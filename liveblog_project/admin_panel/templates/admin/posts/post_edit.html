@@ -1,0 +1,47 @@
+{% extends 'admin/layout/base.html' %}
+{% load static %}
+
+{% block title %}Edit Post{% endblock %}
+{% block extra_head %}
+<link rel="preconnect" href="https://cdn.ckeditor.com" crossorigin />
+<script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+{% endblock %}
+{% block breadcrumbs %}<nav class="admin-breadcrumbs" aria-label="Breadcrumb"><ol class="admin-breadcrumbs-list"><li class="admin-breadcrumbs-item"><a href="{% url 'admin_panel:dashboard' %}">Dashboard</a></li><li class="admin-breadcrumbs-item"><a href="{% url 'admin_panel:posts_list' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">Posts</a></li><li class="admin-breadcrumbs-item">Edit</li></ol></nav>{% endblock %}
+{% block page_title %}Edit {{ item.title|truncatewords:5 }}{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+    <form method="post" class="admin-form" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <ul class="admin-form-errors">{% for err in form.non_field_errors %}<li>{{ err }}</li>{% endfor %}</ul>
+        {% endif %}
+        <div class="admin-form-group">
+            <label for="id_title">{{ form.title.label }}</label>
+            {{ form.title }}
+            {{ form.title.errors }}
+        </div>
+        <div class="admin-form-group" id="admin-text-field-wrapper" role="group">
+            <label for="id_text" id="admin-text-label">{{ form.text.label }}</label>
+            {{ form.text }}
+            {{ form.text.errors }}
+        </div>
+        <div class="admin-form-group">
+            <label for="id_category">{{ form.category.label }}</label>
+            {{ form.category }}
+            {{ form.category.errors }}
+        </div>
+        <div class="admin-form-group admin-form-group-inline">
+            <label for="id_status">{{ form.status.label }}</label>
+            {{ form.status }}
+            {{ form.status.errors }}
+        </div>
+        <div class="admin-form-actions">
+            <button type="submit" class="admin-button admin-button-primary">Save</button>
+            <a href="{% url 'admin_panel:posts_list' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="admin-button admin-button-outline">Cancel</a>
+            {% if item.is_published and item.slug %}<a href="{% url 'smart_blog:item_detail' item.slug %}" class="admin-button admin-button-outline">View</a>{% else %}<span class="admin-button admin-button-outline admin-link-draft">View</span>{% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'admin/js/admin_ckeditor.js' %}"></script>{% endblock %}

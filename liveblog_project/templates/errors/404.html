@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Page not found — brainstorm.org{% endblock %}
+
+{% block body_class %}error-page{% endblock %}
+
+{% block content %}
+  <section class="error-page-section">
+    <div class="container-main">
+      <div class="error-page-card">
+        <p class="error-page-brand"><a href="{% url 'pages:home' %}" class="error-page-brand-link">brainstorm.org</a></p>
+        <p class="error-page-code" aria-hidden="true">404</p>
+        <h1 class="error-page-title">Page not found</h1>
+        <p class="error-page-lead">
+          This address may have changed or contain a typo. Check the URL or return to the home page and open a section from the menu.
+        </p>
+        <div class="error-page-actions">
+          <a href="{% url 'pages:home' %}" class="btn btn-primary btn-lg error-page-btn-primary">Home</a>
+          <a href="{% url 'smart_blog:items_list' %}" class="btn btn-outline-secondary btn-lg error-page-btn-secondary">BraiNews</a>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,42 @@
+{# includes/replied_comments.html #}
+{% if not thread_view or depth|default:0 > 0 %}
+  <div id="reply-form-{{ comment.pk }}" class="reply-form d-none mt-2">
+    <form class="reply-comment-form" data-parent-id="{{ comment.pk }}" data-username="{{ comment.author.username }}" novalidate>
+      {% csrf_token %}
+      <div class="form-floating mb-2">
+        <textarea name="text" id="id_reply_comment_text" class="form-control auto-grow" placeholder=" " rows="1" required spellcheck="true"></textarea>
+        <label for="id_reply_comment_text">Text here...</label>
+      </div>
+      <div class="reply-form-errors mb-2"></div>
+      <div class="d-flex gap-1">
+        <button type="submit" class="cstm-btn-sm custom-primary-btn">Reply</button>
+        <button type="button" class="cstm-btn-sm custom-secondary-btn cancel-reply">Cancel</button>
+      </div>
+    </form>
+  </div>
+{% endif %}
+
+{% if comment.replies.all %}
+  {% if thread_view %}
+    <div class="replies" data-parent-id="{{ comment.pk }}">
+      {% for reply in comment.replies.all %}
+        {% include 'includes/_comments.html' with comment=reply depth=depth|add:1 thread_view=thread_view no_mentions=true %}
+      {% endfor %}
+    </div>
+  {% elif depth >= 2 %}
+      {% with replies_count=comment.replies.count %}
+      <a id="replies-thread-link-{{ comment.pk }}" href="{% url 'smart_blog:comment_thread' comment.pk %}" class="text-decoration-none small d-inline-flex gap-2 align-items-center mt-4 ms-1 success_" data-count="{{ replies_count }}">
+        <span class="replies-circle"></span>
+        <span>View deep replies</span>
+        <span>→</span>
+        <span class="replies-count">{% if replies_count >= 10 %}10+{% else %}{{ replies_count }}{% endif %}</span>
+      </a>
+      {% endwith %}
+  {% else %}
+    <div class="replies" data-parent-id="{{ comment.pk }}">
+      {% for reply in comment.replies.all %}
+        {% include 'includes/_comments.html' with comment=reply depth=depth|add:1 %}
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endif %}

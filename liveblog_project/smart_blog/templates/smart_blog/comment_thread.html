@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block body_class %}thread-comment-page{% endblock %}
+{% block title %}
+  Replies thread
+{% endblock %}
+
+{% block content %}
+  <div class="container-main content_block">
+    {% include 'includes/breadcrumbs.html' %}
+    <div id="threadViewMarker" class="d-none" data-parent-id="{{ comment.pk }}" data-back-url="{{ item.get_absolute_url }}"></div>
+
+    <div class="mb-3">
+      {% include 'includes/_comments.html' with comment=comment depth=0 thread_view=true hide_reply=true no_mentions=true %}
+    </div>
+
+    <div id="threadEmpty" class="text-muted{% if comment.replies.all %} d-none{% endif %}">There are no replies yet!</div>
+  </div>
+  {% include 'includes/comment_modal.html' %}
+  {% include 'includes/report_modal.html' %}
+{% endblock %}
+
+{% block extra_js %}
+  <script defer src="{% static 'smart_blog/js/report_modal.js' %}"></script>
+{% endblock %}

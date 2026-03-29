@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script>
+      (function(){try{var t=localStorage.getItem('themeToggle');document.documentElement.setAttribute('data-theme',t==='sun'?'dark':'light');}catch(e){}}());
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="csrf-token" content="{{ csrf_token }}" />
+
+    <title>
+      {% block title %}
+      {% endblock %}
+    </title>
+    {% block meta_description %}{% endblock %}
+
+    {% load static %}
+    {% load cache %}
+    <link rel="icon" href="{% static 'img/cube-favicon.png' %}" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://cdn.ckeditor.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/reset.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/public-breakpoints.css' %}" />
+    <link rel="stylesheet" href="{% static 'pages/css/pages.css' %}" />
+    <link rel="stylesheet" href="{% static 'smart_blog/css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'login/css/login_app_styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'pages/css/responsive.css' %}" />
+    <link rel="stylesheet" href="{% static 'smart_blog/css/responsive.css' %}" />
+    <link rel="stylesheet" href="{% static 'login/css/responsive.css' %}" />
+    <link rel="stylesheet" href="{% static 'smart_blog/vendor/fontawesome/css/font-awesome.min.css' %}" />
+    {% block extra_head %}
+    {% endblock %}
+  </head>
+
+  <body class="{% block body_class %}{% endblock %}" data-item-slug="{% if item %}{{ item.slug }}{% endif %}"{% if item %} data-item-id="{{ item.pk }}" data-views-count="{{ item.views_count }}" data-reposts-count="{{ item.reposts_count }}"{% endif %} data-user-id="{% if user.is_authenticated %}{{ user.pk }}{% endif %}" data-user-authenticated="{% if user.is_authenticated %}1{% else %}0{% endif %}" data-spellcheck-lang="{{ spellcheck_lang|default:'ru' }}" data-search-history-url="{% url 'smart_blog:api_search_history_list' %}" data-search-history-clicked-pattern="{% url 'smart_blog:api_search_history_clicked' pk=999999 %}" data-search-history-clear-url="{% url 'smart_blog:api_search_history_clear' %}" data-search-history-delete-pattern="{% url 'smart_blog:api_search_history_delete' pk=999999 %}" data-trust-status-url="{% url 'login_app:api_trust_status' %}">
+    {% include 'includes/header.html' %}
+    {% include 'includes/categories_modal.html' %}
+    <div class="container-main messages-container">
+      {% include 'includes/messages.html' %}
+    </div>
+    <!-- MAIN CONTENT -->
+    <main class="main">
+      {% block content %}
+        <!-- Main page content -->
+      {% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    {% comment %} {% cache 300 'footer' %} {% endcomment %}
+    <footer class="footer pt-3 pb-3">
+      {% include 'includes/footer.html' %}
+    </footer>
+    {% comment %} {% endcache %} {% endcomment %}
+
+    {% include 'includes/back_to_top.html' %}
+    {% include 'includes/signout_confirm_modal.html' %}
+
+    <!-- Bootstrap JS + Popper + CKEditor5 + Custom JS files -->
+    <script defer src="{% static 'js/spellcheck.js' %}"></script>
+    <script defer src="{% static 'ckeditor/ckeditor_main.js' %}"></script>
+    <script defer src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script defer src="{% static 'js/bootstrap.min.js' %}"></script>
+    {% comment %} <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script> {% endcomment %}
+    <script defer src="{% static 'smart_blog/js/theme.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/header_scroll_hide.js' %}"></script>
+    <script defer src="{% static 'js/global_utils.js' %}"></script>
+    <script defer src="{% static 'js/footer_subscribe.js' %}"></script>
+    <script defer src="{% static 'js/forms_handler.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/image_manage.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/comment_restore_ui.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/comment_operate.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/like_n_bookmark_item.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/listing_manage.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/brainews_filter.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/image_gallery.js' %}"></script>
+    <!-- global search -->
+    <script>
+      window.SEARCH_URL = "{% url 'global_search' %}";
+      window.USER_AUTHENTICATED = {{ user.is_authenticated|yesno:"true,false" }};
+    </script>
+    <script defer src="{% static 'smart_blog/js/search_operate.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/header_search_toggle.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/categories_modal.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/back_to_top.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/back_btn_nav.js' %}"></script>
+
+    <script defer src="{% static 'login/js/password_gen_switcher.js' %}"></script>
+    <script defer src="{% static 'login/js/password_generator.js' %}"></script>
+    <script defer src="{% static 'login/js/profile_opener.js' %}"></script>
+    <script defer src="{% static 'js/signout_modal.js' %}"></script>
+    <!-- global avatar viewer -->
+    <script>
+      window.CURRENT_AVATAR = {
+        url: "{% if user_obj and user_obj.is_authenticated %}{{ user_obj.profile.avatar_url|default:'' }}{% endif %}",
+        file: '{% if user_obj and user_obj.is_authenticated and user_obj.profile.avatar_file %}{{ user_obj.profile.avatar_file.url }}{% endif %}'
+      }
+    </script>
+    <script defer src="{% static 'login/js/avatar_viewer.js' %}"></script>
+    <script defer src="{% static 'pages/js/pages_utils.js' %}"></script>
+
+    {% block extra_js %}
+    {% endblock %}
+  </body>
+</html>

@@ -1,0 +1,19 @@
+<section id="profile-section-{{ section_id }}"
+         class="profile-section"
+         data-section="{{ section_id }}"
+         data-count="{{ count }}"
+         data-lazy-url="{{ lazy_url|default:'' }}"
+         data-loaded="{% if items %}1{% else %}0{% endif %}">
+  {% if items %}
+    {% include 'includes/profile_section_cards_inner.html' with items=items count=count section_id=section_id title=title link_url=link_url listing_user=user_obj.username %}
+  {% elif lazy_url %}
+    <div class="profile-section-placeholder text-muted small">
+      Tap the tab to load {{ title|lower }} items.
+    </div>
+    {% if count|add:0 > 0 %}
+      <a href="{{ link_url }}" class="profile-section-link text-decoration-none small" data-anchor="profile-section-{{ section_id }}">View all {{ title|lower }} items <span class="ms-2">→</span></a>
+    {% endif %}
+  {% else %}
+    <div class="text-muted small fw-bolder">There are no items yet!</div>
+  {% endif %}
+</section>

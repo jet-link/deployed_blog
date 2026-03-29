@@ -1,0 +1,14 @@
+# Production VPS (omit torch/transformers/detoxify — low RAM; moderation falls back without ML)
+Django>=4.2,<5
+django-ratelimit>=4.1,<5
+psycopg2-binary>=2.9
+python-dotenv>=1.0
+celery>=5.3
+redis>=5.0
+django-redis>=5.4
+transliterate
+Pillow
+whitenoise
+gunicorn>=22.0
+djangorestframework
+bleach>=6.0

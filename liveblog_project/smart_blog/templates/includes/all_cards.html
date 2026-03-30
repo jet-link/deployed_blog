@@ -11,28 +11,7 @@
           <!-- Top: author and meta -->
           <div class="d-flex justify-content-between align-items-center py-2">
             <div class="d-flex align-items-center gap-2">
-              {% if item.author %}
-                {% if item.author.is_active %}
-                <div class="little-avatar{% if user == item.author %} avatar-ring{% endif %}">
-                  {% if item.author.profile.avatar_url or item.author.profile.avatar_file %}
-                    <img src="{{ item.author.profile.get_avatar }}" alt="{{ item.author }}" class="user-avatar clickable-avatar" width="30" height="30" loading="eager" decoding="async" data-full="{{ item.author.profile.get_avatar }}" data-username="{{ item.author.username }}" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
-                  {% else %}
-                    <img src="{% static 'img/no_avatar.svg' %}" alt="{{ item.author }}" class="user-avatar no_avatar" width="30" height="30" loading="eager" decoding="async" data-username="{{ item.author.username }}" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
-                  {% endif %}
-                </div>
-                <small class="d-inline-block text-primary-emphasis fw-semibold text-muted">{{ item.author }}</small>
-                {% else %}
-                <div class="little-avatar">
-                  <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display item.author %}" class="user-avatar" width="30" height="30" loading="eager" decoding="async" />
-                </div>
-                <small class="d-inline-block text-primary-emphasis fw-semibold text-muted">{% user_status_display item.author %}</small>
-                {% endif %}
-              {% else %}
-                <div class="little-avatar">
-                  <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display item.author %}" class="user-avatar" width="40" height="40" loading="eager" decoding="async" />
-                </div>
-                <small class="d-inline-block text-primary-emphasis fw-semibold text-muted">{% user_status_display item.author %}</small>
-              {% endif %}
+              {% include 'includes/user_avatar.html' with author=item.author %}
             </div>
 
             {% if item.category %}
@@ -83,6 +62,8 @@
             <!-- item-link + data-item-id for JS (same as article id) -->
             {% if listing_source == 'profile' and listing_user and listing_section %}
               <a href="{{ item.get_absolute_url }}?from=profile&amp;user={{ listing_user|urlencode }}&amp;section={{ listing_section }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
+            {% elif listing_source == 'profile' and listing_user %}
+              <a href="{{ item.get_absolute_url }}?from=profile&amp;user={{ listing_user|urlencode }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
             {% elif listing_source == 'items_list' and listing_source_url %}
               <a href="{{ item.get_absolute_url }}?from=items_list&amp;source_url={{ listing_source_url|urlencode }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
             {% elif listing_source == 'for_you' and listing_source_url %}

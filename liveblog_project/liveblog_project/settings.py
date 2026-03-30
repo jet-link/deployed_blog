@@ -109,6 +109,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.sitemaps',
     # Third-party
+    'compressor',
     'rest_framework',
     # Local apps
     'admin_panel',
@@ -199,6 +200,7 @@ else:
             'PORT': os.environ.get('DJANGO_DB_PORT', '5432'),
             'OPTIONS': {'connect_timeout': 10},
             'CONN_MAX_AGE': int(os.environ.get('DJANGO_DB_CONN_MAX_AGE', '60')),
+            'CONN_HEALTH_CHECKS': True,
         }
     }
 
@@ -226,6 +228,17 @@ STATICFILES_DIRS = [
 ]
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'compressor.finders.CompressorFinder',
+]
+
+COMPRESS_ENABLED = True
+COMPRESS_OFFLINE = True
+COMPRESS_CSS_FILTERS = ['compressor.filters.cssmin.rCSSMinFilter']
+COMPRESS_JS_FILTERS = ['compressor.filters.jsmin.rJSMinFilter']
 
 
 # Media files
@@ -338,3 +351,7 @@ LOGGING = {
     },
 }
 
+if DEBUG:
+    INSTALLED_APPS += ['debug_toolbar']
+    MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    INTERNAL_IPS = ['127.0.0.1']

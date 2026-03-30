@@ -111,8 +111,7 @@
     searchActiveWithMany = false;
     overlay.classList.remove('hidden');
     overlay.setAttribute('aria-hidden', 'false');
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
+    lockScroll();
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         updateModalHeight(count, false);
@@ -133,8 +132,7 @@
     overlay.classList.add('hidden');
     overlay.setAttribute('aria-hidden', 'true');
     stackTrigger?.focus({ preventScroll: true });
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    unlockScroll();
   }
 
   function openOnClick(e) {

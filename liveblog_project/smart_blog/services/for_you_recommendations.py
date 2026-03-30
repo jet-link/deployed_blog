@@ -5,11 +5,14 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
+from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
 
 from smart_blog.models import Bookmark, Item, ItemView, Like, TrendingItem
 from smart_blog.search_utils import apply_popular_filter
+
+FORYOU_CACHE_TTL = 300
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
@@ -81,7 +84,8 @@ class ForYouResult:
 MAX_POOL = 800
 
 
-def for_you_items_for_authenticated_user(user: AbstractUser) -> ForYouResult:
+def _compute_for_you(user):
+    """Heavy scoring computation — result is cached per user."""
     now = timezone.now()
     since = now - timedelta(days=CANDIDATE_DAYS)
     liked_cat, liked_tags, bm_cat, bm_tags = _collect_interest_sets(user)
@@ -116,10 +120,37 @@ def for_you_items_for_authenticated_user(user: AbstractUser) -> ForYouResult:
         scored.append((sc, item))
 
     scored.sort(key=lambda x: (-x[0], -x[1].published_date.timestamp(), -x[1].pk))
-    ordered = [it for _, it in scored]
+    ordered_ids = [it.pk for _, it in scored]
 
     top_score = scored[0][0] if scored else 0
     low_personal_signal = (not has_interaction) or (has_interaction and top_score < 2)
+
+    return ordered_ids, low_personal_signal
+
+
+def invalidate_foryou_cache(user_pk):
+    cache.delete(f"foryou:{user_pk}")
+
+
+def for_you_items_for_authenticated_user(user: AbstractUser) -> ForYouResult:
+    cache_key = f"foryou:{user.pk}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        ordered_ids, low_personal_signal = cached
+    else:
+        ordered_ids, low_personal_signal = _compute_for_you(user)
+        cache.set(cache_key, (ordered_ids, low_personal_signal), FORYOU_CACHE_TTL)
+
+    if not ordered_ids:
+        return ForYouResult(items=[], low_personal_signal=low_personal_signal)
+
+    items_by_pk = {
+        it.pk: it
+        for it in Item.objects.filter(pk__in=ordered_ids, is_published=True)
+        .select_related("category", "author", "author__profile")
+        .prefetch_related("images", "tags")
+    }
+    ordered = [items_by_pk[pk] for pk in ordered_ids if pk in items_by_pk]
 
     return ForYouResult(items=ordered, low_personal_signal=low_personal_signal)
 

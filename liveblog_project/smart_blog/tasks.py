@@ -16,3 +16,42 @@ def update_trending():
 def rollup_hourly_stats():
     """Fill ItemStatsHourly for the last completed local hour."""
     return rollup_item_stats_hourly_for_hour()
+
+
+@shared_task
+def save_search_history(user_id, query, results_count, filters_dict, from_history):
+    """Async write of search history to avoid blocking the request."""
+    from smart_blog.models import SearchHistory
+
+    existing = SearchHistory.objects.filter(
+        user_id=user_id,
+        search_query__iexact=query,
+        search_filters=filters_dict,
+    ).first()
+
+    if existing:
+        was_clicked = existing.was_clicked
+        existing.delete()
+        SearchHistory.objects.create(
+            user_id=user_id,
+            search_query=existing.search_query if from_history else query,
+            results_count=results_count,
+            search_filters=filters_dict,
+            was_clicked=was_clicked,
+        )
+    elif not from_history:
+        SearchHistory.objects.create(
+            user_id=user_id,
+            search_query=query,
+            results_count=results_count,
+            search_filters=filters_dict,
+            was_clicked=False,
+        )
+
+    all_ids = list(
+        SearchHistory.objects.filter(user_id=user_id)
+        .order_by('-created_at')
+        .values_list('pk', flat=True)
+    )
+    if len(all_ids) > 25:
+        SearchHistory.objects.filter(pk__in=all_ids[25:]).delete()

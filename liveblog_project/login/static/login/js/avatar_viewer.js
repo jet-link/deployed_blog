@@ -74,17 +74,11 @@
 
         const lb = window.__avatarLB__;
 
-        __avatarPrevOverflow.html = document.documentElement.style.overflow;
-        __avatarPrevOverflow.body = document.body.style.overflow;
-        __avatarPrevOverflow.paddingRight = document.body.style.paddingRight;
-
         lb.img.src = src;
         lb.img.alt = alt;
         lb.overlay.style.display = 'flex';
 
-        document.documentElement.style.overflow = 'hidden';
-        document.body.style.overflow = 'hidden';
-        document.body.style.paddingRight = '0px';
+        lockScroll();
     }
 
     function closeLightbox() {
@@ -94,9 +88,7 @@
         lb.overlay.style.display = 'none';
         lb.img.src = '';
 
-        document.documentElement.style.overflow = __avatarPrevOverflow.html;
-        document.body.style.overflow = __avatarPrevOverflow.body;
-        document.body.style.paddingRight = __avatarPrevOverflow.paddingRight;
+        unlockScroll();
     }
 
     function bindEvents(lb) {

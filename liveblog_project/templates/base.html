@@ -27,8 +27,15 @@
     <link rel="stylesheet" href="{% static 'css/reset.css' %}" />
     <link rel="stylesheet" href="{% static 'css/public-breakpoints.css' %}" />
     <link rel="stylesheet" href="{% static 'pages/css/pages.css' %}" />
+    <link rel="stylesheet" href="{% static 'smart_blog/css/tokens.css' %}" />
+    <link rel="stylesheet" href="{% static 'smart_blog/css/editor.css' %}" />
     <link rel="stylesheet" href="{% static 'smart_blog/css/styles.css' %}" />
-    <link rel="stylesheet" href="{% static 'login/css/login_app_styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'login/css/auth_forms.css' %}" />
+    <link rel="stylesheet" href="{% static 'login/css/profile.css' %}" />
+    <link rel="stylesheet" href="{% static 'login/css/avatar.css' %}" />
+    <link rel="stylesheet" href="{% static 'login/css/notifications.css' %}" />
+    <link rel="stylesheet" href="{% static 'login/css/card_switcher.css' %}" />
+    <link rel="stylesheet" href="{% static 'smart_blog/css/liked_users.css' %}" />
     <link rel="stylesheet" href="{% static 'pages/css/responsive.css' %}" />
     <link rel="stylesheet" href="{% static 'smart_blog/css/responsive.css' %}" />
     <link rel="stylesheet" href="{% static 'login/css/responsive.css' %}" />
@@ -72,12 +79,8 @@
     <script defer src="{% static 'js/footer_subscribe.js' %}"></script>
     <script defer src="{% static 'js/forms_handler.js' %}"></script>
     <script defer src="{% static 'smart_blog/js/image_manage.js' %}"></script>
-    <script defer src="{% static 'smart_blog/js/comment_restore_ui.js' %}"></script>
-    <script defer src="{% static 'smart_blog/js/comment_operate.js' %}"></script>
     <script defer src="{% static 'smart_blog/js/like_n_bookmark_item.js' %}"></script>
     <script defer src="{% static 'smart_blog/js/listing_manage.js' %}"></script>
-    <script defer src="{% static 'smart_blog/js/brainews_filter.js' %}"></script>
-    <script defer src="{% static 'smart_blog/js/image_gallery.js' %}"></script>
     <!-- global search -->
     <script>
       window.SEARCH_URL = "{% url 'global_search' %}";
@@ -89,17 +92,16 @@
     <script defer src="{% static 'smart_blog/js/back_to_top.js' %}"></script>
     <script defer src="{% static 'smart_blog/js/back_btn_nav.js' %}"></script>
 
-    <script defer src="{% static 'login/js/password_gen_switcher.js' %}"></script>
-    <script defer src="{% static 'login/js/password_generator.js' %}"></script>
     <script defer src="{% static 'login/js/profile_opener.js' %}"></script>
     <script defer src="{% static 'js/signout_modal.js' %}"></script>
-    <!-- global avatar viewer -->
+    {% if user.is_authenticated %}
     <script>
       window.CURRENT_AVATAR = {
-        url: "{% if user_obj and user_obj.is_authenticated %}{{ user_obj.profile.avatar_url|default:'' }}{% endif %}",
-        file: '{% if user_obj and user_obj.is_authenticated and user_obj.profile.avatar_file %}{{ user_obj.profile.avatar_file.url }}{% endif %}'
+        url: "{{ user_obj.profile.avatar_url|default:'' }}",
+        file: '{% if user_obj and user_obj.profile.avatar_file %}{{ user_obj.profile.avatar_file.url }}{% endif %}'
       }
     </script>
+    {% endif %}
     <script defer src="{% static 'login/js/avatar_viewer.js' %}"></script>
     <script defer src="{% static 'pages/js/pages_utils.js' %}"></script>
 

@@ -74,10 +74,7 @@
         isOpen = true;
         lastTrigger = triggerEl && triggerEl.matches(TRIG_SEL) ? triggerEl : null;
 
-        prevOverflow.html = document.documentElement.style.overflow;
-        prevOverflow.body = document.body.style.overflow;
-        document.documentElement.style.overflow = 'hidden';
-        document.body.style.overflow = 'hidden';
+        lockScroll();
 
         root.classList.remove('hidden');
         root.setAttribute('aria-hidden', 'false');
@@ -92,8 +89,7 @@
         if (!isOpen) return;
         isOpen = false;
 
-        document.documentElement.style.overflow = prevOverflow.html || '';
-        document.body.style.overflow = prevOverflow.body || '';
+        unlockScroll();
 
         root.classList.add('hidden');
         root.setAttribute('aria-hidden', 'true');

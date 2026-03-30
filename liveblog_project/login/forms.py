@@ -341,21 +341,6 @@ class UserEditForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         # ----------------------------
-        # username uniqueness check
-        # ----------------------------
-        username = cleaned.get('username')
-        if username:
-            qs = User.objects.filter(username__iexact=username)
-            if self.instance and getattr(self.instance, 'pk', None):
-                qs = qs.exclude(pk=self.instance.pk)
-            if qs.exists():
-                self.add_error(
-                    'username',
-                    ValidationError(_("User with this username already exists."))
-                )
-
-        
-        # ----------------------------
         # avatar priority validation
         # ----------------------------
         url = cleaned.get('avatar_url')

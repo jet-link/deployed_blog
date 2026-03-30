@@ -10,7 +10,7 @@
     </div>
 
     {% if low_personal_signal %}
-      <div class="alert alert-secondary small for-you-empty-hint mb-4" role="status">
+      <div class="alert alert-secondary small for-you-empty-hint" role="status">
         We’re still learning your interests. Here are some recommended and trending stories to get started.
       </div>
     {% endif %}
@@ -23,7 +23,7 @@
         {% include 'includes/pagination.html' %}
       </div>
     {% else %}
-      <p class="text-muted pt-4 mb-0">Nothing to recommend yet. Try <a href="{% url 'smart_blog:items_list' %}">BraiNews</a> or <a href="{% url 'smart_blog:topics_list' %}">Topics</a>.</p>
+      <p class="text-muted mb-0">Nothing to recommend yet. Try <a href="{% url 'smart_blog:items_list' %}">BraiNews</a> or <a href="{% url 'smart_blog:topics_list' %}">Topics</a>.</p>
     {% endif %}
 
     <div class="hidden">

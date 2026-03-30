@@ -1,6 +1,7 @@
 from datetime import timedelta
 from urllib.parse import urlencode
 
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Count, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404, render
@@ -10,6 +11,8 @@ from django.utils import timezone
 from smart_blog.models import Category, Item, TrendingItem
 from smart_blog.utils import breadcrumb, build_breadcrumbs
 from smart_blog.views import annotate_user_bookmarked, annotate_user_liked
+
+TOPICS_CACHE_TTL = 600
 
 LIST_PER_PAGE = 40
 FEATURED_COUNT = 6
@@ -23,8 +26,12 @@ def _trending_category_ids(limit=40):
     )
 
 
-def topics_list(request):
-    trending_cat_ids = _trending_category_ids()
+def _get_topics_data():
+    """Cached topics list data (heavy aggregation query)."""
+    cache_key = "topics_list_data"
+    data = cache.get(cache_key)
+    if data is not None:
+        return data
 
     latest_title = Subquery(
         Item.objects.filter(category_id=OuterRef("pk"), is_published=True)
@@ -45,11 +52,20 @@ def topics_list(request):
             latest_post_title=latest_title,
         )
         .filter(posts_count__gt=0)
+        .order_by("-posts_count", "-recent_7d", "name")
     )
 
-    qs = qs.order_by("-posts_count", "-recent_7d", "name")
     all_topics = list(qs)
+    trending_cat_ids = _trending_category_ids()
 
+    data = {"all_topics": all_topics, "trending_category_ids": trending_cat_ids}
+    cache.set(cache_key, data, TOPICS_CACHE_TTL)
+    return data
+
+
+def topics_list(request):
+    data = _get_topics_data()
+    all_topics = data["all_topics"]
     featured = all_topics[:FEATURED_COUNT]
 
     breadcrumbs = build_breadcrumbs(
@@ -62,7 +78,7 @@ def topics_list(request):
         {
             "topics_featured": featured,
             "topics_all": all_topics,
-            "trending_category_ids": trending_cat_ids,
+            "trending_category_ids": data["trending_category_ids"],
             "breadcrumbs": breadcrumbs,
         },
     )

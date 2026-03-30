@@ -40,7 +40,7 @@
     --touch-target-min: 44px;
 
     /* Вертикальные отступы основного контента (симметрично сверху и снизу) */
-    --main-pad-y: 76px;
+    --main-pad-y: 70px;
     --main-pad-top: var(--main-pad-y);
     --main-pad-bottom: var(--main-pad-y);
 
@@ -96,8 +96,8 @@
 /* Prevent stray horizontal scroll on main column */
 .main {
     min-width: 0;
-    padding-top: var(--main-pad-y, 76px);
-    padding-bottom: var(--main-pad-y, 76px);
+    padding-top: var(--main-pad-y);
+    padding-bottom: var(--main-pad-y);
     box-sizing: border-box;
 }
 

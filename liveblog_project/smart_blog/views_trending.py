@@ -30,10 +30,13 @@ def _base_qs():
 
 def _get_trending_page_data(page=1):
     """Returns (hot_rows, rising_rows, feed_page) for a given page."""
-    hot_rows = list(_base_qs().order_by("-trend_score")[:HOT_LIMIT])
+    all_by_score = list(_base_qs().order_by("-trend_score")[:200])
+    hot_rows = all_by_score[:HOT_LIMIT]
+
+    score_pks = {t.pk for t in all_by_score}
     rising_rows = list(_base_qs().order_by("-growth_rate")[:RISING_LIMIT])
-    feed_qs = _base_qs().order_by("-trend_score")
-    paginator = Paginator(feed_qs, FEED_PER_PAGE)
+
+    paginator = Paginator(all_by_score, FEED_PER_PAGE)
     feed_page = paginator.get_page(page)
     return hot_rows, rising_rows, feed_page
 

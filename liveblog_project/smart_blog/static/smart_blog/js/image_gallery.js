@@ -117,7 +117,7 @@
         function hideOverlay() {
             overlay.classList.remove('is-visible');
             clearAutoplay();
-            document.documentElement.style.overflow = '';
+            unlockScroll();
             imgEl.src = '';
             currentSrcs = [];
         }
@@ -158,7 +158,7 @@
             imgEl.src = currentSrcs[curIndex];
 
             overlay.classList.add('is-visible');
-            document.documentElement.style.overflow = 'hidden';
+            lockScroll();
             preloadAdjacent();
             startAutoplayIfNeeded();
             try { closeBtn.focus(); } catch (err) { }

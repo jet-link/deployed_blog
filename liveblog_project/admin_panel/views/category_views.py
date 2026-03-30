@@ -28,11 +28,14 @@ def category_create(request):
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
-        if name:
+        if not name:
+            messages.error(request, 'Name is required.')
+        elif Category.objects.filter(name__iexact=name).exists():
+            messages.error(request, f'Category "{name}" already exists.')
+        else:
             Category.objects.create(name=name, description=description)
             messages.success(request, 'Category created.')
             return redirect('admin_panel:categories_list')
-        messages.error(request, 'Name is required.')
     return render(request, 'admin/categories/category_form.html', {'is_create': True})
 
 

@@ -34,6 +34,7 @@
 
                 // allow page scroll now
                 document.body.classList.remove('no-scroll');
+                if (typeof unlockScroll === 'function') unlockScroll();
 
                 // cleanup listeners
                 detachListeners();
@@ -106,6 +107,7 @@
         overlay.classList.remove('hidden', 'closing', 'preparing');
         overlay.style.display = 'flex';           // ensure visible
         document.body.classList.add('no-scroll');
+        if (typeof lockScroll === 'function') lockScroll();
 
         // small rAF to let CSS settle before attaching listeners
         requestAnimationFrame(() => {

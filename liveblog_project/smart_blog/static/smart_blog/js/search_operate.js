@@ -433,14 +433,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
-        // 🔒 СОХРАНЯЕМ ОДИН РАЗ
-        __searchPrevOverflow.html = document.documentElement.style.overflow;
-        __searchPrevOverflow.body = document.body.style.overflow;
-        __searchPrevOverflow.paddingRight = document.body.style.paddingRight;
-
-        document.documentElement.style.overflow = 'hidden';
-        document.body.style.overflow = 'hidden';
-        document.body.style.paddingRight = '0px';
+        lockScroll();
 
         const input = overlayContent.querySelector('input, textarea');
         input?.focus();
@@ -465,9 +458,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 overlayContent.innerHTML = '';
                 overlayRoot.setAttribute('aria-hidden', 'true');
                 overlayRoot.removeAttribute('inert');
-                document.documentElement.style.overflow = __searchPrevOverflow.html || '';
-                document.body.style.overflow = __searchPrevOverflow.body || '';
-                document.body.style.paddingRight = __searchPrevOverflow.paddingRight || '';
+                unlockScroll();
                 if (typeof onAfterAnimation === 'function') onAfterAnimation();
             });
         }

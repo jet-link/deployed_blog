@@ -12,12 +12,13 @@
 }
 
 .breadcrumb-link {
-    color: inherit;
+    color: var(--text-link, #273c75);
     text-decoration: none;
+    font-weight: 500;
 }
 
 .breadcrumb-link:hover {
-    color: inherit;
+    color: var(--text-link-hover, #1e3060);
     text-decoration: underline;
 }
 

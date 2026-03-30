@@ -1,5 +1,29 @@
+window.LB = window.LB || {};
+
 const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
 const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+
+/* ── iOS-safe scroll lock ──
+   Uses position:fixed on body so Safari doesn't scroll through overlays.
+   Keeps track of nested lock/unlock calls via a counter. */
+var _scrollLockCount = 0;
+var _scrollLockY = 0;
+function lockScroll() {
+    if (_scrollLockCount === 0) {
+        _scrollLockY = window.scrollY || window.pageYOffset || 0;
+        document.documentElement.style.setProperty('--scroll-y', '-' + _scrollLockY + 'px');
+        document.documentElement.classList.add('scroll-locked');
+    }
+    _scrollLockCount++;
+}
+function unlockScroll() {
+    _scrollLockCount = Math.max(0, _scrollLockCount - 1);
+    if (_scrollLockCount === 0) {
+        document.documentElement.classList.remove('scroll-locked');
+        document.documentElement.style.removeProperty('--scroll-y');
+        window.scrollTo(0, _scrollLockY);
+    }
+}
 
 function initAutoDismiss(container, onAfterRemove) {
     const root = container || document;
@@ -25,6 +49,9 @@ function initAutoDismiss(container, onAfterRemove) {
     });
 }
 window.initAutoDismiss = initAutoDismiss;
+LB.lockScroll = lockScroll;
+LB.unlockScroll = unlockScroll;
+LB.initAutoDismiss = initAutoDismiss;
 document.addEventListener('DOMContentLoaded', function () {
     initAutoDismiss(document);
 });
@@ -293,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // bind submit on Enter — either form exists or we intercept keydown Enter
         bindOverlayHandlers();
-        document.body.style.overflow = 'hidden'; // disable page scroll
+        lockScroll();
         overlayRoot.setAttribute('aria-hidden', 'false');
     }
 
@@ -301,7 +328,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!overlayRoot) return;
         overlayRoot.classList.add('hidden');
         overlayContent.innerHTML = '';
-        document.body.style.overflow = ''; // restore scroll
+        unlockScroll();
         overlayRoot.setAttribute('aria-hidden', 'true');
     }
 
@@ -876,6 +903,7 @@ function initFilterCardsPagination() {
 }
 
 window.initFilterCardsPagination = initFilterCardsPagination;
+LB.initFilterCardsPagination = initFilterCardsPagination;
 
 document.addEventListener('DOMContentLoaded', function () {
     initFilterCardsPagination();
@@ -897,23 +925,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let isOpen = false;
 
-    const prevOverflow = {
-        html: '',
-        body: ''
-    };
-
     function openBottomMenu() {
         if (isOpen) return;
         isOpen = true;
 
-        // 🔒 save scroll
-        prevOverflow.html = document.documentElement.style.overflow;
-        prevOverflow.body = document.body.style.overflow;
+        lockScroll();
 
-        document.documentElement.style.overflow = 'hidden';
-        document.body.style.overflow = 'hidden';
-
-        // show overlay + menu
         overlay.classList.remove('hidden');
         menu.classList.remove('hidden');
         requestAnimationFrame(() => {
@@ -930,10 +947,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!isOpen) return;
         isOpen = false;
 
-        // 🔑 remove focus first
         document.activeElement?.blur();
-
-        // hide menu with animation
         menu.classList.remove('open');
 
         setTimeout(() => {
@@ -943,10 +957,8 @@ document.addEventListener('DOMContentLoaded', function () {
             menu.setAttribute('aria-hidden', 'true');
             menu.setAttribute('inert', '');
 
-            // 🔓 restore scroll
-            document.documentElement.style.overflow = prevOverflow.html || '';
-            document.body.style.overflow = prevOverflow.body || '';
-        }, 250); // must match CSS transition
+            unlockScroll();
+        }, 250);
     }
 
     // ===== EVENTS =====

@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load static %}
 <div id="instructionModal" class="modal fade" tabindex="-1" aria-labelledby="instructionModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -28,28 +29,4 @@
     </div>
   </div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('.instruction-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var modalEl = document.getElementById('instructionModal');
-      if (modalEl && typeof bootstrap !== 'undefined') {
-        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
-      }
-    });
-  });
-
-  // Hide username field error while typing
-  ['floatingUsername', 'floatingUsernameProfile'].forEach(function(id) {
-    var input = document.getElementById(id);
-    if (input) {
-      input.addEventListener('input', function() {
-        var wrap = this.closest('.form-floating');
-        var err = wrap ? wrap.querySelector('.text-danger') : null;
-        if (err) err.style.display = 'none';
-      });
-    }
-  });
-});
-</script>
+<script defer src="{% static 'login/js/instruction_modal.js' %}"></script>

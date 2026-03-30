@@ -178,6 +178,9 @@ class Item(models.Model):
 
     class Meta:
         ordering = ("-published_date",)
+        indexes = [
+            models.Index(fields=["is_published", "-published_date"]),
+        ]
 
     def __str__(self):
         return self.title
@@ -385,6 +388,9 @@ class Comment(models.Model):
 
     class Meta:
         ordering = ("created",)
+        indexes = [
+            models.Index(fields=["item", "is_draft", "-created"]),
+        ]
 
     def is_reply(self):
         return self.parent_id is not None
@@ -437,13 +443,6 @@ class CommentLike(models.Model):
 
     def __str__(self):
         return f"{self.user or 'Vanished'} likes comment {self.comment_id}"
-    
-    @property
-    def likes_count(self):
-        return self.likes.count()
-    
-    def can_show_likes(self, user):
-        return self.parent is None and (user == self.author or not user.is_authenticated)
     
     
 
@@ -697,6 +696,9 @@ class Notification(models.Model):
 
     class Meta:
         ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["recipient", "cleared_from_inbox", "-created_at"]),
+        ]
 
     def __str__(self):
         return f"Notification for {self.recipient} on {self.item}"

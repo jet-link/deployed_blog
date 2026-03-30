@@ -1,0 +1,48 @@
+"""smart_blog views package — re-exports all view functions for backward compatibility."""
+
+from smart_blog.views._helpers import annotate_user_liked, annotate_user_bookmarked  # noqa: F401
+
+from smart_blog.views.listing_views import (  # noqa: F401
+    items_list,
+    items_filtered,
+    tag_list,
+    category_list,
+)
+
+from smart_blog.views.detail_views import (  # noqa: F401
+    item_detail,
+    comment_thread,
+    register_item_view,
+)
+
+from smart_blog.views.comment_views import (  # noqa: F401
+    add_comment,
+    edit_comment,
+    delete_comment,
+    toggle_comment_like,
+)
+
+from smart_blog.views.item_crud_views import (  # noqa: F401
+    create_item,
+    edit_item,
+    delete_item,
+    delete_item_image,
+    find_existing_media_path,
+)
+
+from smart_blog.views.interaction_views import (  # noqa: F401
+    toggle_like,
+    toggle_bookmark,
+    item_counters,
+    api_repost,
+)
+
+from smart_blog.views.search_views import (  # noqa: F401
+    search_view,
+    api_search_history_list,
+    api_search_history_clicked,
+    api_search_history_clear,
+    api_search_history_delete,
+)
+
+from smart_blog.views.report_views import submit_report  # noqa: F401

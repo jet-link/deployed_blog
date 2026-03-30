@@ -4,7 +4,7 @@
     --font-body: 'Inter', sans-serif;
     --font-heading: 'Space Grotesk', sans-serif;
 
-    /* Fixed header (см. .header-wrapper) — для отступа контента под шапку */
+    /* Ориентир высоты шапки (модалки, расчёты позиции) */
     --header-height: 72px;
 
     /* Spacing & Layout (align with public-breakpoints scale where possible) */
@@ -459,7 +459,7 @@ html {
 }
 
 html {
-    scroll-padding-top: 90px;
+    scroll-padding-top: 1rem;
 }
 
 body {
@@ -871,26 +871,10 @@ html[data-theme="dark"] .paginator-page.paginator-current {
     margin-top: 10px;
 }
 
-/* Фиксированный header — высота учитывается через --header-height (:root) для padding контента */
+/* Обычный header в потоке документа; dropdown поиска якорится к обёртке */
 .header-wrapper {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    position: relative;
     z-index: 1050;
-    transition: transform 0.28s ease;
-    will-change: transform;
-}
-
-.header-wrapper--hidden {
-    transform: translateY(-100%);
-    pointer-events: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .header-wrapper {
-        transition: none;
-    }
 }
 
 .header {
@@ -1093,21 +1077,10 @@ html[data-theme="dark"] .paginator-page.paginator-current {
     }
 }
 
-/* скрытие */
-.header--hidden {
-    transform: translateY(-100%);
-}
-
-.header-spacer {
-    height: 0;
-    pointer-events: none;
-    display: none;
-}
-
 .content_block {
     position: relative;
-    padding-top: max(200px, var(--main-pad-top, 128px));
-    margin-bottom: 120px;
+    padding-top: 0;
+    margin-bottom: 0;
 }
 
 /* Trending page + categories modal: card-body as stretched-link container */
@@ -1777,9 +1750,9 @@ input::-webkit-search-decoration {
     transition: opacity 0.6s linear, transform 0.3s ease;
 }
 
-/* Контейнер алертов — под фиксированным header с верхним отступом (только когда есть сообщения) */
+/* Алерты сразу под шапкой */
 .messages-container:has(.custom-alert) {
-    padding-top: calc(72px + 12px);
+    padding-top: var(--space-3, 12px);
 }
 
 .custom-alert {
@@ -1833,15 +1806,7 @@ textarea {
     box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Когда скрыт */
-.top_header--hidden {
-    transform: translateY(-100%);
-}
-
-/* Чтобы контент не прыгал */
-.header-spacer {
-    height: var(--top-header-height, 130px);
-}
+/* .top_header--hidden, .header-spacer — removed (header is no longer fixed) */
 
 .header-search-overlay {
     position: relative;
@@ -4533,11 +4498,11 @@ html[data-theme="dark"] .categories-modal-backdrop {
 .categories-modal-dialog {
     position: absolute;
     left: 50%;
-    top: calc(var(--header-height) + 1rem);
+    top: 1.5rem;
     transform: translateX(-50%);
     z-index: 1;
     width: min(100% - 1.5rem, 75rem);
-    max-height: min(calc(100vh - var(--header-height) - 1rem), 42rem);
+    max-height: min(calc(100vh - 3rem), 42rem);
     display: flex;
     flex-direction: column;
     background: var(--card-bg, var(--bg-default));

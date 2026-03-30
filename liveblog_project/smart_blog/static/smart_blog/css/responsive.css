@@ -1,19 +1,6 @@
 /* smart_blog — listings, post detail, gallery, comments, modals, filters */
 
-/* Main content vertical rhythm (below fixed header + air before footer) */
-@media (max-width: 991px) {
-    .content_block {
-        padding-top: var(--main-pad-top, 128px);
-        margin-bottom: 104px;
-    }
-}
-
-@media (max-width: 575px) {
-    .content_block {
-        padding-top: var(--main-pad-top, 128px);
-        margin-bottom: 88px;
-    }
-}
+/* Вертикальный ритм: отступы .main (--main-pad-y) */
 
 /* ---------- Post image gallery ---------- */
 @media (max-width: 991px) {

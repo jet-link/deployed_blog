@@ -39,9 +39,10 @@
 
     --touch-target-min: 44px;
 
-    /* Единый зазор под фиксированную шапку и над футером (публичная часть) */
-    --main-pad-top: calc(var(--header-height, 72px) + 56px);
-    --main-pad-bottom: 88px;
+    /* Вертикальные отступы основного контента (симметрично сверху и снизу) */
+    --main-pad-y: 76px;
+    --main-pad-top: var(--main-pad-y);
+    --main-pad-bottom: var(--main-pad-y);
 
     /* Stacking: Bootstrap modals above mobile drawer (.bottom-side-menu 1600) and categories (1700) */
     --z-modal-backdrop: 2080;
@@ -95,14 +96,9 @@
 /* Prevent stray horizontal scroll on main column */
 .main {
     min-width: 0;
-    /* воздух перед футером на всех страницах */
-    /* padding-bottom: var(--main-pad-bottom, 88px); */
-}
-
-@media (max-width: 575px) {
-    .main {
-        padding-bottom: 96px;
-    }
+    padding-top: var(--main-pad-y, 76px);
+    padding-bottom: var(--main-pad-y, 76px);
+    box-sizing: border-box;
 }
 
 /* Home / pages: inner <main class="site-main"> — space before footer (header gap via first section in pages/responsive.css) */

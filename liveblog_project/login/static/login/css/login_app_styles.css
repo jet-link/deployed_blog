@@ -831,7 +831,7 @@ html[data-theme="dark"] .block-quote {
 .password-toggle {
     display: none;
     color: inherit;
-    font-size: .8rem;
+    font-size: .750rem;
     opacity: 0.9;
     transition: opacity .12s ease, transform .12s ease;
     -webkit-tap-highlight-color: transparent;
@@ -1373,10 +1373,9 @@ html[data-theme="dark"] .block-quote {
 
 /* ========== Auth: login / register — centered layout, compact readable fields ========== */
 .auth-form-layout.content_block {
-    padding-top: calc(var(--header-height, 72px) + 28px);
-    margin-bottom: 48px;
-    min-height: calc(100vh - var(--header-height, 72px) - 96px);
-    min-height: calc(100svh - var(--header-height, 72px) - 96px);
+    padding-top: 0;
+    margin-bottom: 0;
+    min-height: calc(100svh - 2 * var(--main-pad-y, 76px) - 100px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1446,10 +1445,9 @@ html[data-theme="dark"] .block-quote {
 
 @media (max-width: 575px) {
     .auth-form-layout.content_block {
-        padding-top: calc(var(--header-height, 72px) + 16px);
-        min-height: calc(100vh - var(--header-height, 72px) - 80px);
-        min-height: calc(100svh - var(--header-height, 72px) - 80px);
-        margin-bottom: 40px;
+        padding-top: 0;
+        min-height: calc(100svh - 2 * var(--main-pad-y, 76px) - 88px);
+        margin-bottom: 0;
     }
 
     .auth-form-layout .form-wrapper {

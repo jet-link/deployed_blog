@@ -68,8 +68,8 @@ h6 {
 }
 
 .faq-section {
-    padding-top: max(200px, var(--main-pad-top, 128px));
-    margin-bottom: 120px;
+    padding-top: 0;
+    margin-bottom: 0;
 }
 
 /* Human-readable /sitemap/ (aligned with FAQ spacing) */
@@ -647,7 +647,7 @@ html[data-theme="dark"] .faq-item-answer {
 /* Error pages (404 / 403) — same tokens as smart_blog theme */
 .error-page-section {
     padding: clamp(2rem, 6vw, 4rem) 0 clamp(3rem, 8vw, 5rem);
-    min-height: min(70vh, calc(100vh - var(--header-height, 72px) - 120px));
+    min-height: min(70vh, calc(100vh - 2 * var(--main-pad-y, 76px) - 120px));
     display: flex;
     align-items: center;
 }
@@ -748,7 +748,7 @@ body.error-page .main {
 .home-page .home-hero.primary_section.centered,
 .home-page .home-quick-links.primary_section.centered {
     min-height: unset;
-    padding-top: max(4.5rem, var(--main-pad-top, 96px));
+    padding-top: 2rem;
     padding-bottom: 2.5rem;
 }
 

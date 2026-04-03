@@ -11,6 +11,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from smart_blog.forms import CommentForm
 from smart_blog.models import (
     Bookmark, Category, Comment, CommentLike, Item, ItemView, Like, Notification,
+    ViewEvent,
 )
 from smart_blog.selectors import has_user_reported_item
 from smart_blog.services.report_limits import can_user_report
@@ -48,6 +49,8 @@ def _comments_min_visible_for_focus(item, focus_comment_id):
 
 
 def register_item_view(request, item):
+    ViewEvent.objects.create(item=item)
+
     if request.user.is_authenticated:
         ItemView.objects.get_or_create(
             item=item,

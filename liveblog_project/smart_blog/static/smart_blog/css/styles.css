@@ -2813,6 +2813,10 @@ html[data-theme="dark"] .replies > .comment-block::before {
     cursor: pointer;
 }
 
+.perform-text{
+    font-size: .775rem;
+}
+
 .primary_ {
     color: var(--text-link);
 }

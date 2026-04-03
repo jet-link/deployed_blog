@@ -8,23 +8,39 @@ from django.test import TestCase
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
-from smart_blog.models import Item, ItemStatsHourly, ItemView, TrendingItem
+from smart_blog.models import Item, ItemStatsHourly, TrendingItem, ViewEvent
 from smart_blog.services import trending_service as ts
 
 User = get_user_model()
 
 
 class TrendingFormulaTests(TestCase):
-    def test_trend_score_formula(self):
-        """Matches (v + 2L + 3C) / (h+2)^1.5."""
+    def test_trend_score_formula_basic(self):
+        """Score uses log-based formula with velocity bonus."""
         h = 10.0
-        score = ts.trend_score_from_stats(100, 10, 5, h)
-        expected = (100 + 20 + 15) / math.pow(h + 2, 1.5)
+        score = ts.trend_score_from_stats(100, 10, 5, 2, 1, h)
+        raw = 100 * 0.5 + 10 * 3.0 + 5 * 5.0 + 2 * 4.0 + 1 * 6.0
+        base = math.log10(max(raw, 1))
+        age_penalty = math.pow(h + 2, 1.5)
+        expected = base / age_penalty
         self.assertAlmostEqual(score, expected, places=6)
 
-    def test_growth_rate_division_by_zero_guard(self):
-        self.assertEqual(ts.growth_rate_from_views(5, 0), 5.0)
-        self.assertEqual(ts.growth_rate_from_views(0, 0), 0.0)
+    def test_trend_score_with_velocity_bonus(self):
+        """Velocity bonus boosts the score when engagement_1h > engagement_prev_1h."""
+        h = 10.0
+        score_no_velocity = ts.trend_score_from_stats(100, 10, 5, 0, 0, h, 0, 0)
+        score_with_velocity = ts.trend_score_from_stats(100, 10, 5, 0, 0, h, 10, 5)
+        self.assertGreater(score_with_velocity, score_no_velocity)
+
+    def test_growth_rate_from_engagement(self):
+        growth = ts.growth_rate_from_engagement(10, 2, 1, 0, 0, 5, 1, 0, 0, 0)
+        eng_1h = 10 + 2 * 3 + 1 * 5
+        eng_prev = 5 + 1 * 3
+        self.assertAlmostEqual(growth, eng_1h / eng_prev, places=5)
+
+    def test_growth_rate_zero_prev(self):
+        growth = ts.growth_rate_from_engagement(5, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.assertEqual(growth, 5.0)
 
 
 class TrendingTrustFilterTests(TestCase):
@@ -97,7 +113,7 @@ class TrendingSevenDayWindowTests(TestCase):
 
 
 class TrendingRollupTests(TestCase):
-    """Hourly rollup writes ItemStatsHourly; growth uses it when available."""
+    """Hourly rollup writes ItemStatsHourly from ViewEvent."""
 
     def setUp(self):
         self.user = User.objects.create_user("trend_u4", "t4@test.com", "pass")
@@ -109,41 +125,34 @@ class TrendingRollupTests(TestCase):
             is_published=True,
         )
 
-    def test_rollup_hourly_creates_row_for_view_in_bucket(self):
+    def test_rollup_hourly_creates_row_for_view_event_in_bucket(self):
         now = timezone.now()
         hour_start, hour_end = ts.previous_completed_hour_bounds(now)
-        v = ItemView.objects.create(item=self.item, session_key=f"rollup_sess_{uuid.uuid4().hex}")
-        ItemView.objects.filter(pk=v.pk).update(viewed_at=hour_start + timedelta(minutes=30))
+        ve = ViewEvent.objects.create(item=self.item)
+        ViewEvent.objects.filter(pk=ve.pk).update(created_at=hour_start + timedelta(minutes=30))
         n = ts.rollup_item_stats_hourly_for_hour(hour_start_local=hour_start, now=now)
         self.assertGreaterEqual(n, 1)
         row = ItemStatsHourly.objects.get(item=self.item, hour_start=hour_start)
         self.assertEqual(row.views, 1)
 
-    def test_growth_prefers_hourly_when_buckets_present(self):
-        now = timezone.now()
-        cur = ts.local_hour_floor(now)
-        last_start = cur - timedelta(hours=1)
-        prev_start = cur - timedelta(hours=2)
-        ItemStatsHourly.objects.create(item=self.item, hour_start=prev_start, views=2, likes=0, comments=0)
-        ItemStatsHourly.objects.create(item=self.item, hour_start=last_start, views=10, likes=0, comments=0)
-        g = ts.growth_rate_from_hourly(self.item, now)
-        self.assertIsNotNone(g)
-        self.assertAlmostEqual(g, 10.0 / 2.0, places=5)
 
+class TrendingBatchAggregationTests(TestCase):
+    """Batch aggregation computes correct counts from ViewEvent."""
 
-class TrendingOneHourStatsTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("trend_u5", "t5@test.com", "pass")
         self.item = Item.objects.create(
             author=self.user,
-            title="1h",
+            title="Batch",
             text="Body",
-            slug="1h-stats",
+            slug="batch-agg-test",
             is_published=True,
         )
 
-    def test_get_last_1h_stats_empty(self):
-        s = ts.get_last_1h_stats(self.item, timezone.now())
-        self.assertEqual(s["views"], 0)
-        self.assertEqual(s["likes"], 0)
-        self.assertEqual(s["comments"], 0)
+    def test_calculate_trending_with_view_events(self):
+        for _ in range(5):
+            ViewEvent.objects.create(item=self.item)
+        ts.calculate_trending()
+        t = TrendingItem.objects.get(item=self.item)
+        self.assertEqual(t.views_24h, 5)
+        self.assertGreater(t.trend_score, 0)

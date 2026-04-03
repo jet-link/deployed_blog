@@ -47,6 +47,7 @@ def itemview_deleted(sender, instance, **kwargs):
 def bookmark_created(sender, instance, created, **kwargs):
     if created:
         Item.objects.filter(pk=instance.item_id).update(bookmarks_count=F('bookmarks_count') + 1)
+        _invalidate_trending_api_cache()
 
 
 @receiver(post_delete, sender=Bookmark)
@@ -54,12 +55,14 @@ def bookmark_deleted(sender, instance, **kwargs):
     Item.objects.filter(pk=instance.item_id).update(
         bookmarks_count=Greatest(F('bookmarks_count') - 1, 0)
     )
+    _invalidate_trending_api_cache()
 
 
 @receiver(post_save, sender=PostRepost)
 def repost_created(sender, instance, created, **kwargs):
     if created:
         Item.objects.filter(pk=instance.item_id).update(reposts_count=F('reposts_count') + 1)
+        _invalidate_trending_api_cache()
 
 
 @receiver(post_save, sender=Comment)

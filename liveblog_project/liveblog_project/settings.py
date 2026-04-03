@@ -304,6 +304,10 @@ try:
             'task': 'smart_blog.tasks.rollup_hourly_stats',
             'schedule': crontab(minute=7),
         },
+        'prune-view-events': {
+            'task': 'smart_blog.tasks.prune_view_events',
+            'schedule': crontab(hour=3, minute=30),
+        },
     }
 except ImportError:
     CELERY_BEAT_SCHEDULE = {}

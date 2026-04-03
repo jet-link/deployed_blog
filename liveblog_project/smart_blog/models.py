@@ -781,10 +781,19 @@ class TrendingItem(models.Model):
     views_24h = models.PositiveIntegerField(default=0)
     likes_24h = models.PositiveIntegerField(default=0)
     comments_24h = models.PositiveIntegerField(default=0)
+    bookmarks_24h = models.PositiveIntegerField(default=0)
+    reposts_24h = models.PositiveIntegerField(default=0)
     growth_rate = models.FloatField(default=0)
-    views_last_hour = models.PositiveIntegerField(default=0)  # rolling ~1h (see trending_service)
+    views_last_hour = models.PositiveIntegerField(default=0)
     likes_1h = models.PositiveIntegerField(default=0)
     comments_1h = models.PositiveIntegerField(default=0)
+    bookmarks_1h = models.PositiveIntegerField(default=0)
+    reposts_1h = models.PositiveIntegerField(default=0)
+    views_prev_hour = models.PositiveIntegerField(default=0)
+    likes_prev_1h = models.PositiveIntegerField(default=0)
+    comments_prev_1h = models.PositiveIntegerField(default=0)
+    bookmarks_prev_1h = models.PositiveIntegerField(default=0)
+    reposts_prev_1h = models.PositiveIntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -795,3 +804,23 @@ class TrendingItem(models.Model):
 
     def __str__(self):
         return f"TrendingItem(item={self.item_id}, score={self.trend_score:.4f})"
+
+
+class ViewEvent(models.Model):
+    """Non-unique page-view event for trending velocity measurement.
+
+    Unlike ItemView (unique per user/session), this records every page visit
+    so trending can measure real traffic velocity in time windows.
+    """
+
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="view_events")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["item", "created_at"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"ViewEvent(item={self.item_id}, {self.created_at})"

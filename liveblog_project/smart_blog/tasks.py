@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from celery import shared_task
 
 from smart_blog.services.trending_service import (
@@ -16,6 +18,17 @@ def update_trending():
 def rollup_hourly_stats():
     """Fill ItemStatsHourly for the last completed local hour."""
     return rollup_item_stats_hourly_for_hour()
+
+
+@shared_task
+def prune_view_events():
+    """Delete ViewEvent rows older than 8 days (trending only looks at 7)."""
+    from django.utils import timezone
+    from smart_blog.models import ViewEvent
+
+    cutoff = timezone.now() - timedelta(days=8)
+    deleted, _ = ViewEvent.objects.filter(created_at__lt=cutoff).delete()
+    return deleted
 
 
 @shared_task

@@ -8,10 +8,7 @@ from django.shortcuts import render
 from django.urls import reverse
 
 from smart_blog.models import TrendingItem
-from smart_blog.services.trending_service import (
-    TRENDING_API_CACHE_KEY,
-    live_display_metrics_for_item,
-)
+from smart_blog.services.trending_service import TRENDING_API_CACHE_KEY
 
 HOT_LIMIT = 5
 RISING_LIMIT = 10
@@ -29,12 +26,14 @@ def _base_qs():
 
 
 def _get_trending_page_data(page=1):
-    """Returns (hot_rows, rising_rows, feed_page) for a given page."""
+    """Returns (hot_rows, rising_rows, feed_page) from a single base queryset."""
     all_by_score = list(_base_qs().order_by("-trend_score")[:200])
-    hot_rows = all_by_score[:HOT_LIMIT]
 
-    score_pks = {t.pk for t in all_by_score}
-    rising_rows = list(_base_qs().order_by("-growth_rate")[:RISING_LIMIT])
+    hot_rows = [t for t in all_by_score if t.views_last_hour >= 1][:HOT_LIMIT]
+    if len(hot_rows) < HOT_LIMIT:
+        hot_rows = all_by_score[:HOT_LIMIT]
+
+    rising_rows = sorted(all_by_score, key=lambda t: t.growth_rate, reverse=True)[:RISING_LIMIT]
 
     paginator = Paginator(all_by_score, FEED_PER_PAGE)
     feed_page = paginator.get_page(page)
@@ -42,8 +41,8 @@ def _get_trending_page_data(page=1):
 
 
 def _serialize_item(request, t: TrendingItem, rank=None):
+    """Serialize a TrendingItem using pre-computed fields (no live DB queries)."""
     item = t.item
-    live = live_display_metrics_for_item(item)
     img = item.images.first()
     thumb = img.get_thumbnail_url() if img else ""
     url = item.get_absolute_url()
@@ -57,13 +56,15 @@ def _serialize_item(request, t: TrendingItem, rank=None):
         "preview": item.short_text(220),
         "category": item.category.name if item.category else None,
         "trend_score": round(t.trend_score, 6),
-        "views_24h": live["views_24h"],
-        "likes_24h": live["likes_24h"],
-        "comments_24h": live["comments_24h"],
+        "views_24h": t.views_24h,
+        "likes_24h": t.likes_24h,
+        "comments_24h": t.comments_24h,
+        "bookmarks_24h": t.bookmarks_24h,
+        "reposts_24h": t.reposts_24h,
         "growth_rate": round(t.growth_rate, 4),
-        "views_last_hour": live["views_last_hour"],
-        "likes_1h": live["likes_1h"],
-        "comments_1h": live["comments_1h"],
+        "views_last_hour": t.views_last_hour,
+        "likes_1h": t.likes_1h,
+        "comments_1h": t.comments_1h,
         "thumbnail": thumb,
         "author": item.author.username if item.author else None,
     }

@@ -1,4 +1,8 @@
-"""MVP personalized recommendations for the For you feed."""
+"""Personalized recommendations for the For You feed.
+
+Authenticated users: scored by liked/bookmarked/viewed categories and tags.
+Guest users: trending + popular, batch-fetched (no N+1).
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -20,6 +24,10 @@ if TYPE_CHECKING:
 
 CANDIDATE_DAYS = 90
 FRESH_DAYS = 7
+MAX_POOL = 800
+MAX_CONSECUTIVE_SAME_CATEGORY = 3
+
+
 def _base_item_filter(since):
     return (
         Item.objects.filter(is_published=True, published_date__gte=since)
@@ -36,42 +44,59 @@ def _tag_ids_for_item_ids(item_ids):
 
 
 def _collect_interest_sets(user):
-    liked_cat = set(
-        c
-        for c in Like.objects.filter(user=user).values_list("item__category_id", flat=True)
-        if c
-    )
     liked_item_ids = set(Like.objects.filter(user=user).values_list("item_id", flat=True))
+    liked_cat = set(
+        c for c in Like.objects.filter(user=user).values_list("item__category_id", flat=True) if c
+    )
     liked_tags = _tag_ids_for_item_ids(liked_item_ids)
 
-    bm_cat = set(
-        c
-        for c in Bookmark.objects.filter(user=user).values_list("item__category_id", flat=True)
-        if c
-    )
     bm_item_ids = set(Bookmark.objects.filter(user=user).values_list("item_id", flat=True))
+    bm_cat = set(
+        c for c in Bookmark.objects.filter(user=user).values_list("item__category_id", flat=True) if c
+    )
     bm_tags = _tag_ids_for_item_ids(bm_item_ids)
 
-    return liked_cat, liked_tags, bm_cat, bm_tags
+    viewed_cat = set(
+        c for c in ItemView.objects.filter(user=user).values_list("item__category_id", flat=True) if c
+    )
+    viewed_item_ids = set(ItemView.objects.filter(user=user).values_list("item_id", flat=True))
+    viewed_tags = _tag_ids_for_item_ids(viewed_item_ids)
+
+    return liked_cat, liked_tags, bm_cat, bm_tags, viewed_cat, viewed_tags
 
 
-def score_item_for_user(item, *, liked_cat, liked_tags, bm_cat, bm_tags, trending_ids, read_ids, now):
+def score_item_for_user(
+    item, *,
+    liked_cat, liked_tags, bm_cat, bm_tags,
+    viewed_cat, viewed_tags,
+    trending_ids, read_ids, now,
+):
     s = 0
     cid = item.category_id
+
     if cid and cid in liked_cat:
         s += 3
     if cid and cid in bm_cat:
         s += 3
+    if cid and cid in viewed_cat:
+        s += 1
+
     item_tag_ids = {t.pk for t in item.tags.all()}
     interest_tags = liked_tags | bm_tags
     if item_tag_ids and (item_tag_ids & interest_tags):
         s += 2
+    if item_tag_ids and (item_tag_ids & viewed_tags):
+        s += 1
+
     if item.pk in trending_ids:
         s += 2
+
     if (now - item.published_date) <= timedelta(days=FRESH_DAYS):
         s += 1
+
     if item.pk in read_ids:
-        s -= 5
+        s -= 2
+
     return s
 
 
@@ -81,14 +106,35 @@ class ForYouResult:
     low_personal_signal: bool
 
 
-MAX_POOL = 800
+def _apply_category_diversity(scored_items):
+    """Reorder so no more than MAX_CONSECUTIVE_SAME_CATEGORY items from the same category appear consecutively."""
+    if not scored_items:
+        return scored_items
+
+    result = []
+    remaining = list(scored_items)
+
+    while remaining:
+        placed = False
+        for i, item in enumerate(remaining):
+            cat_id = item.category_id
+            recent_cats = [r.category_id for r in result[-MAX_CONSECUTIVE_SAME_CATEGORY:]]
+            if len(recent_cats) < MAX_CONSECUTIVE_SAME_CATEGORY or not all(c == cat_id for c in recent_cats):
+                result.append(remaining.pop(i))
+                placed = True
+                break
+
+        if not placed:
+            result.append(remaining.pop(0))
+
+    return result
 
 
 def _compute_for_you(user):
     """Heavy scoring computation — result is cached per user."""
     now = timezone.now()
     since = now - timedelta(days=CANDIDATE_DAYS)
-    liked_cat, liked_tags, bm_cat, bm_tags = _collect_interest_sets(user)
+    liked_cat, liked_tags, bm_cat, bm_tags, viewed_cat, viewed_tags = _collect_interest_sets(user)
     trending_ids = set(TrendingItem.objects.values_list("item_id", flat=True))
     read_ids = set(ItemView.objects.filter(user=user).values_list("item_id", flat=True))
 
@@ -100,8 +146,8 @@ def _compute_for_you(user):
         _base_item_filter(since)
         .select_related("category", "author", "author__profile")
         .prefetch_related("images", "tags")
+        .order_by("-published_date", "-pk")
     )
-    qs = qs.order_by("-published_date", "-pk")
 
     pool = list(qs[:MAX_POOL])
 
@@ -113,6 +159,8 @@ def _compute_for_you(user):
             liked_tags=liked_tags,
             bm_cat=bm_cat,
             bm_tags=bm_tags,
+            viewed_cat=viewed_cat,
+            viewed_tags=viewed_tags,
             trending_ids=trending_ids,
             read_ids=read_ids,
             now=now,
@@ -120,7 +168,10 @@ def _compute_for_you(user):
         scored.append((sc, item))
 
     scored.sort(key=lambda x: (-x[0], -x[1].published_date.timestamp(), -x[1].pk))
-    ordered_ids = [it.pk for _, it in scored]
+
+    ordered_items = [it for _, it in scored]
+    ordered_items = _apply_category_diversity(ordered_items)
+    ordered_ids = [it.pk for it in ordered_items]
 
     top_score = scored[0][0] if scored else 0
     low_personal_signal = (not has_interaction) or (has_interaction and top_score < 2)
@@ -156,35 +207,30 @@ def for_you_items_for_authenticated_user(user: AbstractUser) -> ForYouResult:
 
 
 def for_you_items_guest() -> ForYouResult:
-    """Trending + quality recent (popular heuristic), deduped (full list for pagination)."""
-    trending_ids_ordered = list(
-        TrendingItem.objects.select_related("item")
+    """Trending + quality recent (popular heuristic), batch-fetched."""
+    trending_rows = list(
+        TrendingItem.objects
+        .select_related("item", "item__category", "item__author", "item__author__profile")
+        .prefetch_related("item__images", "item__tags")
         .filter(item__is_published=True)
-        .order_by("-trend_score")
-        .values_list("item_id", flat=True)[:120]
+        .order_by("-trend_score")[:120]
     )
+
     seen = set()
     items_out = []
 
-    def _append_valid(it: Item | None, pk: int) -> None:
-        nonlocal items_out, seen
-        if not it or pk in seen:
-            return
-        if it.author_id and (not it.author.is_active or getattr(
-            getattr(it.author, "profile", None), "trust_banned", False
-        )):
-            return
+    for t in trending_rows:
+        it = t.item
+        pk = it.pk
+        if pk in seen:
+            continue
+        if it.author_id and (
+            not it.author.is_active
+            or getattr(getattr(it.author, "profile", None), "trust_banned", False)
+        ):
+            continue
         items_out.append(it)
         seen.add(pk)
-
-    for pk in trending_ids_ordered:
-        it = (
-            Item.objects.filter(pk=pk, is_published=True)
-            .select_related("category", "author", "author__profile")
-            .prefetch_related("images", "tags")
-            .first()
-        )
-        _append_valid(it, pk)
 
     since = timezone.now() - timedelta(days=CANDIDATE_DAYS)
     pop_qs = apply_popular_filter(

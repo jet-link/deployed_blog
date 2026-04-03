@@ -1,25 +1,29 @@
 """
-Velocity-based trending for published Items (rolling 24h / 1h metrics, last ACTIVE_DAYS by published_date).
+Velocity-based trending for published Items.
 
-Score: (views + 2·likes + 3·comments) / (hours_since_post + 2)^1.5.
-Growth: last two completed local hours from ItemStatsHourly when present, else live ItemView counts.
-Trust: authors with profile.trust_score < TRUST_SCORE_MIN are skipped.
+Score uses a Reddit/HN-inspired formula with velocity bonus (see Phase 3).
+All aggregation uses batch SQL (3-5 queries total, not per-item).
+ViewEvent provides non-unique page-view counts for real velocity.
 """
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 from datetime import timedelta
 
 from django.core.cache import cache
+from django.db.models import Count, Q
 from django.utils import timezone
 
-from smart_blog.models import Comment, Item, ItemStatsHourly, ItemView, Like, TrendingItem
+from smart_blog.models import (
+    Bookmark, Comment, Item, ItemStatsHourly, Like,
+    PostRepost, TrendingItem, ViewEvent,
+)
 
 TRENDING_API_CACHE_KEY = "trending:api_snapshot"
 
 TRUST_SCORE_MIN = 3.0
 ACTIVE_DAYS = 7
-HOURS_24 = 24
 
 
 def _author_trust_ok(item: Item) -> bool:
@@ -32,31 +36,6 @@ def _author_trust_ok(item: Item) -> bool:
 
 def _published_anchor(item: Item):
     return item.published_date or item.created
-
-
-def get_last_24h_stats(item: Item, now=None) -> dict:
-    """Raw counts from ItemView / Like / Comment in the last 24 hours."""
-    now = now or timezone.now()
-    since = now - timedelta(hours=HOURS_24)
-    views = ItemView.objects.filter(item=item, viewed_at__gte=since, viewed_at__lte=now).count()
-    likes = Like.objects.filter(item=item, created_at__gte=since, created_at__lte=now).count()
-    comments = Comment.objects.filter(
-        item=item,
-        is_draft=False,
-        created__gte=since,
-        created__lte=now,
-    ).count()
-    return {"views": views, "likes": likes, "comments": comments}
-
-
-def _window_counts(item: Item, start, end) -> dict:
-    """Counts strictly in [start, end)."""
-    views = ItemView.objects.filter(item=item, viewed_at__gte=start, viewed_at__lt=end).count()
-    likes = Like.objects.filter(item=item, created_at__gte=start, created_at__lt=end).count()
-    comments = Comment.objects.filter(
-        item=item, is_draft=False, created__gte=start, created__lt=end
-    ).count()
-    return {"views": views, "likes": likes, "comments": comments}
 
 
 def local_hour_floor(dt):
@@ -75,75 +54,260 @@ def previous_completed_hour_bounds(now=None):
     return hour_start, hour_end
 
 
-def get_views_last_and_prev_hour(item: Item, now=None) -> tuple[int, int]:
-    """Views in last closed hour vs previous closed hour (local TZ), from live ItemView."""
-    now = now or timezone.now()
-    cur_floor = local_hour_floor(now)
-    last_start = cur_floor - timedelta(hours=1)
-    last_end = cur_floor
-    prev_start = cur_floor - timedelta(hours=2)
-    prev_end = cur_floor - timedelta(hours=1)
-    v_last = ItemView.objects.filter(item=item, viewed_at__gte=last_start, viewed_at__lt=last_end).count()
-    v_prev = ItemView.objects.filter(item=item, viewed_at__gte=prev_start, viewed_at__lt=prev_end).count()
-    return v_last, v_prev
+# ---------------------------------------------------------------------------
+# Scoring formulas (Phase 3)
+# ---------------------------------------------------------------------------
+
+def trend_score_from_stats(
+    views: int, likes: int, comments: int,
+    bookmarks: int, reposts: int,
+    hours_since_post: float,
+    engagement_1h: float = 0,
+    engagement_prev_1h: float = 0,
+) -> float:
+    """Reddit/HN-inspired score with velocity bonus.
+
+    base = log10(max(views*0.5 + likes*3 + comments*5 + bookmarks*4 + reposts*6, 1))
+    velocity_bonus = engagement_1h / max(engagement_prev_1h, 1)   capped at 3.0
+    score = (base * (1 + 0.3 * min(velocity_bonus, 3.0))) / age_penalty
+    """
+    raw = views * 0.5 + likes * 3.0 + comments * 5.0 + bookmarks * 4.0 + reposts * 6.0
+    base = math.log10(max(raw, 1))
+    age_penalty = math.pow(max(hours_since_post, 0.0) + 2.0, 1.5)
+    velocity_bonus = engagement_1h / max(engagement_prev_1h, 1) if engagement_prev_1h >= 0 else 0
+    score = (base * (1.0 + 0.3 * min(velocity_bonus, 3.0))) / age_penalty
+    return score
 
 
-def trend_score_from_stats(views: int, likes: int, comments: int, hours_since_post: float) -> float:
-    numerator = views * 1.0 + likes * 2.0 + comments * 3.0
-    denom = math.pow(max(hours_since_post, 0.0) + 2.0, 1.5)
-    if denom <= 0:
-        return 0.0
-    return numerator / denom
+def growth_rate_from_engagement(
+    views_1h: int, likes_1h: int, comments_1h: int,
+    bookmarks_1h: int, reposts_1h: int,
+    views_prev: int, likes_prev: int, comments_prev: int,
+    bookmarks_prev: int, reposts_prev: int,
+) -> float:
+    """Engagement velocity: combined weighted engagement in last hour vs previous."""
+    eng_1h = views_1h + likes_1h * 3 + comments_1h * 5 + bookmarks_1h * 4 + reposts_1h * 6
+    eng_prev = views_prev + likes_prev * 3 + comments_prev * 5 + bookmarks_prev * 4 + reposts_prev * 6
+    return float(eng_1h) / float(max(eng_prev, 1))
 
 
-def growth_rate_from_views(v_last: int, v_prev: int) -> float:
-    return float(v_last) / float(max(v_prev, 1))
+def _engagement_total(views, likes, comments, bookmarks, reposts):
+    return views + likes * 3 + comments * 5 + bookmarks * 4 + reposts * 6
+
+
+# ---------------------------------------------------------------------------
+# Batch aggregation helpers
+# ---------------------------------------------------------------------------
+
+def _aggregate_view_events(since_24h, since_1h, since_2h):
+    """Aggregate ViewEvent counts per item for 24h, 1h, and prev-1h windows."""
+    qs = (
+        ViewEvent.objects.filter(created_at__gte=since_24h)
+        .values("item_id")
+        .annotate(
+            views_24h=Count("id"),
+            views_1h=Count("id", filter=Q(created_at__gte=since_1h)),
+            views_prev_1h=Count("id", filter=Q(
+                created_at__gte=since_2h, created_at__lt=since_1h
+            )),
+        )
+    )
+    result = {}
+    for row in qs:
+        result[row["item_id"]] = {
+            "views_24h": row["views_24h"],
+            "views_1h": row["views_1h"],
+            "views_prev_1h": row["views_prev_1h"],
+        }
+    return result
+
+
+def _aggregate_likes(since_24h, since_1h, since_2h):
+    qs = (
+        Like.objects.filter(created_at__gte=since_24h)
+        .values("item_id")
+        .annotate(
+            likes_24h=Count("id"),
+            likes_1h=Count("id", filter=Q(created_at__gte=since_1h)),
+            likes_prev_1h=Count("id", filter=Q(
+                created_at__gte=since_2h, created_at__lt=since_1h
+            )),
+        )
+    )
+    result = {}
+    for row in qs:
+        result[row["item_id"]] = {
+            "likes_24h": row["likes_24h"],
+            "likes_1h": row["likes_1h"],
+            "likes_prev_1h": row["likes_prev_1h"],
+        }
+    return result
+
+
+def _aggregate_comments(since_24h, since_1h, since_2h):
+    qs = (
+        Comment.objects.filter(is_draft=False, created__gte=since_24h)
+        .values("item_id")
+        .annotate(
+            comments_24h=Count("id"),
+            comments_1h=Count("id", filter=Q(created__gte=since_1h)),
+            comments_prev_1h=Count("id", filter=Q(
+                created__gte=since_2h, created__lt=since_1h
+            )),
+        )
+    )
+    result = {}
+    for row in qs:
+        result[row["item_id"]] = {
+            "comments_24h": row["comments_24h"],
+            "comments_1h": row["comments_1h"],
+            "comments_prev_1h": row["comments_prev_1h"],
+        }
+    return result
+
+
+def _aggregate_bookmarks(since_24h, since_1h, since_2h):
+    qs = (
+        Bookmark.objects.filter(created_at__gte=since_24h)
+        .values("item_id")
+        .annotate(
+            bookmarks_24h=Count("id"),
+            bookmarks_1h=Count("id", filter=Q(created_at__gte=since_1h)),
+            bookmarks_prev_1h=Count("id", filter=Q(
+                created_at__gte=since_2h, created_at__lt=since_1h
+            )),
+        )
+    )
+    result = {}
+    for row in qs:
+        result[row["item_id"]] = {
+            "bookmarks_24h": row["bookmarks_24h"],
+            "bookmarks_1h": row["bookmarks_1h"],
+            "bookmarks_prev_1h": row["bookmarks_prev_1h"],
+        }
+    return result
+
+
+def _aggregate_reposts(since_24h, since_1h, since_2h):
+    qs = (
+        PostRepost.objects.filter(created_at__gte=since_24h)
+        .values("item_id")
+        .annotate(
+            reposts_24h=Count("id"),
+            reposts_1h=Count("id", filter=Q(created_at__gte=since_1h)),
+            reposts_prev_1h=Count("id", filter=Q(
+                created_at__gte=since_2h, created_at__lt=since_1h
+            )),
+        )
+    )
+    result = {}
+    for row in qs:
+        result[row["item_id"]] = {
+            "reposts_24h": row["reposts_24h"],
+            "reposts_1h": row["reposts_1h"],
+            "reposts_prev_1h": row["reposts_prev_1h"],
+        }
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Main trending calculation
+# ---------------------------------------------------------------------------
+
+_ZERO_VIEWS = {"views_24h": 0, "views_1h": 0, "views_prev_1h": 0}
+_ZERO_LIKES = {"likes_24h": 0, "likes_1h": 0, "likes_prev_1h": 0}
+_ZERO_COMMENTS = {"comments_24h": 0, "comments_1h": 0, "comments_prev_1h": 0}
+_ZERO_BOOKMARKS = {"bookmarks_24h": 0, "bookmarks_1h": 0, "bookmarks_prev_1h": 0}
+_ZERO_REPOSTS = {"reposts_24h": 0, "reposts_1h": 0, "reposts_prev_1h": 0}
 
 
 def calculate_trending(now=None) -> int:
     """
-    Recompute TrendingItem for all eligible posts. Deletes stale rows.
+    Recompute TrendingItem for all eligible posts using batch SQL aggregation.
     Returns number of TrendingItem rows written.
     """
     now = now or timezone.now()
-    since = now - timedelta(days=ACTIVE_DAYS)
-    qs = (
-        Item.objects.filter(is_published=True, published_date__gte=since)
+    since_24h = now - timedelta(hours=24)
+    since_1h = now - timedelta(hours=1)
+    since_2h = now - timedelta(hours=2)
+    since_days = now - timedelta(days=ACTIVE_DAYS)
+
+    items = list(
+        Item.objects.filter(is_published=True, published_date__gte=since_days)
         .select_related("author", "author__profile")
-        .order_by("pk")
+        .only("pk", "published_date", "created", "author_id",
+              "author__id", "author__profile__trust_score")
     )
+
+    view_stats = _aggregate_view_events(since_24h, since_1h, since_2h)
+    like_stats = _aggregate_likes(since_24h, since_1h, since_2h)
+    comment_stats = _aggregate_comments(since_24h, since_1h, since_2h)
+    bookmark_stats = _aggregate_bookmarks(since_24h, since_1h, since_2h)
+    repost_stats = _aggregate_reposts(since_24h, since_1h, since_2h)
 
     written = 0
     seen_ids: list[int] = []
 
-    for item in qs.iterator(chunk_size=200):
+    for item in items:
         if not _author_trust_ok(item):
             continue
-        stats = get_last_24h_stats(item, now)
-        stats_1h = get_last_1h_stats(item, now)
-        growth = _growth_for_item(item, now)
+
+        iid = item.pk
+        v = view_stats.get(iid, _ZERO_VIEWS)
+        l = like_stats.get(iid, _ZERO_LIKES)
+        c = comment_stats.get(iid, _ZERO_COMMENTS)
+        b = bookmark_stats.get(iid, _ZERO_BOOKMARKS)
+        r = repost_stats.get(iid, _ZERO_REPOSTS)
 
         anchor = _published_anchor(item)
         hours = (now - anchor).total_seconds() / 3600.0
+
+        eng_1h = _engagement_total(
+            v["views_1h"], l["likes_1h"], c["comments_1h"],
+            b["bookmarks_1h"], r["reposts_1h"],
+        )
+        eng_prev_1h = _engagement_total(
+            v["views_prev_1h"], l["likes_prev_1h"], c["comments_prev_1h"],
+            b["bookmarks_prev_1h"], r["reposts_prev_1h"],
+        )
+
         score = trend_score_from_stats(
-            stats["views"], stats["likes"], stats["comments"], hours
+            v["views_24h"], l["likes_24h"], c["comments_24h"],
+            b["bookmarks_24h"], r["reposts_24h"],
+            hours, eng_1h, eng_prev_1h,
+        )
+
+        growth = growth_rate_from_engagement(
+            v["views_1h"], l["likes_1h"], c["comments_1h"],
+            b["bookmarks_1h"], r["reposts_1h"],
+            v["views_prev_1h"], l["likes_prev_1h"], c["comments_prev_1h"],
+            b["bookmarks_prev_1h"], r["reposts_prev_1h"],
         )
 
         TrendingItem.objects.update_or_create(
             item=item,
             defaults={
                 "trend_score": score,
-                "views_24h": stats["views"],
-                "likes_24h": stats["likes"],
-                "comments_24h": stats["comments"],
+                "views_24h": v["views_24h"],
+                "likes_24h": l["likes_24h"],
+                "comments_24h": c["comments_24h"],
+                "bookmarks_24h": b["bookmarks_24h"],
+                "reposts_24h": r["reposts_24h"],
                 "growth_rate": growth,
-                "views_last_hour": stats_1h["views"],
-                "likes_1h": stats_1h["likes"],
-                "comments_1h": stats_1h["comments"],
+                "views_last_hour": v["views_1h"],
+                "likes_1h": l["likes_1h"],
+                "comments_1h": c["comments_1h"],
+                "bookmarks_1h": b["bookmarks_1h"],
+                "reposts_1h": r["reposts_1h"],
+                "views_prev_hour": v["views_prev_1h"],
+                "likes_prev_1h": l["likes_prev_1h"],
+                "comments_prev_1h": c["comments_prev_1h"],
+                "bookmarks_prev_1h": b["bookmarks_prev_1h"],
+                "reposts_prev_1h": r["reposts_prev_1h"],
             },
         )
         written += 1
-        seen_ids.append(item.pk)
+        seen_ids.append(iid)
 
     if seen_ids:
         TrendingItem.objects.exclude(item_id__in=seen_ids).delete()
@@ -154,10 +318,14 @@ def calculate_trending(now=None) -> int:
     return written
 
 
+# ---------------------------------------------------------------------------
+# Hourly rollup (uses ViewEvent for view counts)
+# ---------------------------------------------------------------------------
+
 def rollup_item_stats_hourly_for_hour(hour_start_local=None, now=None) -> int:
     """
-    Fill ItemStatsHourly for one hour bucket [hour_start, hour_start+1h) in local TZ.
-    If hour_start_local is None, uses the previous completed hour.
+    Fill ItemStatsHourly for one hour bucket [hour_start, hour_start+1h).
+    Uses ViewEvent (non-unique) for view counts.
     Returns number of rows upserted.
     """
     now = now or timezone.now()
@@ -166,91 +334,37 @@ def rollup_item_stats_hourly_for_hour(hour_start_local=None, now=None) -> int:
     else:
         hour_end_local = hour_start_local + timedelta(hours=1)
 
-    # Aggregate distinct items with any activity in window
-    item_ids = set(
-        ItemView.objects.filter(viewed_at__gte=hour_start_local, viewed_at__lt=hour_end_local).values_list(
-            "item_id", flat=True
-        )
+    view_agg = dict(
+        ViewEvent.objects.filter(
+            created_at__gte=hour_start_local, created_at__lt=hour_end_local
+        ).values("item_id").annotate(cnt=Count("id")).values_list("item_id", "cnt")
     )
-    item_ids.update(
-        Like.objects.filter(created_at__gte=hour_start_local, created_at__lt=hour_end_local).values_list(
-            "item_id", flat=True
-        )
+
+    like_agg = dict(
+        Like.objects.filter(
+            created_at__gte=hour_start_local, created_at__lt=hour_end_local
+        ).values("item_id").annotate(cnt=Count("id")).values_list("item_id", "cnt")
     )
-    item_ids.update(
+
+    comment_agg = dict(
         Comment.objects.filter(
-            created__gte=hour_start_local,
-            created__lt=hour_end_local,
             is_draft=False,
-        ).values_list("item_id", flat=True)
+            created__gte=hour_start_local, created__lt=hour_end_local,
+        ).values("item_id").annotate(cnt=Count("id")).values_list("item_id", "cnt")
     )
+
+    item_ids = set(view_agg) | set(like_agg) | set(comment_agg)
 
     count = 0
     for iid in item_ids:
-        cts = _window_counts(Item(pk=iid), hour_start_local, hour_end_local)
         ItemStatsHourly.objects.update_or_create(
             item_id=iid,
             hour_start=hour_start_local,
             defaults={
-                "views": cts["views"],
-                "likes": cts["likes"],
-                "comments": cts["comments"],
+                "views": view_agg.get(iid, 0),
+                "likes": like_agg.get(iid, 0),
+                "comments": comment_agg.get(iid, 0),
             },
         )
         count += 1
     return count
-
-
-def get_views_from_hourly(item: Item, hour_start_local) -> int:
-    row = ItemStatsHourly.objects.filter(item=item, hour_start=hour_start_local).first()
-    return row.views if row else 0
-
-
-def get_last_1h_stats(item: Item, now=None) -> dict:
-    """Rolling last 60 minutes (wall clock); mirrors get_last_24h_stats window shape."""
-    now = now or timezone.now()
-    since = now - timedelta(hours=1)
-    views = ItemView.objects.filter(item=item, viewed_at__gte=since, viewed_at__lte=now).count()
-    likes = Like.objects.filter(item=item, created_at__gte=since, created_at__lte=now).count()
-    comments = Comment.objects.filter(
-        item=item,
-        is_draft=False,
-        created__gte=since,
-        created__lte=now,
-    ).count()
-    return {"views": views, "likes": likes, "comments": comments}
-
-
-def live_display_metrics_for_item(item: Item, now=None) -> dict:
-    """Live rolling counts for API and templates (avoids stale TrendingItem snapshots)."""
-    s24 = get_last_24h_stats(item, now)
-    s1 = get_last_1h_stats(item, now)
-    return {
-        "views_24h": s24["views"],
-        "likes_24h": s24["likes"],
-        "comments_24h": s24["comments"],
-        "views_last_hour": s1["views"],
-        "likes_1h": s1["likes"],
-        "comments_1h": s1["comments"],
-    }
-
-
-def growth_rate_from_hourly(item: Item, now=None) -> float | None:
-    """Growth from last two completed hourly buckets in ItemStatsHourly (if any data)."""
-    now = now or timezone.now()
-    cur_floor = local_hour_floor(now)
-    last_start = cur_floor - timedelta(hours=1)
-    prev_start = cur_floor - timedelta(hours=2)
-    v_last = get_views_from_hourly(item, last_start)
-    v_prev = get_views_from_hourly(item, prev_start)
-    if v_last == 0 and v_prev == 0:
-        return None
-    return growth_rate_from_views(v_last, v_prev)
-
-
-def _growth_for_item(item: Item, now) -> float:
-    gh = growth_rate_from_hourly(item, now)
-    if gh is not None:
-        return gh
-    v_last, v_prev = get_views_last_and_prev_hour(item, now)
-    return growth_rate_from_views(v_last, v_prev)

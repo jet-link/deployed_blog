@@ -3,11 +3,13 @@
 <div class="hero-snap">
   {% for item in popular_items %}
     <article class="hero-card">
-      {% if item.images.first %}
-        <img src="{{ item.images.first.get_thumbnail_url }}" alt="thumbnail" loading="lazy" width="300" height="200" />
+      {% with im=item.images.all|first %}
+      {% if im %}
+        <img src="{{ im.get_thumbnail_url }}" alt="thumbnail" loading="lazy" width="300" height="200" />
       {% else %}
         <img src="{% static 'img/no_image.jpg' %}" alt="thumbnail" />
       {% endif %}
+      {% endwith %}
       <div class="d-flex hero-card-body flex-column">
         <h5 class="m-0">{{ item.title }}</h5>
         <hr />

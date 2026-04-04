@@ -1,4 +1,5 @@
 """Analytics service for admin dashboard."""
+from django.core.cache import cache
 from django.utils import timezone
 from django.db.models import Count
 from django.db.models.functions import TruncDate
@@ -8,8 +9,24 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+ACTIVITY_CHART_CACHE_KEY = "admin:activity_chart:v1:{days}"
+ACTIVITY_CHART_TTL = 120
+ANALYTICS_PAGE_CACHE_KEY = "admin:analytics:dashboard:v1"
+ANALYTICS_PAGE_TTL = 120
+
 
 def get_activity_chart_data(days=14):
+    """Daily activity (posts, comments, users). Cached briefly to cut DB load."""
+    key = ACTIVITY_CHART_CACHE_KEY.format(days=days)
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    data = _compute_activity_chart_data(days)
+    cache.set(key, data, ACTIVITY_CHART_TTL)
+    return data
+
+
+def _compute_activity_chart_data(days=14):
     """Get daily activity (posts, comments, users) for chart."""
     _tz = timezone.get_current_timezone()
     since = timezone.now() - timezone.timedelta(days=days)
@@ -49,6 +66,21 @@ def get_activity_chart_data(days=14):
         'comments': comments_data,
         'users': users_data,
     }
+
+
+def get_analytics_page_context():
+    """Bundle analytics list view queries; cached for ANALYTICS_PAGE_TTL seconds."""
+    cached = cache.get(ANALYTICS_PAGE_CACHE_KEY)
+    if cached is not None:
+        return cached
+    ctx = {
+        'top_posts': get_top_posts_by_popularity(limit=20),
+        'views_growth': get_views_growth(days=30),
+        'users_growth': get_users_growth(days=30),
+        'comments_growth': get_comments_growth(days=30),
+    }
+    cache.set(ANALYTICS_PAGE_CACHE_KEY, ctx, ANALYTICS_PAGE_TTL)
+    return ctx
 
 
 def get_post_activity_chart_data(item, days=14):

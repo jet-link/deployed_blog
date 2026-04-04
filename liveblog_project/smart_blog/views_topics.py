@@ -87,9 +87,11 @@ def topics_list(request):
 _VALID_TOPIC_SORT = frozenset({"latest", "liked", "discussed"})
 
 
-def _topic_listing_source_url(request, category_slug, sort):
+def _topic_listing_source_url(request, category_slug, sort, *, from_sitemap=False):
     path = reverse("smart_blog:topic_detail", kwargs={"slug": category_slug})
     q = {}
+    if from_sitemap:
+        q["from"] = "sitemap"
     if sort != "latest":
         q["sort"] = sort
     if q:
@@ -97,14 +99,20 @@ def _topic_listing_source_url(request, category_slug, sort):
     return request.build_absolute_uri(path)
 
 
-def _topic_extra_qs(sort):
+def _topic_extra_qs(sort, *, from_sitemap=False):
+    q = {}
+    if from_sitemap:
+        q["from"] = "sitemap"
     if sort != "latest":
-        return f"sort={sort}&"
-    return ""
+        q["sort"] = sort
+    if not q:
+        return ""
+    return urlencode(q) + "&"
 
 
 def topic_detail(request, slug):
     category = get_object_or_404(Category, slug=slug)
+    from_sitemap = request.GET.get("from") == "sitemap"
     sort = (request.GET.get("sort") or "latest").lower()
     if sort not in _VALID_TOPIC_SORT:
         sort = "latest"
@@ -133,20 +141,27 @@ def topic_detail(request, slug):
         on_ends=1,
     )
 
+    if from_sitemap:
+        mid = breadcrumb("Sitemap", reverse("pages:sitemap_page"))
+    else:
+        mid = breadcrumb("Topics", reverse("smart_blog:topics_list"))
     breadcrumbs = build_breadcrumbs(
-        breadcrumb("Topics", reverse("smart_blog:topics_list")),
+        mid,
         breadcrumb(category.name, None),
     )
 
     ctx = {
         "category": category,
         "topic_sort": sort,
+        "from_sitemap": from_sitemap,
         "page_obj": page_obj,
         "page_range": page_range,
         "items": page_obj.object_list,
         "breadcrumbs": breadcrumbs,
-        "listing_source_url": _topic_listing_source_url(request, category.slug, sort),
-        "topic_extra_qs": _topic_extra_qs(sort),
+        "listing_source_url": _topic_listing_source_url(
+            request, category.slug, sort, from_sitemap=from_sitemap
+        ),
+        "topic_extra_qs": _topic_extra_qs(sort, from_sitemap=from_sitemap),
     }
 
     if request.GET.get("partial") == "1":

@@ -1,13 +1,35 @@
 (function () {
   'use strict';
 
+  function extraQueryString() {
+    var el = document.getElementById('topicHubPageRoot');
+    var raw = (el && el.dataset && el.dataset.topicPreserveQuery) || '';
+    return String(raw).trim();
+  }
+
   function buildPartialUrl(base, sort) {
     var u = base.indexOf('?') >= 0 ? base + '&' : base + '?';
     u += 'partial=1';
+    var extra = extraQueryString();
+    if (extra) {
+      u += '&' + extra;
+    }
     if (sort && sort !== 'latest') {
       u += '&sort=' + encodeURIComponent(sort);
     }
     return u;
+  }
+
+  function buildHistoryQuery(sort) {
+    var parts = [];
+    var extra = extraQueryString();
+    if (extra) {
+      parts.push(extra);
+    }
+    if (sort && sort !== 'latest') {
+      parts.push('sort=' + encodeURIComponent(sort));
+    }
+    return parts.length ? '?' + parts.join('&') : '';
   }
 
   function replaceTopicFeed(html) {
@@ -60,12 +82,11 @@
         setSelectedSort(sort);
         try {
           var path = base.replace(/\/?$/, '/');
-          var qs = sort === 'latest' ? '' : '?sort=' + encodeURIComponent(sort);
-          window.history.replaceState({}, '', path + qs);
+          window.history.replaceState({}, '', path + buildHistoryQuery(sort));
         } catch (err) { /* ignore */ }
       })
       .catch(function () {
-        window.location.href = base + (sort === 'latest' ? '' : '?sort=' + encodeURIComponent(sort));
+        window.location.href = base.replace(/\/?$/, '/') + buildHistoryQuery(sort);
       });
   });
 })();

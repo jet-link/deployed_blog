@@ -45,10 +45,15 @@ def users_list(request):
 @admin_required
 def banned_users_list(request):
     """List banned users only (inactive, not in Deleted queue). Search + bulk Unban."""
-    qs = User.objects.filter(is_active=False, deleted_queue_entry__isnull=True).annotate(
-        posts_count=Count('items', distinct=True),
-        comments_count=Count('comments', distinct=True),
-    ).order_by('-date_joined')
+    qs = (
+        User.objects.filter(is_active=False, deleted_queue_entry__isnull=True)
+        .select_related("profile", "deleted_queue_entry")
+        .annotate(
+            posts_count=Count("items", distinct=True),
+            comments_count=Count("comments", distinct=True),
+        )
+        .order_by("-date_joined")
+    )
 
     search = request.GET.get('q', '').strip()
     if search:
@@ -66,8 +71,16 @@ def banned_users_list(request):
 def user_profile(request, pk):
     """View user profile (admin detail)."""
     user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
-    posts = Item.objects.filter(author=user, is_published=True).order_by('-published_date')[:10]
-    comments = Comment.objects.filter(author=user, item__is_published=True, is_draft=False).order_by('-created')[:10]
+    posts = (
+        Item.objects.filter(author=user, is_published=True)
+        .select_related("category")
+        .order_by("-published_date")[:10]
+    )
+    comments = (
+        Comment.objects.filter(author=user, item__is_published=True, is_draft=False)
+        .select_related("item")
+        .order_by("-created")[:10]
+    )
     context = {'user_obj': user, 'posts': posts, 'comments': comments}
     return render(request, 'admin/users/user_profile.html', context)
 

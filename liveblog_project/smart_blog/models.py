@@ -120,6 +120,8 @@ class Tag(models.Model):
         return reverse('smart_blog:tag_list', kwargs={'slug': self.slug})
 
     def save(self, *args, **kwargs):
+        # Match public tag entry style (lowercase); slugify lowercases anyway
+        self.tag_name = (self.tag_name or '').strip().lower()
         # Автогенерация slug при сохранении (если не указан)
         if not self.slug:
             base = slugify(self.tag_name)
@@ -691,6 +693,11 @@ class Notification(models.Model):
         default=False,
         db_index=True,
         help_text="Hidden from the recipient inbox but kept for deduplication when likes/replies repeat.",
+    )
+    hidden_from_admin = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Hidden from the admin notifications table only; does not change recipient inbox.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

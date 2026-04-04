@@ -30,7 +30,7 @@ def tag_create(request):
         raw = request.POST.get('tag_name', '').strip()
         if raw:
             tags_created = 0
-            for tg in [t for t in re.split(r'\s+', raw) if t]:
+            for tg in [t.strip().lower() for t in re.split(r'\s+', raw) if t.strip()]:
                 _, created = Tag.objects.get_or_create(tag_name=tg)
                 if created:
                     tags_created += 1

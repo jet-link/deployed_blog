@@ -15,6 +15,8 @@
   --admin-warning: #d29922;
   --admin-danger: #f85149;
   --admin-radius: 5px;
+  --admin-input-radius: 8px;
+  --admin-input-focus-ring: color-mix(in srgb, var(--admin-accent) 30%, transparent);
   --admin-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
@@ -448,6 +450,34 @@
   font-size: 20px;
   font-weight: 600;
   font-family: var(--font-heading);
+}
+
+/* Default site title: full brand on desktop, short on narrow (matches main site) */
+.admin-header-brand-full,
+.admin-header-brand-short {
+  white-space: nowrap;
+}
+
+.admin-header-brand-short {
+  display: none !important;
+}
+
+@media (max-width: 1019px) {
+  .admin-page-title .admin-header-brand-full {
+    display: none !important;
+  }
+
+  .admin-page-title .admin-header-brand-short {
+    display: inline !important;
+  }
+
+  .admin-page-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: clamp(15px, 4.2vw, 20px);
+  }
 }
 
 .admin-online-badge {
@@ -971,13 +1001,25 @@
 .admin-select {
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 12px;
-  border-radius: var(--admin-radius);
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: var(--admin-input-radius);
   border: 1px solid var(--admin-border);
-  background: var(--admin-bg);
+  background: var(--admin-bg-elevated);
   color: var(--admin-text);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.45;
   font-family: inherit;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.admin-input:hover:not(:focus):not(:disabled),
+.admin-textarea:hover:not(:focus):not(:disabled),
+.admin-select:hover:not(:focus):not(:disabled) {
+  border-color: var(--admin-text-muted);
 }
 
 .admin-input:focus,
@@ -985,16 +1027,35 @@
 .admin-select:focus {
   outline: none;
   border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
+}
+
+.admin-input::placeholder,
+.admin-textarea::placeholder {
+  color: var(--admin-text-muted);
+  opacity: 1;
+}
+
+.admin-input:disabled,
+.admin-textarea:disabled,
+.admin-select:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
 }
 
 .admin-select {
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b949e' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16'%3E%3Cpath fill='%238b949e' d='M8 11L3 6h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
-  padding-right: 32px;
+  background-size: 14px 14px;
+  padding-right: 36px;
+}
+
+[data-theme="light"] .admin-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16'%3E%3Cpath fill='%23656d76' d='M8 11L3 6h10z'/%3E%3C/svg%3E");
 }
 
 .admin-select-sm {
@@ -1003,28 +1064,79 @@
 }
 
 .admin-form .admin-select {
-  min-height: 38px;
+  min-height: 40px;
 }
 
-.admin-file-input {
-  font-size: 13px;
+.admin-input::placeholder,
+.admin-textarea::placeholder {
   color: var(--admin-text-muted);
+  opacity: 1;
+  font-weight: 400;
 }
 
-.admin-file-input::file-selector-button {
-  padding: 8px 14px;
-  margin-right: 12px;
+/* File upload — same shell as .admin-input + split «Choose file» button */
+.admin-file-input {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 40px;
+  padding: 0.2rem 0.4rem 0.2rem 0.2rem;
   border: 1px solid var(--admin-border);
-  border-radius: var(--admin-radius);
+  border-radius: var(--admin-input-radius);
   background: var(--admin-bg-elevated);
+  color: var(--admin-text);
+  font-size: 14px;
+  line-height: 1.45;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.admin-file-input:hover:not(:disabled) {
+  border-color: var(--admin-text-muted);
+}
+
+.admin-file-input:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
+}
+
+.admin-file-input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-file-input::file-selector-button,
+.admin-file-input::-webkit-file-upload-button {
+  margin-right: 12px;
+  padding: 8px 16px;
+  border: none;
+  border-right: 1px solid var(--admin-border);
+  border-radius: calc(var(--admin-input-radius) - 3px) 0 0 calc(var(--admin-input-radius) - 3px);
+  background: var(--admin-bg-hover);
   color: var(--admin-text);
   cursor: pointer;
   font-size: 13px;
+  font-weight: 500;
   font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.admin-file-input::file-selector-button:hover {
-  background: var(--admin-bg-hover);
+.admin-file-input:disabled::file-selector-button,
+.admin-file-input:disabled::-webkit-file-upload-button {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.admin-file-input:enabled::file-selector-button:hover,
+.admin-file-input:enabled::-webkit-file-upload-button:hover {
+  background: var(--admin-accent);
+  color: #fff;
+  border-right-color: var(--admin-accent);
 }
 
 .admin-search-form .admin-select {
@@ -1222,6 +1334,11 @@ a.admin-link {
   background: rgba(139, 148, 158, 0.2);
   color: var(--admin-text-muted);
   /* border: 1px solid var(--admin-text-muted); */
+}
+
+.admin-badge-neutral {
+  background: rgba(139, 148, 158, 0.15);
+  color: var(--admin-text-muted);
 }
 
 .admin-badge-new {
@@ -1529,6 +1646,8 @@ a.admin-link {
 .admin-sidebar-overlay.is-open {
   pointer-events: auto;
   opacity: 1;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 /* Sign out confirmation modal */
@@ -1594,6 +1713,11 @@ a.admin-link {
   gap: 5px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.admin-signout-form {
+  margin: 0;
+  display: inline-flex;
 }
 
 /* Home page — quick link row: Save + Delete side by side */
@@ -1890,6 +2014,27 @@ a.admin-link {
   .admin-backups-toolbar .admin-bulk-ban-form .admin-bulk-ban-btn,
   .admin-backups-toolbar .admin-bulk-restore-form .admin-bulk-recover-btn {
     width: auto;
+  }
+}
+
+/* Lock page scroll when mobile drawer + dimmer are open (no scrollbar on iOS / narrow strip) */
+@media (max-width: 1019px) {
+  html:has(.admin-sidebar-overlay.is-open),
+  body.admin-body:has(.admin-sidebar-overlay.is-open) {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+  }
+
+  html.admin-mobile-nav-open {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    height: 100%;
+  }
+
+  body.admin-body.admin-mobile-nav-open {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    touch-action: none;
   }
 }
 

@@ -13,10 +13,25 @@ document.addEventListener('DOMContentLoaded', function () {
     // helpers
     function $(sel, ctx) { try { return (ctx || document).querySelector(sel); } catch (e) { return null; } }
     function $$(sel, ctx) { try { return Array.from((ctx || document).querySelectorAll(sel)); } catch (e) { return []; } }
+    /**
+     * Where "Back" on search results should go: same page unless we left
+     * post edit (→ item detail) or profile edit (→ public profile).
+     */
     function getSearchReturnUrl() {
         var path = location.pathname;
-        var m = path.match(/^(\/blog\/item\/[^/]+)\/edit\/?$/);
-        if (m) return m[1] + '/';
+        var parts = path.split('/').filter(function (s) { return s.length; });
+        var i;
+
+        i = parts.lastIndexOf('edit');
+        if (i >= 2 && parts[i - 1] && parts[i - 2] === 'item') {
+            return '/' + parts.slice(0, i).join('/') + '/';
+        }
+
+        i = parts.indexOf('edit');
+        if (i === 1 && parts[0] === 'profile' && parts[2]) {
+            return '/profile/' + parts[2] + '/';
+        }
+
         return path + location.search;
     }
 
@@ -267,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function initOverlayHistory(container) {
         var block = document.querySelector('[data-search-history-url]');
         if (!block) return;
-        var isAuth = (block.getAttribute('data-user-authenticated') || '').trim() === '1';
+        var isAuth = String(block.getAttribute('data-user-authenticated') || document.body.getAttribute('data-user-authenticated') || '').trim() === '1';
         var listUrl = block.getAttribute('data-search-history-url');
         var clickedPattern = block.getAttribute('data-search-history-clicked-pattern');
         var clearUrl = block.getAttribute('data-search-history-clear-url');
@@ -305,12 +320,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         function renderItems(items) {
             grid.innerHTML = '';
-            if (isAuth) clearWrap.style.display = '';
             if (!items || items.length === 0) {
-                grid.innerHTML = '<span class="overlay-history-empty">No recent requests!</span>';
+                wrap.style.display = 'none';
                 if (isAuth) clearWrap.style.display = 'none';
                 return;
             }
+            wrap.style.display = 'block';
+            if (isAuth) clearWrap.style.display = '';
             items.slice(0, OVERLAY_HISTORY_MAX).forEach(function (item, idx) {
                 var q = item.search_query || '';
                 var display = truncateQuery(q);
@@ -330,9 +346,21 @@ document.addEventListener('DOMContentLoaded', function () {
         function loadHistory() {
             if (isAuth && listUrl) {
                 fetch(listUrl, { credentials: 'same-origin' })
-                    .then(function (r) { return r.json(); })
-                    .then(function (data) {
-                        renderItems(data.items || []);
+                    .then(function (r) {
+                        return r.json().then(function (data) {
+                            return { ok: r.ok, data: data || {} };
+                        }).catch(function () {
+                            return { ok: r.ok, data: {} };
+                        });
+                    })
+                    .then(function (res) {
+                        if (res.ok && res.data) {
+                            var items = res.data.items;
+                            if (!Array.isArray(items)) items = [];
+                            renderItems(items);
+                        } else {
+                            renderItems([]);
+                        }
                     })
                     .catch(function () { renderItems([]); });
             } else if (typeof window.getGuestSearchHistory === 'function') {
@@ -620,18 +648,33 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- Search history dropdown (BraiNews, search_results, tag_items_list) ---
     (function initSearchHistory() {
-        const block = document.querySelector('[data-search-history-url], [data-user-authenticated]');
+        const block = document.querySelector('[data-search-history-url]');
         if (!block) return;
         const headerInput = document.getElementById('headerSearchInput');
         const dropdown = document.getElementById('searchHistoryDropdown');
         if (!headerInput || !dropdown) return;
 
-        const isAuth = (block.getAttribute('data-user-authenticated') || '').trim() === '1';
+        const isAuth = String(block.getAttribute('data-user-authenticated') || document.body.getAttribute('data-user-authenticated') || '').trim() === '1';
         const listUrl = block.getAttribute('data-search-history-url');
         const clickedPattern = block.getAttribute('data-search-history-clicked-pattern');
         const deletePattern = block.getAttribute('data-search-history-delete-pattern');
         const clearUrl = block.getAttribute('data-search-history-clear-url');
         if (isAuth && (!listUrl || !clickedPattern)) return;
+
+        const headerSearchPanel = document.getElementById('headerSearchDropdown');
+        const headerSearchOverlayEl = document.getElementById('headerSearchOverlay');
+
+        function ensureHeaderSearchPanelOpen() {
+            if (!headerSearchPanel || !headerSearchPanel.classList.contains('hidden')) return;
+            headerSearchPanel.classList.remove('hidden');
+            headerSearchPanel.setAttribute('aria-hidden', 'false');
+            const searchBtn = document.querySelector('.header-actions .search-btn');
+            const icon = searchBtn && searchBtn.querySelector('i');
+            if (icon) {
+                icon.classList.remove('fa-search');
+                icon.classList.add('fa-times');
+            }
+        }
 
         var GUEST_STORAGE_KEY = 'brainews_search_history';
         var GUEST_MAX_ITEMS = 10;
@@ -671,39 +714,46 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         var cachedHistory = [];
+        var historyFetchSeq = 0;
 
         function showHistory(items, isEmptyFilter) {
             dropdown.innerHTML = '';
             if (!items || items.length === 0) {
-                dropdown.innerHTML = '<div class="search-history-empty">' + (isEmptyFilter ? 'No matching requests...' : 'No recent requests...') + '</div>';
-            } else {
-                var headerRow = document.createElement('div');
-                headerRow.className = 'search-history-header-row';
-                headerRow.innerHTML = '<span class="search-history-header">Search history</span>';
-                if (isAuth) {
-                    var clearBtn = document.createElement('button');
-                    clearBtn.type = 'button';
-                    clearBtn.className = 'search-history-clear-btn';
-                    clearBtn.textContent = 'Clear history';
-                    clearBtn.setAttribute('aria-label', 'Clear search history');
-                    headerRow.appendChild(clearBtn);
+                if (isEmptyFilter) {
+                    dropdown.innerHTML = '<div class="search-history-empty">No matching requests...</div>';
+                    dropdown.classList.remove('hidden');
+                    dropdown.setAttribute('aria-hidden', 'false');
+                } else {
+                    hideHistory();
                 }
-                dropdown.appendChild(headerRow);
-                items.forEach(function (item, idx) {
-                    const row = document.createElement('div');
-                    row.className = 'search-history-item';
-                    row.dataset.id = item.id;
-                    row.dataset.url = buildSearchUrl(item);
-                    row.dataset.searchQuery = item.search_query || '';
-                    row.dataset.searchFilters = JSON.stringify(item.search_filters || {});
-                    row.dataset.isGuest = isAuth ? '0' : '1';
-                    row.dataset.guestIndex = isAuth ? '' : String(idx);
-                    var metaHtml = isAuth ? '<span class="search-history-item-meta">' + escapeHtml(formatMeta(item)) + '</span>' : '';
-                    var removeHtml = isAuth ? '<button type="button" class="search-history-item-remove" data-id="' + (item.id || ('local-' + idx)) + '" data-guest-index="' + idx + '" aria-label="Remove from history">×</button>' : '';
-                    row.innerHTML = '<span class="search-history-item-icon"><i class="fa fa-clock-o" aria-hidden="true"></i></span><span class="search-history-item-text">' + escapeHtml(item.search_query) + '</span>' + metaHtml + removeHtml;
-                    dropdown.appendChild(row);
-                });
+                return;
             }
+            var headerRow = document.createElement('div');
+            headerRow.className = 'search-history-header-row';
+            headerRow.innerHTML = '<span class="search-history-header">Search history</span>';
+            if (isAuth) {
+                var clearBtn = document.createElement('button');
+                clearBtn.type = 'button';
+                clearBtn.className = 'search-history-clear-btn';
+                clearBtn.textContent = 'Clear history';
+                clearBtn.setAttribute('aria-label', 'Clear search history');
+                headerRow.appendChild(clearBtn);
+            }
+            dropdown.appendChild(headerRow);
+            items.forEach(function (item, idx) {
+                const row = document.createElement('div');
+                row.className = 'search-history-item';
+                row.dataset.id = item.id;
+                row.dataset.url = buildSearchUrl(item);
+                row.dataset.searchQuery = item.search_query || '';
+                row.dataset.searchFilters = JSON.stringify(item.search_filters || {});
+                row.dataset.isGuest = isAuth ? '0' : '1';
+                row.dataset.guestIndex = isAuth ? '' : String(idx);
+                var metaHtml = isAuth ? '<span class="search-history-item-meta">' + escapeHtml(formatMeta(item)) + '</span>' : '';
+                var removeHtml = isAuth ? '<button type="button" class="search-history-item-remove" data-id="' + (item.id || ('local-' + idx)) + '" data-guest-index="' + idx + '" aria-label="Remove from history">×</button>' : '';
+                row.innerHTML = '<span class="search-history-item-icon"><i class="fa fa-clock-o" aria-hidden="true"></i></span><span class="search-history-item-text">' + escapeHtml(item.search_query) + '</span>' + metaHtml + removeHtml;
+                dropdown.appendChild(row);
+            });
             dropdown.classList.remove('hidden');
             dropdown.setAttribute('aria-hidden', 'false');
         }
@@ -803,21 +853,51 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         window.bumpGuestSearchToTop = bumpGuestSearchToTop;
 
-        function fetchAndShow(filterText) {
-            function onLoaded(items) {
-                cachedHistory = items || [];
-                var filtered = filterText ? filterItems(cachedHistory, filterText) : cachedHistory;
-                showHistory(filtered, !!filterText && filtered.length === 0);
-            }
+        function applyCurrentQueryToCache() {
+            var valNow = (headerInput.value || '').trim();
+            var filtered = valNow ? filterItems(cachedHistory, valNow) : cachedHistory;
+            showHistory(filtered, !!valNow && filtered.length === 0);
+        }
+
+        function commitFetchedHistory(seq, items) {
+            if (seq !== historyFetchSeq) return;
+            cachedHistory = items || [];
+            applyCurrentQueryToCache();
+        }
+
+        function fetchAndShow() {
+            var seq = ++historyFetchSeq;
             if (isAuth) {
                 fetch(listUrl, { credentials: 'same-origin' })
-                    .then(function (r) { return r.json(); })
-                    .then(function (data) {
-                        onLoaded(data.items || []);
+                    .then(function (r) {
+                        return r.json().then(function (data) {
+                            return { ok: r.ok, data: data || {} };
+                        }).catch(function () {
+                            return { ok: r.ok, data: {} };
+                        });
                     })
-                    .catch(function () { dropdown.classList.add('hidden'); });
+                    .then(function (res) {
+                        if (seq !== historyFetchSeq) return;
+                        if (res.ok && res.data) {
+                            var items = res.data.items;
+                            if (!Array.isArray(items)) items = [];
+                            commitFetchedHistory(seq, items);
+                        } else if (cachedHistory.length > 0) {
+                            applyCurrentQueryToCache();
+                        } else {
+                            hideHistory();
+                        }
+                    })
+                    .catch(function () {
+                        if (seq !== historyFetchSeq) return;
+                        if (cachedHistory.length > 0) {
+                            applyCurrentQueryToCache();
+                        } else {
+                            hideHistory();
+                        }
+                    });
             } else {
-                onLoaded(getGuestHistory());
+                commitFetchedHistory(seq, getGuestHistory());
             }
         }
 
@@ -835,12 +915,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 var filtered = filterItems(cachedHistory, val);
                 showHistory(filtered, !!val && filtered.length === 0);
             } else {
-                fetchAndShow(val);
+                fetchAndShow();
             }
         }
 
         headerInput.addEventListener('focus', function () {
-            fetchAndShow((headerInput.value || '').trim());
+            ensureHeaderSearchPanelOpen();
+            fetchAndShow();
         });
         headerInput.addEventListener('input', function () {
             var val = (headerInput.value || '').trim();
@@ -850,7 +931,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 dropdown.classList.remove('hidden');
                 dropdown.setAttribute('aria-hidden', 'false');
             } else {
-                fetchAndShow(val);
+                fetchAndShow();
             }
         });
 
@@ -893,7 +974,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         'X-CSRFToken': getCSRF(),
                         'X-Requested-With': 'XMLHttpRequest'
                     }
-                }).then(function () { hideHistory(); }).catch(function () { });
+                }).then(function () {
+                    cachedHistory = [];
+                    hideHistory();
+                }).catch(function () { });
                 return;
             }
             const historyRow = e.target.closest('.search-history-item');
@@ -935,11 +1019,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         document.addEventListener('click', function (e) {
-            if (!dropdown.classList.contains('hidden') &&
-                !dropdown.contains(e.target) &&
-                !headerInput.contains(e.target)) {
-                hideHistory();
-            }
+            if (dropdown.classList.contains('hidden')) return;
+            if (dropdown.contains(e.target) || headerInput.contains(e.target)) return;
+            if (headerSearchOverlayEl && headerSearchOverlayEl.contains(e.target)) return;
+            hideHistory();
         });
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && !dropdown.classList.contains('hidden')) {

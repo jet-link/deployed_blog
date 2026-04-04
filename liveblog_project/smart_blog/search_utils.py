@@ -9,7 +9,7 @@ import re
 from functools import reduce
 from operator import or_
 
-from django.db import connection
+from django.db import connection, transaction
 from django.db.models import Q
 
 
@@ -34,6 +34,36 @@ def refresh_item_search_vector(item_id):
                 )), 'C')
             ) WHERE id = %s
         """, [item_id])
+
+
+def _flush_pending_search_vectors():
+    """Run after transaction commit; see schedule_search_vector_refresh."""
+    conn = transaction.get_connection()
+    pending = getattr(conn, "_search_vector_pending", None)
+    if not pending:
+        return
+    conn._search_vector_pending = set()
+    for pk in sorted(pending):
+        refresh_item_search_vector(pk)
+
+
+def schedule_search_vector_refresh(item_id):
+    """
+    Queue search_vector refresh after commit. Multiple calls in the same transaction
+    coalesce into one flush (first on_commit drains the whole pending set).
+    Outside of atomic(), runs immediately.
+    """
+    if connection.vendor != "postgresql" or not item_id:
+        return
+    pk = int(item_id)
+    conn = transaction.get_connection()
+    if not conn.in_atomic_block:
+        refresh_item_search_vector(pk)
+        return
+    if not hasattr(conn, "_search_vector_pending"):
+        conn._search_vector_pending = set()
+    conn._search_vector_pending.add(pk)
+    transaction.on_commit(_flush_pending_search_vectors)
 
 
 def _build_fts_query_with_prefix(q):

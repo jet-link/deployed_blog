@@ -25,6 +25,12 @@
             icon.classList.remove(SEARCH_ICON);
             icon.classList.add(CLOSE_ICON);
         }
+        const input = document.getElementById('headerSearchInput');
+        if (input) {
+            requestAnimationFrame(function () {
+                input.focus();
+            });
+        }
     }
 
     function close() {

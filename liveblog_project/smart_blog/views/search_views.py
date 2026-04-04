@@ -80,11 +80,11 @@ def search_view(request):
             breadcrumb(q, None),
         )
         if request.user.is_authenticated:
-            from smart_blog.tasks import save_search_history
+            from smart_blog.tasks import save_search_history_record
             filters_dict = {
                 'by_title': by_title, 'by_text': by_text, 'by_tags': by_tags
             }
-            save_search_history.delay(
+            save_search_history_record(
                 request.user.pk, q, results_total, filters_dict,
                 bool(request.GET.get('from_history')),
             )

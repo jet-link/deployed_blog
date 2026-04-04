@@ -284,13 +284,27 @@
     pointer-events: auto;
 }
 
-.user-tooltip a, .user-tooltip span {
+.user-tooltip a {
     display: block;
     padding: 15px 25px;
     font-size: .85rem;
     color: #111;
     text-decoration: none;
     transition: background .15s ease;
+}
+
+.user-tooltip a.user-tooltip-profile-row {
+    display: flex;
+    align-items: center;
+    /* same padding/color as .user-tooltip a + .text-muted peers */
+}
+
+.user-tooltip-profile-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    max-width: 220px;
 }
 
 .user-tooltip a:hover {

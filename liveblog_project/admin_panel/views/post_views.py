@@ -1,5 +1,4 @@
 """Post (Item) management views."""
-import re
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib import messages
@@ -9,19 +8,28 @@ from django.utils import timezone
 
 from admin_panel.decorators import admin_required
 from admin_panel.forms import ItemAdminEditForm, ItemAdminCreateForm
-from smart_blog.models import Item, Category, Tag, ItemImage
-from smart_blog.image_utils import process_image_legacy_safe
-from smart_blog.search_utils import refresh_item_search_vector
-
-MAX_IMAGES = 10
-
+from smart_blog.models import Item, Category
+from smart_blog.services.item_write import (
+    MAX_ITEM_IMAGES,
+    attach_item_images_from_uploads,
+    merge_item_tags,
+)
+from django.db import transaction
 
 @admin_required
 def posts_list(request):
     """List posts with search, filter, pagination."""
-    qs = Item.objects.select_related('author', 'category').annotate(
-        comments_count=Count('comments', filter=Q(comments__parent__isnull=True), distinct=True)
-    ).order_by('-published_date')
+    qs = (
+        Item.objects.select_related("author", "category")
+        .annotate(
+            comments_count=Count(
+                "comments",
+                filter=Q(comments__parent__isnull=True),
+                distinct=True,
+            )
+        )
+        .order_by("-published_date")
+    )
 
     search = request.GET.get('q', '').strip()
     if search:
@@ -50,7 +58,7 @@ def posts_list(request):
     paginator = Paginator(qs, 30)
     page = request.GET.get('page', 1)
     posts = paginator.get_page(page)
-    categories = Category.objects.order_by('name')
+    categories = Category.objects.only("id", "name", "slug").order_by("name")
 
     context = {
         'posts': posts,
@@ -72,28 +80,13 @@ def post_create(request):
         files = request.FILES.getlist('images')
         selected_tag_ids = [int(x) for x in request.POST.getlist('tags') if str(x).isdigit()]
         if form.is_valid():
-            item = form.save(commit=False)
-            item.author = request.user
-            item.save()
-            form.save_m2m()
-            new_tags_raw = form.cleaned_data.get('new_tags', '')
-            if new_tags_raw:
-                for tg in [t for t in re.split(r'\s+', new_tags_raw.strip()) if t]:
-                    tag_obj, _ = Tag.objects.get_or_create(tag_name=tg)
-                    item.tags.add(tag_obj)
-            refresh_item_search_vector(item.pk)
-            for f in files[:MAX_IMAGES]:
-                if f:
-                    processed = process_image_legacy_safe(f, item.pk)
-                    if processed:
-                        ItemImage.objects.create(
-                            item=item, image=processed["image"],
-                            image_thumbnail=processed.get("image_thumbnail"),
-                            image_medium=processed.get("image_medium"),
-                            width=processed.get("width"), height=processed.get("height"),
-                        )
-                    else:
-                        ItemImage.objects.create(item=item, image=f)
+            with transaction.atomic():
+                item = form.save(commit=False)
+                item.author = request.user
+                item.save()
+                item.tags.set(merge_item_tags(form.cleaned_data))
+                file_list = [f for f in files[:MAX_ITEM_IMAGES] if f]
+                attach_item_images_from_uploads(item, file_list)
             messages.success(request, 'Post created successfully.')
             return redirect('admin_panel:posts_list')
     else:
@@ -104,7 +97,10 @@ def post_create(request):
 @admin_required
 def post_edit(request, pk):
     """Edit existing post."""
-    item = get_object_or_404(Item, pk=pk)
+    item = get_object_or_404(
+        Item.objects.select_related("author", "category"),
+        pk=pk,
+    )
     if request.method == 'POST':
         form = ItemAdminEditForm(request.POST, instance=item)
         if form.is_valid():
@@ -123,7 +119,10 @@ def post_edit(request, pk):
 @admin_required
 def post_delete(request, pk):
     """Delete post."""
-    item = get_object_or_404(Item, pk=pk)
+    item = get_object_or_404(
+        Item.objects.select_related("author", "category"),
+        pk=pk,
+    )
     if request.method == 'POST':
         item.deleted_at = timezone.now()
         item.is_published = False
@@ -141,11 +140,21 @@ def post_delete(request, pk):
 def post_view_stats(request, pk):
     """View post statistics."""
     import json
-    from smart_blog.models import Comment
+
     from admin_panel.services.analytics_service import get_post_activity_chart_data
-    item = get_object_or_404(Item, pk=pk)
-    comments_count = Comment.objects.filter(item=item, parent__isnull=True).count()
-    reports_count = item.reports.count()
+
+    item = get_object_or_404(
+        Item.objects.annotate(
+            _admin_root_comments=Count(
+                "comments",
+                filter=Q(comments__parent__isnull=True),
+            ),
+            _admin_reports_count=Count("reports"),
+        ),
+        pk=pk,
+    )
+    comments_count = item._admin_root_comments
+    reports_count = item._admin_reports_count
     activity_data = get_post_activity_chart_data(item, days=14)
     activity_json = json.dumps(activity_data)
     return render(request, 'admin/posts/post_stats.html', {

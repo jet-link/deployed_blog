@@ -4,7 +4,19 @@
       {% if not forloop.first %}
         <span class="breadcrumb-sep">›</span>
       {% endif %}
-      {% if crumb.url %}
+      {% if crumb.title == "brainstorm.news" %}
+        {% if crumb.url %}
+          <a class="breadcrumb-link" href="{{ crumb.url }}" aria-label="brainstorm.news">
+            <span class="breadcrumb-brand-full" aria-hidden="true">brainstorm.news</span>
+            <span class="breadcrumb-brand-short" aria-hidden="true">bstrm.news</span>
+          </a>
+        {% else %}
+          <span class="breadcrumb-current" aria-current="page" aria-label="brainstorm.news">
+            <span class="breadcrumb-brand-full" aria-hidden="true">brainstorm.news</span>
+            <span class="breadcrumb-brand-short" aria-hidden="true">bstrm.news</span>
+          </span>
+        {% endif %}
+      {% elif crumb.url %}
         <a class="breadcrumb-link" href="{{ crumb.url }}">{{ crumb.title }}</a>
       {% else %}
         <span class="breadcrumb-current" aria-current="page">{{ crumb.title }}</span>

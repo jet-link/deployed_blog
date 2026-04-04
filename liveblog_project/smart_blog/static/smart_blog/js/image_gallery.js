@@ -62,19 +62,23 @@
         const overlay = document.createElement('div');
         overlay.className = 'gallery-overlay';
         overlay.innerHTML = `
-      <button class="gclose" aria-label="Close">&times;</button>
-      <button class="gbtn left" aria-label="Previous">&#x2190;</button>
+      <button type="button" class="gclose" aria-label="Close">&times;</button>
+      <button type="button" class="gzone gzone--prev" aria-label="Previous">
+        <span class="gzone__arrow" aria-hidden="true"><i class="fa fa-angle-left"></i></span>
+      </button>
       <div class="gallery-overlay-inner" role="dialog" aria-modal="true">
-        <img src="" alt="" class="gallery-overlay-img" loading="lazy" decoding="async" />
+        <img src="" alt="" class="gallery-overlay-img" tabindex="-1" loading="lazy" decoding="async" />
       </div>
-      <button class="gbtn right" aria-label="Next">&#x2192;</button>
+      <button type="button" class="gzone gzone--next" aria-label="Next">
+        <span class="gzone__arrow" aria-hidden="true"><i class="fa fa-angle-right"></i></span>
+      </button>
     `;
         document.body.appendChild(overlay);
 
         const imgEl = qs('.gallery-overlay-img', overlay);
         const closeBtn = qs('.gclose', overlay);
-        const prevBtn = qs('.gbtn.left', overlay);
-        const nextBtn = qs('.gbtn.right', overlay);
+        const prevBtn = qs('.gzone--prev', overlay);
+        const nextBtn = qs('.gzone--next', overlay);
 
         let curIndex = 0;
         let currentSrcs = [];
@@ -123,7 +127,6 @@
         }
 
         closeBtn.addEventListener('click', function (e) { e.stopPropagation(); hideOverlay(); });
-        overlay.addEventListener('click', function (e) { if (e.target === overlay) hideOverlay(); });
         prevBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); nav(-1); clearAutoplay(); }, { passive: false });
         nextBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); nav(1); clearAutoplay(); }, { passive: false });
 
@@ -135,21 +138,18 @@
             if (e.key === 'ArrowRight') { e.preventDefault(); nav(1); return; }
         });
 
-        // --- NEW: close overlay when user clicks/taps outside the inner area ---
-        // We use pointerdown so it works for mouse/touch/pen; we check that the event target
-        // is not inside the .gallery-overlay-inner and not a control button (.gbtn, .gclose).
-        function onPointerDownOutside(e) {
+        // Close when tapping the dimmed backdrop: inside overlay, but not on the image,
+        // side nav zones, or close button (on narrow screens close is hidden — backdrop tap closes).
+        function onPointerDownBackdrop(e) {
             if (!overlay.classList.contains('is-visible')) return;
-            // if click/tap is inside inner container -> do nothing
-            const inner = qs('.gallery-overlay-inner', overlay);
-            if (inner && inner.contains(e.target)) return;
-            // if click/tap is on control buttons -> do nothing
-            if (e.target.closest && e.target.closest('.gbtn, .gclose')) return;
-            // otherwise close
+            if (!overlay.contains(e.target)) return;
+            if (e.target.closest && e.target.closest('.gallery-overlay-img')) return;
+            if (e.target.closest && e.target.closest('.gzone')) return;
+            if (e.target.closest && e.target.closest('.gclose')) return;
             hideOverlay();
         }
         // use capture phase to detect touches/mouse early
-        document.addEventListener('pointerdown', onPointerDownOutside, true);
+        document.addEventListener('pointerdown', onPointerDownBackdrop, true);
 
         window.__gallery_openAt = function (index, allSrcs) {
             currentSrcs = Array.isArray(allSrcs) ? allSrcs.slice() : [];
@@ -161,7 +161,14 @@
             lockScroll();
             preloadAdjacent();
             startAutoplayIfNeeded();
-            try { closeBtn.focus(); } catch (err) { }
+            try {
+                const cs = window.getComputedStyle(closeBtn);
+                if (cs.display !== 'none' && cs.visibility !== 'hidden') {
+                    closeBtn.focus();
+                } else {
+                    imgEl.focus();
+                }
+            } catch (err) { }
         };
 
         window.__gallery_close = hideOverlay;
@@ -220,10 +227,17 @@
         return spans;
     }
 
+    function gridItemsForAdjust(grid) {
+        if (grid.classList.contains('item-feed-card__thumb-grid')) {
+            return Array.from(grid.querySelectorAll('.item-feed-card__thumb-slot'));
+        }
+        return Array.from(grid.querySelectorAll('.gallery-cell'));
+    }
+
     // main adjuster for one grid
     function adjustLastRowSpan(grid) {
         if (!grid) return;
-        const items = Array.from(grid.querySelectorAll('.gallery-cell'));
+        const items = gridItemsForAdjust(grid);
         if (!items.length) return;
 
         // clear previous inline gridColumn from ALL items to keep consistent state
@@ -231,10 +245,11 @@
             it.style.gridColumn = '';
         });
 
-        // special-case: если всего 2 item'а на всей галерее => удобнее показать как 2 колонки
-        if (items.length === 2) {
+        const isFeedThumb = grid.classList.contains('item-feed-card__thumb-grid');
+        // detail page gallery: 2 tiles → две колонки (класс переопределяет grid)
+        if (!isFeedThumb && items.length === 2) {
             grid.classList.add('gallery-two-cols');
-        } else {
+        } else if (!isFeedThumb) {
             grid.classList.remove('gallery-two-cols');
         }
 
@@ -264,7 +279,7 @@
     }
 
     function adjustAllGrids() {
-        const grids = Array.from(document.querySelectorAll('.gallery-grid'));
+        const grids = Array.from(document.querySelectorAll('.gallery-grid, .item-feed-card__thumb-grid'));
         grids.forEach(grid => {
             try {
                 adjustLastRowSpan(grid);

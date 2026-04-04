@@ -85,7 +85,7 @@ class PostSitemap(Sitemap):
 
 
 class TopicSitemap(Sitemap):
-    """Category topic hub: /blog/topics/<slug>/."""
+    """Category topic hub: /topics/<slug>/."""
 
     changefreq = "weekly"
     priority = 0.7
@@ -98,7 +98,7 @@ class TopicSitemap(Sitemap):
 
 
 class CategoryListSitemap(Sitemap):
-    """Posts filtered by category: /blog/brainews/category/<slug>/."""
+    """Posts filtered by category legacy URL: /blog/brainews/category/<slug>/ (→ topic)."""
 
     changefreq = "weekly"
     priority = 0.65

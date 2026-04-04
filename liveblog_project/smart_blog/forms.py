@@ -80,7 +80,7 @@ class ItemCreateForm(forms.ModelForm):
         required=False,
         widget=MultiFileInput(),
         help_text="(You can upload 10 images)",
-        label='Upload images (optional)',
+        label=_('Upload images'),
     )
 
     tags = forms.ModelMultipleChoiceField(
@@ -92,8 +92,12 @@ class ItemCreateForm(forms.ModelForm):
 
     new_tags = forms.CharField(
         required=False,
-        label="Enter tag (optional)",
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Enter tag/s separate with spaces (optional)", "spellcheck": "true"}),
+        label=_('New tags'),
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": " ",
+            "spellcheck": "true",
+        }),
     )
 
     category = forms.ModelChoiceField(
@@ -129,15 +133,13 @@ class ItemCreateForm(forms.ModelForm):
         value = (self.cleaned_data.get('new_tags') or '').strip()
         if not value:
             return value
+        tokens = [t.strip().lower() for t in re.split(r'\s+', value) if t.strip()]
+        value = ' '.join(tokens)
         from admin_panel.models import ForbiddenWord
         forbidden = list(ForbiddenWord.objects.filter(is_active=True))
-        if not forbidden:
-            return value
-        tokens = [t.strip() for t in re.split(r'\s+', value) if t.strip()]
         for token in tokens:
-            normalized = token.lower()
             for fw in forbidden:
-                if fw.is_active and fw.word.lower() in normalized:
+                if fw.is_active and fw.word.lower() in token:
                     raise forms.ValidationError('Sorry, forbidden tag.')
         return value
 

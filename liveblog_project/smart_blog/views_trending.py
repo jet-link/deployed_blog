@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from smart_blog.models import TrendingItem
 from smart_blog.services.trending_service import TRENDING_API_CACHE_KEY
+from smart_blog.utils import count_convert
 
 HOT_LIMIT = 5
 RISING_LIMIT = 10
@@ -41,7 +42,7 @@ def _get_trending_page_data(page=1):
 
 
 def _serialize_item(request, t: TrendingItem, rank=None):
-    """Serialize a TrendingItem using pre-computed fields (no live DB queries)."""
+    """Serialize a TrendingItem with both real-time totals and 24h/1h trending windows."""
     item = t.item
     img = item.images.first()
     thumb = img.get_thumbnail_url() if img else ""
@@ -56,6 +57,16 @@ def _serialize_item(request, t: TrendingItem, rank=None):
         "preview": item.short_text(220),
         "category": item.category.name if item.category else None,
         "trend_score": round(t.trend_score, 6),
+        # Real-time totals (updated instantly via signals)
+        "total_views": item.views_count,
+        "total_likes": item.likes_count,
+        "total_bookmarks": item.bookmarks_count,
+        "total_reposts": item.reposts_count,
+        "total_views_h": count_convert(item.views_count),
+        "total_likes_h": count_convert(item.likes_count),
+        "total_bookmarks_h": count_convert(item.bookmarks_count),
+        "total_reposts_h": count_convert(item.reposts_count),
+        # 24h/1h trending windows (refreshed every 12 min by Celery)
         "views_24h": t.views_24h,
         "likes_24h": t.likes_24h,
         "comments_24h": t.comments_24h,

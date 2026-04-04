@@ -32,7 +32,19 @@
 
     if (!url || !icon) return;
 
-    btn.classList.add('opacity-50');
+    const wasLiked = icon.classList.contains('fa-heart');
+    icon.classList.toggle('fa-heart', !wasLiked);
+    icon.classList.toggle('fa-heart-o', !!wasLiked);
+    icon.classList.remove('btn-bounce');
+    icon.offsetWidth;
+    icon.classList.add('btn-bounce');
+    const endBounce = function () {
+      icon.classList.remove('btn-bounce');
+      icon.removeEventListener('animationend', endBounce);
+    };
+    icon.addEventListener('animationend', endBounce);
+
+    btn.disabled = true;
 
     try {
       const resp = await fetch(url, {
@@ -46,16 +58,15 @@
       });
 
       const data = await resp.json().catch(() => null);
-      if (!resp.ok) {
+      if (!resp.ok || !data) {
+        icon.classList.toggle('fa-heart', wasLiked);
+        icon.classList.toggle('fa-heart-o', !wasLiked);
         console.error('LIKE ERROR', resp.status);
         return;
       }
 
-      icon.classList.toggle('fa-heart', data.liked);
+      icon.classList.toggle('fa-heart', !!data.liked);
       icon.classList.toggle('fa-heart-o', !data.liked);
-
-      icon.classList.add('btn-bounce');
-      setTimeout(() => icon.classList.remove('btn-bounce'), 300);
 
       // if we came from profile listing, ensure it refreshes on return
       try {
@@ -91,9 +102,11 @@
       if (window.updateLikedUsersUI) {
         window.updateLikedUsersUI(data);
       }
-
+    } catch (err) {
+      icon.classList.toggle('fa-heart', wasLiked);
+      icon.classList.toggle('fa-heart-o', !wasLiked);
     } finally {
-      btn.classList.remove('opacity-50');
+      btn.disabled = false;
     }
   });
 
@@ -134,7 +147,19 @@
 
     if (!url || !icon) return;
 
-    btn.classList.add('opacity-50');
+    const wasBookmarked = icon.classList.contains('fa-bookmark');
+    icon.classList.toggle('fa-bookmark', !wasBookmarked);
+    icon.classList.toggle('fa-bookmark-o', !!wasBookmarked);
+    icon.classList.remove('btn-bounce');
+    icon.offsetWidth;
+    icon.classList.add('btn-bounce');
+    const endBm = function () {
+      icon.classList.remove('btn-bounce');
+      icon.removeEventListener('animationend', endBm);
+    };
+    icon.addEventListener('animationend', endBm);
+
+    btn.disabled = true;
 
     try {
       const resp = await fetch(url, {
@@ -148,21 +173,15 @@
       });
 
       const data = await resp.json().catch(() => null);
-      if (!resp.ok) {
-        console.error('LIKE ERROR', resp.status);
+      if (!resp.ok || !data) {
+        icon.classList.toggle('fa-bookmark', wasBookmarked);
+        icon.classList.toggle('fa-bookmark-o', !wasBookmarked);
+        console.error('BOOKMARK ERROR', resp.status);
         return;
       }
 
-      if (!resp.ok) {
-        console.error('LIKE ERROR', resp.status);
-        return;
-      }
-
-      icon.classList.toggle('fa-bookmark', data.bookmarked);
+      icon.classList.toggle('fa-bookmark', !!data.bookmarked);
       icon.classList.toggle('fa-bookmark-o', !data.bookmarked);
-
-      icon.classList.add('btn-bounce');
-      setTimeout(() => icon.classList.remove('btn-bounce'), 300);
 
       // if we came from profile listing, ensure it refreshes on return
       try {
@@ -196,9 +215,11 @@
       if (cardBookmarks && data.bookmarks_count != null) {
         cardBookmarks.textContent = humanCount(data.bookmarks_count);
       }
-
+    } catch (err) {
+      icon.classList.toggle('fa-bookmark', wasBookmarked);
+      icon.classList.toggle('fa-bookmark-o', !wasBookmarked);
     } finally {
-      btn.classList.remove('opacity-50');
+      btn.disabled = false;
     }
   });
 })();

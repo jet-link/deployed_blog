@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admin{% endblock %} | brainstorm.org</title>
+    <title>{% block title %}Admin{% endblock %} | brainstorm.news</title>
     <link rel="icon" type="image/svg+xml" href="{% static 'admin/favicon-cube.svg' %}">
     <!-- Fonts (same as smart_blog) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -23,7 +23,17 @@
     <div class="admin-layout">
         {% include 'admin/layout/sidebar.html' %}
         <div class="admin-main">
-            {% include 'admin/layout/header.html' %}
+            <header class="admin-header">
+                <div class="admin-header-left">
+                    <button type="button" class="admin-menu-toggle" id="adminMenuToggle" aria-label="Open menu" aria-expanded="false">☰</button>
+                    <h1 class="admin-page-title">{% block page_title %}<span class="admin-header-brand-full">brainstorm.news</span><span class="admin-header-brand-short">bstrm.news</span>{% endblock %}</h1>
+                    <span class="admin-online-badge">Online: {{ admin_online_count|default:0 }}</span>
+                </div>
+                <div class="admin-header-right">
+                    <button type="button" class="admin-theme-toggle" id="adminThemeToggle" aria-label="Toggle theme" title="Toggle light/dark theme"><i class="admin-theme-icon fa-regular fa-moon" aria-hidden="true"></i></button>
+                    <a href="{% url 'login_app:profile' username=request.user.username %}" class="admin-button admin-button-sm">Go to site</a>
+                </div>
+            </header>
             {% block breadcrumbs %}<nav class="admin-breadcrumbs" aria-label="Breadcrumb"><ol class="admin-breadcrumbs-list"><li class="admin-breadcrumbs-item"><a href="{% url 'admin_panel:dashboard' %}">Dashboard</a></li></ol></nav>{% endblock %}
             <main class="admin-content">
                 {% if messages %}
@@ -59,14 +69,16 @@
         <div class="admin-modal-content">
           <h2 class="admin-modal-title" id="adminSignoutModalTitle">Are you sure you want to sign out?</h2>
           <div class="admin-modal-actions">
-            <button type="button" class="admin-button admin-button-danger" id="adminSignoutConfirmBtn">Sign out</button>
+            <form method="post" action="{% url 'login_app:logout' %}" class="admin-signout-form">
+              {% csrf_token %}
+              <button type="submit" class="admin-button admin-button-danger" id="adminSignoutConfirmBtn">Sign out</button>
+            </form>
             <button type="button" class="admin-button admin-button-outline" id="adminSignoutCancelBtn">Cancel</button>
           </div>
         </div>
       </div>
     </div>
     <script>
-      window.ADMIN_LOGOUT_URL = "{% url 'login_app:logout' %}";
       window.ADMIN_CSRF_TOKEN = "{{ csrf_token }}";
     </script>
     <script src="{% static 'js/spellcheck.js' %}"></script>

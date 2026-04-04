@@ -68,6 +68,9 @@
     --toggle-track: #e9e9ea;
     --toggle-thumb: #ffffff;
     --toggle-thumb-dark: #5f27cd;
+
+    /* Form fields — focus ring (color-mix with link accent) */
+    --input-focus-ring: color-mix(in srgb, var(--text-link) 28%, transparent);
 }
 
 /* GitHub-style dark theme */
@@ -113,4 +116,6 @@ html[data-theme="dark"] {
 
     --toggle-track: #21262d;
     --toggle-thumb: var(--toggle-thumb-dark);
+
+    --input-focus-ring: color-mix(in srgb, var(--text-link) 32%, transparent);
 }

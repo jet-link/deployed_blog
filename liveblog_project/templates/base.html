@@ -5,7 +5,7 @@
       (function(){try{var t=localStorage.getItem('themeToggle');document.documentElement.setAttribute('data-theme',t==='sun'?'dark':'light');}catch(e){}}());
     </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <meta name="csrf-token" content="{{ csrf_token }}" />
 
     <title>
@@ -39,7 +39,9 @@
     <link rel="stylesheet" href="{% static 'pages/css/responsive.css' %}" />
     <link rel="stylesheet" href="{% static 'smart_blog/css/responsive.css' %}" />
     <link rel="stylesheet" href="{% static 'login/css/responsive.css' %}" />
+    <link rel="preload" href="{% static 'smart_blog/vendor/fontawesome/fonts/fontawesome-webfont.woff2' %}?v=4.7.0" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="{% static 'smart_blog/vendor/fontawesome/css/font-awesome.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'smart_blog/css/fontawesome-tweak.css' %}" />
     {% block extra_head %}
     {% endblock %}
   </head>
@@ -81,6 +83,7 @@
     <script defer src="{% static 'smart_blog/js/image_manage.js' %}"></script>
     <script defer src="{% static 'smart_blog/js/like_n_bookmark_item.js' %}"></script>
     <script defer src="{% static 'smart_blog/js/listing_manage.js' %}"></script>
+    <script defer src="{% static 'smart_blog/js/image_gallery.js' %}"></script>
     <!-- global search -->
     <script>
       window.SEARCH_URL = "{% url 'global_search' %}";

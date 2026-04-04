@@ -61,18 +61,47 @@
   var overlay = document.getElementById('adminSidebarOverlay');
   var menuToggle = document.getElementById('adminMenuToggle');
   var sidebarClose = document.getElementById('adminSidebarClose');
+  var adminLayout = document.querySelector('.admin-layout');
+  var adminMain = document.querySelector('.admin-main');
+  var mobileNavScrollY = 0;
 
   function openSidebar() {
+    if (window.innerWidth > 1019) return;
     if (sidebar) sidebar.classList.add('is-open');
     if (overlay) { overlay.classList.add('is-open'); overlay.setAttribute('aria-hidden', 'false'); }
     if (menuToggle) menuToggle.setAttribute('aria-expanded', 'true');
+    document.documentElement.classList.add('admin-mobile-nav-open');
+    document.body.classList.add('admin-mobile-nav-open');
+    mobileNavScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-' + mobileNavScrollY + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+    if (adminLayout) adminLayout.style.overflow = 'hidden';
+    if (adminMain) adminMain.style.overflow = 'hidden';
   }
   function closeSidebar() {
+    var hadMobileLock = document.body.classList.contains('admin-mobile-nav-open');
     if (sidebar) sidebar.classList.remove('is-open');
     if (overlay) { overlay.classList.remove('is-open'); overlay.setAttribute('aria-hidden', 'true'); }
     if (menuToggle) menuToggle.setAttribute('aria-expanded', 'false');
+    document.documentElement.classList.remove('admin-mobile-nav-open');
+    document.body.classList.remove('admin-mobile-nav-open');
+    document.documentElement.style.overflow = '';
     document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    if (adminLayout) adminLayout.style.overflow = '';
+    if (adminMain) adminMain.style.overflow = '';
+    if (hadMobileLock) {
+      window.scrollTo(0, mobileNavScrollY);
+    }
   }
 
   if (menuToggle) menuToggle.addEventListener('click', openSidebar);
@@ -120,6 +149,9 @@
   }
 
   window.addEventListener('resize', function() {
+    if (window.innerWidth > 1019 && sidebar && sidebar.classList.contains('is-open')) {
+      closeSidebar();
+    }
     if (window.innerWidth < 993) {
       document.documentElement.classList.remove('admin-sidebar-collapsed');
       if (sidebar) sidebar.classList.remove('admin-sidebar-collapsed');
@@ -213,10 +245,7 @@
   // Sign out confirmation modal
   var signoutModal = document.getElementById('adminSignoutModal');
   var signoutBackdrop = document.getElementById('adminSignoutModalBackdrop');
-  var signoutConfirm = document.getElementById('adminSignoutConfirmBtn');
   var signoutCancel = document.getElementById('adminSignoutCancelBtn');
-  var logoutUrl = typeof window.ADMIN_LOGOUT_URL === 'string' ? window.ADMIN_LOGOUT_URL : '';
-
   var signoutModalTrigger = null;
 
   function openSignoutModal(trigger) {
@@ -252,11 +281,6 @@
   });
   if (signoutBackdrop) signoutBackdrop.addEventListener('click', closeSignoutModal);
   if (signoutCancel) signoutCancel.addEventListener('click', closeSignoutModal);
-  if (signoutConfirm && logoutUrl) {
-    signoutConfirm.addEventListener('click', function() {
-      window.location.href = logoutUrl;
-    });
-  }
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && signoutModal && signoutModal.classList.contains('is-open')) {
       closeSignoutModal();

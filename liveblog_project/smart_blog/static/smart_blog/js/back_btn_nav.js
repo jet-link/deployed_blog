@@ -20,10 +20,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 sessionStorage.setItem('category_return_url', location.pathname + location.search);
             } catch (err) { }
         }
-        var topic = e.target.closest('a[href*="/blog/topics/"]');
-        if (topic && topic.href && !topic.href.match(/\/blog\/topics\/?$/)) {
+        var topic = e.target.closest('a[href*="/topics/"], a[href*="/blog/topics/"]');
+        if (topic && topic.href) {
             try {
-                sessionStorage.setItem('category_return_url', location.pathname + location.search);
+                var p = new URL(topic.href, window.location.origin).pathname.replace(/\/+$/, '') || '/';
+                var isTopicHub = p.indexOf('/topics/') === 0 || p.indexOf('/blog/topics/') === 0;
+                if (isTopicHub) {
+                    sessionStorage.setItem('category_return_url', location.pathname + location.search);
+                }
             } catch (err) { }
         }
     }, true);
@@ -34,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!btn) return;
         e.preventDefault();
         var key = btn.getAttribute('data-return-key');
-        var fallback = btn.getAttribute('data-fallback') || '/blog/brainews/';
+        var fallback = btn.getAttribute('data-fallback') || '/brainews/';
         if (!key) {
             window.location.href = fallback;
             return;

@@ -78,13 +78,24 @@
 .main .item-text.ck-content img,
 .main .item-text.ck-content figure img,
 .main .ck-content img,
-.main .post-body img,
+.main .post-body img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
 .main .item-gallery img,
 .main .gallery-img,
 .main .gallery-slide-img {
     max-width: 100%;
-    height: auto;
     display: block;
+}
+
+.main .item-gallery .gallery-img,
+.main .gallery-slide-img {
+    height: 100%;
+    min-height: 0;
+    object-fit: cover;
 }
 
 .main .item-text.ck-content video,

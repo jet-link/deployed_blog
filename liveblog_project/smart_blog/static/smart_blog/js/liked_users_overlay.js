@@ -120,6 +120,9 @@
   }
 
   function closeOverlay() {
+    if (overlay.classList.contains('hidden')) {
+      return;
+    }
     if (overlay.contains(document.activeElement)) {
       document.activeElement.blur();
     }
@@ -131,8 +134,14 @@
     }
     overlay.classList.add('hidden');
     overlay.setAttribute('aria-hidden', 'true');
-    stackTrigger?.focus({ preventScroll: true });
     unlockScroll();
+    requestAnimationFrame(function () {
+      try {
+        stackTrigger?.focus({ preventScroll: true });
+      } catch (err) {
+        try { stackTrigger?.focus(); } catch (e2) { /* ignore */ }
+      }
+    });
   }
 
   function openOnClick(e) {
@@ -253,7 +262,12 @@
     closeOverlay();
   });
   window.addEventListener('pagehide', closeOverlay);
-  window.addEventListener('pageshow', closeOverlay);
+  /* bfcache restore only — avoid running on every tab focus (that caused stray unlockScroll / scroll jumps) */
+  window.addEventListener('pageshow', function (ev) {
+    if (ev.persisted && overlay && !overlay.classList.contains('hidden')) {
+      closeOverlay();
+    }
+  });
   window.addEventListener('resize', () => {
     /* Два rAF после смены viewport (открытие DevTools и т.д.), чтобы measureItemHeight видел финальный layout */
     requestAnimationFrame(function () {
@@ -304,30 +318,41 @@
   function syncStackFromList() {
     if (!stack || !list) return;
     const items = Array.from(list.querySelectorAll('[data-like-user]')).slice(0, 5);
-    stack.innerHTML = '';
-    items.forEach((row) => {
-      const username = row.dataset.likeUser;
-      const sourceImg = row.querySelector('img');
-      const span = document.createElement('span');
-      span.className = 'liked-user-avatar little-avatar';
-      span.title = username;
-      const img = document.createElement('img');
-      if (sourceImg?.classList.contains('avatar-load-failed')) {
-        img.classList.add('avatar-load-failed');
-        img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>';
-      } else {
-        img.src = sourceImg?.getAttribute('src') || '/static/img/no_avatar.svg';
-      }
-      img.alt = username;
-      img.className = 'user-avatar';
-      img.width = 30;
-      img.height = 30;
-      img.decoding = 'async';
-      img.loading = 'lazy';
-      img.onerror = function () { this.onerror = null; this.classList.add('avatar-load-failed'); };
-      span.appendChild(img);
-      stack.appendChild(span);
-    });
+
+    function rebuild() {
+      stack.classList.remove('is-refreshing-out');
+      stack.innerHTML = '';
+      items.forEach((row) => {
+        const username = row.dataset.likeUser;
+        const sourceImg = row.querySelector('img');
+        const span = document.createElement('span');
+        span.className = 'liked-user-avatar little-avatar';
+        span.title = username;
+        const img = document.createElement('img');
+        if (sourceImg && sourceImg.classList.contains('avatar-load-failed')) {
+          img.classList.add('avatar-load-failed');
+          img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>';
+        } else {
+          img.src = (sourceImg && sourceImg.getAttribute('src')) || '/static/img/no_avatar.svg';
+        }
+        img.alt = username;
+        img.className = 'user-avatar';
+        img.width = 30;
+        img.height = 30;
+        img.decoding = 'async';
+        img.loading = 'lazy';
+        img.onerror = function () { this.onerror = null; this.classList.add('avatar-load-failed'); };
+        span.appendChild(img);
+        stack.appendChild(span);
+      });
+    }
+
+    if (stack.querySelector('.liked-user-avatar')) {
+      stack.classList.add('is-refreshing-out');
+      window.setTimeout(rebuild, 150);
+    } else {
+      rebuild();
+    }
   }
 
   function updateButtonVisibility(likesCount) {

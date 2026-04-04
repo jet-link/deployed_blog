@@ -99,8 +99,10 @@
         lastTrigger = null;
         if (t && document.body.contains(t)) {
             try {
-                t.focus();
-            } catch (e) { /* ignore */ }
+                t.focus({ preventScroll: true });
+            } catch (e) {
+                try { t.focus(); } catch (e2) { /* ignore */ }
+            }
         }
     }
 

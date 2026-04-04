@@ -24,17 +24,18 @@
         </div>
 
         {# PASSWORD #}
-        <div class="form-floating mb-2">
+        <div class="form-floating form-floating-password mb-2">
           {{ form.password }}
           <label for="floatingPassword" class="text-muted">Password...</label>
-          {% if form.password.errors %}
-            <div class="text-danger small mt-1">
-              {% for err in form.password.errors %}
-                {{ err }}
-              {% endfor %}
-            </div>
-          {% endif %}
+          <button type="button" class="password-toggle password-toggle--inside" data-password-toggle="1" aria-label="Show password"></button>
         </div>
+        {% if form.password.errors %}
+          <div class="text-danger small mt-1 mb-2">
+            {% for err in form.password.errors %}
+              {{ err }}
+            {% endfor %}
+          </div>
+        {% endif %}
 
         <div class="errors-block">
           {% if form.non_field_errors %}
@@ -49,28 +50,22 @@
         </div>
 
         {# REMEMBER ME #}
-        <div class="d-flex justify-content-between align-items-center small">
-          <div class="form-check text-start my-3">
-            {{ form.remember }}
-            <label class="form-check-label ms-1 text-muted" for="checkDefault">Remember me</label>
-          </div>
-          <button type="button" class="text-muted text-decoration-none password-toggle small" data-password-toggle="1"></button>
+        <div class="form-check text-start my-3 small">
+          {{ form.remember }}
+          <label class="form-check-label ms-1 text-muted" for="checkDefault">Remember me</label>
         </div>
 
         {# BUTTONS #}
-        <hr class="text-muted" />
-        <div class="d-flex justify-content-between align-items-center mt-2">
-          <div class="d-flex gap-1">
-            <button type="submit" class="cstm-btn-sm custom-primary-btn">Sign in</button>
-            <a href="{% url 'login_app:register' %}" class="cstm-btn-sm custom-secondary-btn">Sign up</a>
-          </div>
+        <div class="auth-form-submit-row d-flex gap-2 mt-2">
+          <button type="submit" class="cstm-btn-sm custom-primary-btn auth-form-submit-btn">Sign in</button>
+          <a href="{% url 'login_app:register' %}" class="cstm-btn-sm custom-secondary-btn auth-form-submit-btn">Sign up</a>
+        </div>
 
           {% comment %} <div class="another_login_block d-flex gap-1">
             <a href="#" class="google_btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Sign in by Google"><i class="fa fa-google" aria-hidden="true"></i></a>
             <a href="#" class="apple_btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Sign in by Apple"><i class="fa fa-apple" aria-hidden="true"></i></a>
             <a href="#" class="twitter_btn_login" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Sign in by twitter"><i class="fa fa-twitter" aria-hidden="true"></i></a>
           </div> {% endcomment %}
-        </div>
       </form>
     </main>
   </div>

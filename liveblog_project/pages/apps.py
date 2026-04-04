@@ -7,3 +7,6 @@ class PagesConfig(AppConfig):
 
     def ready(self):
         import pages.signals  # noqa: F401
+        from pages.signals import connect_sitemap_cache_invalidation
+
+        connect_sitemap_cache_invalidation()

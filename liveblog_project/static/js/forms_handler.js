@@ -187,6 +187,8 @@
         requiredFields.forEach(f => {
             // If field is hidden, skip (could still validate via server)
             if (f.type === 'hidden' || f.disabled) return;
+            // Auxiliary file inputs inside rich-text widgets (often empty); not part of our model forms
+            if (f.type === 'file' && !f.name) return;
             // For checkboxes/radios: at least one in group must be checked
             if (f.type === 'checkbox' || f.type === 'radio') {
                 // if same name group, validate only once
@@ -233,11 +235,28 @@
         return res;
     }
 
+    /**
+     * Build FormData for multipart POST. Some browsers (esp. mobile Safari) omit files
+     * assigned via DataTransfer on the input when using `new FormData(form)` alone.
+     */
+    function buildFormDataFromForm(form) {
+        const fd = new FormData(form);
+        form.querySelectorAll('input[type="file"]').forEach(function (inp) {
+            if (!inp.name || inp.disabled) return;
+            fd.delete(inp.name);
+            if (inp.files && inp.files.length) {
+                for (let i = 0; i < inp.files.length; i++) {
+                    fd.append(inp.name, inp.files[i]);
+                }
+            }
+        });
+        return fd;
+    }
+
     // ---------- AJAX submit ----------
     async function submitFormAjax(form) {
         clearGlobalErrors(form);
-        // build FormData (will include files)
-        const fd = new FormData(form);
+        const fd = buildFormDataFromForm(form);
 
         const url = form.getAttribute('action') || window.location.href;
         const method = (form.getAttribute('method') || 'POST').toUpperCase();
@@ -359,6 +378,10 @@
 
                 ev.preventDefault();
 
+                if (form.hasAttribute(ATTR_AJAX) && form.dataset.ajaxSubmitting === '1') {
+                    return;
+                }
+
                 // clear previous errors
                 clearGlobalErrors(form);
                 Array.from(form.elements).forEach(el => clearFieldErrors(el));
@@ -400,20 +423,29 @@
                 const submitter = ev.submitter || document.activeElement;
                 const submitBtns = Array.from(form.querySelectorAll('[type="submit"], button[data-submit]'));
 
-                // Disable all submit buttons EXCEPT the real submitter (to preserve its name/value)
+                // If form is AJAX-handled -> send via fetch and stay on page
+                if (form.hasAttribute(ATTR_AJAX)) {
+                    submitBtns.forEach(b => {
+                        try {
+                            b.disabled = true;
+                        } catch (e) { /* ignore */ }
+                    });
+                    form.dataset.ajaxSubmitting = '1';
+                    try {
+                        await submitFormAjax(form);
+                    } finally {
+                        form.dataset.ajaxSubmitting = '0';
+                        submitBtns.forEach(b => { try { b.disabled = false; } catch (e) { } });
+                    }
+                    return;
+                }
+
+                // Not AJAX — disable other submit buttons only (preserve submitter name/value semantics)
                 submitBtns.forEach(b => {
                     try {
                         if (b !== submitter) b.disabled = true;
                     } catch (e) { /* ignore */ }
                 });
-
-                // If form is AJAX-handled -> send via fetch and stay on page
-                if (form.hasAttribute(ATTR_AJAX)) {
-                    const result = await submitFormAjax(form);
-                    // re-enable all submits after AJAX result
-                    submitBtns.forEach(b => { try { b.disabled = false; } catch (e) { } });
-                    return;
-                }
 
                 // Not AJAX — we will submit the form normally.
                 // BUT: some browsers don't include the clicked button name/value if we call form.submit()

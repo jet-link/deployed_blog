@@ -2,6 +2,15 @@
 
 /* Вертикальный ритм: отступы .main (--main-pad-y) */
 
+/* iOS: avoid auto-zoom on focus when font-size < 16px */
+@media (max-width: 767.98px) {
+    textarea,
+    input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="range"]):not([type="color"]):not([type="hidden"]):not([type="file"]),
+    select {
+        font-size: 16px !important;
+    }
+}
+
 /* ---------- Post image gallery ---------- */
 @media (max-width: 991px) {
     .gallery-grid {
@@ -55,7 +64,6 @@
 @media (max-width: 991px) {
     .gallery-overlay-inner {
         padding: 28px;
-        height: 150%;
     }
 
     .gallery-overlay-img {
@@ -148,10 +156,11 @@
     }
 }
 
-/* Mobile slide menu */
+/* Mobile slide menu — avoid 100vw (horizontal scrollbar); lock scroll handled via html.scroll-locked */
 @media (max-width: 575px) {
     .bottom-side-menu {
-        width: 100vw;
+        width: 100%;
+        max-width: 100%;
     }
 
     .bottom-menu-overlay {
@@ -159,11 +168,10 @@
     }
 }
 
-/* Card columns: Bootstrap col-md-6 on listings — tighten card padding on phones */
+/* Card columns: listing cards — comfortable padding on phones */
 @media (max-width: 575px) {
     .item_block .card-body {
-        padding-top: 0.75rem;
-        padding-bottom: 0.75rem;
+        padding: 1.15rem 1rem;
     }
 }
 
@@ -180,20 +188,25 @@
     }
 
     .VLB {
-        padding: 7px 10px;
-        font-size: 0.74rem;
+        padding: 10px 14px;
+        font-size: 0.78rem;
+        border-radius: var(--radius-md, 8px);
     }
 
     .VLB .item-stats {
-        gap: 12px;
+        gap: 18px;
     }
 
     .VLB .item-stats .stat {
-        gap: 4px;
+        gap: 6px;
+    }
+
+    .VLB .item-stats .stat span {
+        font-size: 0.76rem;
     }
 
     .VLB .item-stats .stat i {
-        font-size: 0.8rem;
+        font-size: 0.88rem;
     }
 
     .main .item-text.ck-content {
@@ -213,29 +226,30 @@
     }
 
     .VLB {
-        padding: 7px;
-        font-size: 0.68rem;
-        line-height: 1.2;
+        padding: 9px 12px;
+        font-size: 0.74rem;
+        line-height: 1.25;
+        border-radius: var(--radius-md, 8px);
     }
 
     .VLB .item-stats {
-        gap: 10px;
+        gap: 16px;
         justify-content: flex-end;
         flex-wrap: wrap;
-        row-gap: 2px;
+        row-gap: 6px;
     }
 
     .VLB .item-stats .stat {
-        gap: 5px;
+        gap: 6px;
     }
 
     .VLB .item-stats .stat span {
-        font-size: 0.64rem;
+        font-size: 0.72rem;
         font-weight: 600;
     }
 
     .VLB .item-stats .stat .fa {
-        font-size: 0.72rem;
+        font-size: 0.82rem;
     }
 
     .main .item-text.ck-content {
@@ -277,12 +291,13 @@
 
 
     .comment_likes_badge {
-        font-size: 0.55rem;
-        padding: 1px 5px;
+        font-size: 0.68rem;
+        padding: 3px 7px;
         right: 4px;
-        top: -5px;
-        gap: 2px !important;
-        line-height: 1.15;
+        top: -6px;
+        gap: 3px !important;
+        line-height: 1.2;
+        border-radius: 5px;
     }
 
     .comment_likes_badge span {
@@ -292,18 +307,12 @@
 
 /* ---------- Comments: nesting depth + overflow ---------- */
 @media (max-width: 767px) {
+    .replies {
+        padding-left: 0.75rem;
+    }
+
     .replies .replies {
-        margin-left: 10px;
-    }
-
-    .replies::before {
-        left: -10px;
-    }
-
-    .replies > .comment-block::before {
-        left: -10px;
-        width: 8px;
-        top: 24px;
+        padding-left: 0.75rem;
     }
 
     .comment-text {
@@ -323,51 +332,153 @@
         gap: 6px;
     }
 
-    /*
-     * Comment header actions: keep compact on narrow viewports.
-     * Do not force 40×40 min on text pills — that made Reply/Share/Report huge.
-     */
+    /* Username badge + actions: compact pill, actions in a dropdown */
     .comment-menu {
-        flex-wrap: wrap;
-        row-gap: 4px;
-        column-gap: 4px;
+        position: relative;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        flex-direction: column;
         max-width: 100%;
     }
 
-    .comment-actions {
-        flex-wrap: wrap;
-        gap: 3px;
-        margin-left: 2px;
+    .comment-menu .comment-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        flex-wrap: nowrap;
+        gap: 0;
+        margin-left: 0;
+        margin-top: 10px;
+        padding: 6px 0;
+        width: max-content;
+        min-width: 132px;
+        max-width: min(200px, calc(100vw - 32px));
+        background: var(--card-bg);
+        border: 1px solid var(--border-default);
+        border-radius: var(--card-radius, 8px);
+        box-shadow: 3px 12px 25px rgba(0, 0, 0, 0.14);
+        position: absolute;
+        left: 0;
+        top: 100%;
+        z-index: 25;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-6px);
+        pointer-events: none;
+        transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+    }
+
+    /* Tooltip-style arrow: points up toward the username badge */
+    /* --comment-menu-arrow-x = horizontal center of badge, set in comment_operate.js */
+    .comment-menu .comment-actions::before {
+        content: "";
+        position: absolute;
+        bottom: 100%;
+        left: var(--comment-menu-arrow-x, 50%);
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid var(--border-default);
+        pointer-events: none;
+    }
+
+    .comment-menu .comment-actions::after {
+        content: "";
+        position: absolute;
+        bottom: 100%;
+        left: var(--comment-menu-arrow-x, 50%);
+        transform: translateX(-50%);
+        margin-bottom: -1px;
+        width: 0;
+        height: 0;
+        border-left: 7px solid transparent;
+        border-right: 7px solid transparent;
+        border-bottom: 7px solid var(--card-bg);
+        pointer-events: none;
+    }
+
+    .comment-menu.open .comment-actions {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    .comment-actions > .fa {
+        display: none;
     }
 
     .comment-menu-btn {
         min-height: 0;
         min-width: 0;
-        padding: 4px 10px;
-        font-size: 0.65rem;
+        padding: 5px 12px;
+        font-size: 0.72rem;
     }
 
-    .comment-menu-action {
+    /* Match header user-tooltip rows: flat list, no pill borders */
+    .comment-menu .comment-actions .comment-menu-action {
         min-height: 0 !important;
         min-width: 0 !important;
-        padding: 3px 9px !important;
-        font-size: 0.62rem !important;
-        line-height: 1.2;
-        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 12px 22px !important;
+        font-size: 0.85rem !important;
+        line-height: 1.35 !important;
+        font-weight: 500;
+        border: none !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        color: var(--text-default) !important;
+        text-align: left;
+        transition: background 0.15s ease;
+    }
+
+    .comment-menu .comment-actions .comment-menu-action:not(.disabled):hover {
+        background: #f1f2f6 !important;
+    }
+
+    html[data-theme="dark"] .comment-menu .comment-actions .comment-menu-action:not(.disabled):hover {
+        background: var(--bg-muted) !important;
+    }
+
+    .comment-menu .comment-actions .comment-menu-action.badge_danger,
+    .comment-menu .comment-actions .comment-menu-action.btn-delete-comment {
+        color: #e74c3c !important;
+    }
+
+    html[data-theme="dark"] .comment-menu .comment-actions .comment-menu-action.badge_danger,
+    html[data-theme="dark"] .comment-menu .comment-actions .comment-menu-action.btn-delete-comment {
+        color: var(--danger-fg) !important;
+    }
+
+    .comment-menu .comment-actions .comment-menu-action.disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
     }
 
     .comment-form-btn {
         min-height: 0 !important;
         min-width: 0 !important;
-        width: 28px;
-        height: 28px;
+        width: 30px;
+        height: 30px;
     }
 }
 
 @media (max-width: 767px) {
     .comment-menu-action {
-        padding: 4px 10px;
-        font-size: 0.64rem;
+        padding: 5px 11px;
+        font-size: 0.68rem;
+    }
+
+    .comment-menu-btn {
+        padding: 5px 11px;
+        font-size: 0.7rem;
     }
 }
 
@@ -434,19 +545,57 @@
     }
 }
 
-/* ---------- Touch targets ---------- */
+/* ---------- Touch targets (align with header 44px search / burger) ---------- */
 @media (max-width: 991px) {
     .search-btn,
     .theme-toggle-btn {
-        /* min-width: var(--touch-target-min, 44px);
-        min-height: var(--touch-target-min, 44px); */
-        min-width: 35px;
-        min-height: 35px;
-        font-size: .775rem;
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 1rem;
     }
 
     .bottom-burger {
-        min-width: 33px;
-        min-height: 33px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/*
+ * Post gallery on small phones: strict 2-column rows; when count is odd, the last
+ * cell spans both columns so there is never a half-empty row (no “holes”).
+ */
+@media (max-width: 576px) {
+    .item-gallery {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .item-gallery .gallery-grid,
+    .item-gallery .gallery-grid.flex {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0;
+        grid-auto-flow: row;
+    }
+
+    .item-gallery .gallery-cell {
+        grid-column: auto;
+        aspect-ratio: 1;
+        min-height: 108px !important;
+        box-shadow: none !important;
+    }
+
+    .item-gallery .gallery-cell:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+        aspect-ratio: 16 / 10;
+        min-height: 160px !important;
+    }
+
+    .item-gallery .gallery-img {
+        height: 100% !important;
+        min-height: 100%;
+        object-fit: cover;
     }
 }

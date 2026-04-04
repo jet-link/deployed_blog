@@ -31,9 +31,8 @@ def prune_view_events():
     return deleted
 
 
-@shared_task
-def save_search_history(user_id, query, results_count, filters_dict, from_history):
-    """Async write of search history to avoid blocking the request."""
+def save_search_history_record(user_id, query, results_count, filters_dict, from_history):
+    """Write search history (sync). Use from the search view so history works without Celery."""
     from smart_blog.models import SearchHistory
 
     existing = SearchHistory.objects.filter(
@@ -68,3 +67,11 @@ def save_search_history(user_id, query, results_count, filters_dict, from_histor
     )
     if len(all_ids) > 25:
         SearchHistory.objects.filter(pk__in=all_ids[25:]).delete()
+
+
+@shared_task
+def save_search_history(user_id, query, results_count, filters_dict, from_history):
+    """Async variant (optional); prefer save_search_history_record in request paths."""
+    save_search_history_record(
+        user_id, query, results_count, filters_dict, from_history
+    )

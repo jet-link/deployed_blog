@@ -857,6 +857,12 @@
 
   window.closeAllCommentEditForms = closeAllCommentEditForms;
 
+  function extractMentionUserIdFromRaw(rawDecoded) {
+    if (!rawDecoded) return '';
+    const m = String(rawDecoded).match(/@\[\s*user\s*:\s*(\d+)\s*\]/i);
+    return m ? m[1] : '';
+  }
+
   function openEditor(commentNode, commentId, editUrl) {
     if (window.closeAllReplyForms) {
       window.closeAllReplyForms();
@@ -882,8 +888,9 @@
 
     const displayHtml =
       textDiv?.dataset.fullHtml || textDiv?.innerHTML || '';
+    const rawDecoded = decodeHtml(rawHtml);
     const fullHtml =
-      editText ? decodeHtml(editText) : (decodeHtml(rawHtml) || displayHtml);
+      editText ? decodeHtml(editText) : (rawDecoded || displayHtml);
     if (fullHtml && !commentNode.dataset.rawHtml && !editText) {
       commentNode.dataset.rawHtml = fullHtml;
     }
@@ -892,18 +899,43 @@
       commentNode.dataset.fullHtmlCache = displayHtml;
     }
 
-    let originalText = fullHtml
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/p>/gi, '\n\n')
-      .replace(/<[^>]+>/g, '')
-      .trim();
-    let mention = null;
+    let mentionId = (commentNode.dataset.mentionId || '').trim();
+    if (!mentionId) {
+      mentionId = extractMentionUserIdFromRaw(rawDecoded);
+    }
 
-    // 🔥 надёжное извлечение mention
-    const match = originalText.match(/^@([\w.-]+)\s*,?\s*/);
-    if (match) {
-      mention = match[1];
-      originalText = originalText.replace(/^@[\w.-]+\s*,?\s*/, '');
+    let originalText = '';
+    let mention = '';
+    const editDecoded = editText ? decodeHtml(editText) : '';
+
+    if (editDecoded.startsWith('@')) {
+      const comma = editDecoded.indexOf(', ');
+      if (comma === -1) {
+        mention = editDecoded.slice(1).trim();
+        originalText = '';
+      } else {
+        mention = editDecoded.slice(1, comma).trim();
+        originalText = editDecoded.slice(comma + 2).trim();
+      }
+    } else {
+      originalText = fullHtml
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n\n')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+      originalText = originalText.replace(/^\s*@\[user:\d+\]\s*,?\s*/i, '').trim();
+      const legacy = originalText.match(/^@([\w.-]+)\s*,?\s*/);
+      if (legacy) {
+        mention = legacy[1];
+        originalText = originalText.replace(/^@[\w.-]+\s*,?\s*/, '');
+      }
+    }
+
+    if (!editText && rawDecoded) {
+      let fallback = rawDecoded.replace(/^\s*@\[user:\d+\]\s*,?\s*/i, '').trim();
+      if (!originalText && fallback) {
+        originalText = fallback;
+      }
     }
 
     /* ===============================
@@ -926,7 +958,6 @@
     textarea.placeholder = 'Edited text';
     textarea.value = originalText;
 
-    const mentionId = commentNode.dataset.mentionId || '';
     if (mention) {
       textarea.dataset.mention = mention;
     }
@@ -1002,11 +1033,14 @@
         return;
       }
 
-      const mentionId = textarea.dataset.mentionId;
-      const mention = textarea.dataset.mention;
-      if (mentionId && mention) {
-        text = text.replace(new RegExp('@' + mention.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g'), '@[user:' + mentionId + ']');
-      } else if (mentionId && !mention) {
+      const mentionId = (textarea.dataset.mentionId || '').trim();
+      const mention = textarea.dataset.mention || '';
+      if (mentionId) {
+        text = text.replace(/^\s*@\[user:\d+\]\s*,?\s*/i, '').trim();
+        if (mention) {
+          const esc = mention.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          text = text.replace(new RegExp('^\\s*@' + esc + '\\s*,?\\s*'), '').trim();
+        }
         text = `@[user:${mentionId}], ${text}`;
       } else if (mention) {
         text = `@${mention}, ${text}`;
@@ -1399,12 +1433,34 @@
       ?.classList.add('comment-active');
   }
 
-  function closeAllCommentMenus() {
-    document.querySelectorAll('.comment-menu.open')
-      .forEach(menu => {
-        menu.classList.remove('open');
-      });
+  function positionCommentMenuArrow(menu) {
+    const btn = menu.querySelector('.comment-menu-btn');
+    const panel = menu.querySelector('.comment-actions');
+    if (!btn || !panel) return;
+    requestAnimationFrame(() => {
+      const br = btn.getBoundingClientRect();
+      const pr = panel.getBoundingClientRect();
+      let x = br.left + br.width / 2 - pr.left;
+      const inset = 12;
+      x = Math.max(inset, Math.min(x, pr.width - inset));
+      panel.style.setProperty('--comment-menu-arrow-x', `${x}px`);
+    });
   }
+
+  function closeAllCommentMenus() {
+    document.querySelectorAll('.comment-menu.open').forEach(menu => {
+      menu.classList.remove('open');
+      menu.querySelector('.comment-actions')?.style.removeProperty('--comment-menu-arrow-x');
+    });
+  }
+
+  let _commentMenuResizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(_commentMenuResizeTimer);
+    _commentMenuResizeTimer = setTimeout(() => {
+      document.querySelectorAll('.comment-menu.open').forEach(positionCommentMenuArrow);
+    }, 100);
+  });
 
   /* ===============================
      CLOSE FORMS ON OUTSIDE CLICK
@@ -1498,12 +1554,19 @@
       if (!menu) return;
       const wasOpen = menu.classList.contains('open');
       closeAllCommentMenus();
-      if (!wasOpen) menu.classList.add('open');
+      if (!wasOpen) {
+        menu.classList.add('open');
+        positionCommentMenuArrow(menu);
+      }
       return;
     }
 
     const actionBtn = e.target.closest('.comment-menu-action');
     if (actionBtn) {
+      if (actionBtn.classList.contains('btn-delete-comment') || actionBtn.classList.contains('btn-edit-comment')) {
+        closeAllCommentMenus();
+        return;
+      }
       e.preventDefault();
       const action = actionBtn.dataset.action;
       const commentId = actionBtn.dataset.commentId;

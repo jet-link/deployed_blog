@@ -33,8 +33,8 @@ urlpatterns = [
     # Global search at /search/
     path('search/', smart_views.search_view, name='global_search'),
 
-    # Blog routes (prefix /blog/)
-    path('blog/', include('smart_blog.urls')),
+    # Blog: hub pages at /for-you/, /trending/, /topics/; rest under /blog/ (see smart_blog.urls)
+    path('', include('smart_blog.urls')),
 
     # Pages last so slug patterns do not shadow other routes
     path('', include('pages.urls', namespace='pages')),

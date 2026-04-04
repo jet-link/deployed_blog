@@ -1,8 +1,12 @@
 """Admin panel access control."""
 from functools import wraps
+from urllib.parse import quote
 
+from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
+
+_ADMIN_LOGIN_URL = getattr(settings, "LOGIN_URL", "/profile/login/")
 
 
 def is_admin(user):
@@ -15,11 +19,8 @@ def admin_required(view_func):
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            from django.conf import settings
-            from urllib.parse import quote
-            login_url = getattr(settings, 'LOGIN_URL', '/profile/login/')
-            next_url = quote(request.get_full_path(), safe='/')
-            return redirect(f'{login_url}?next={next_url}')
+            next_url = quote(request.get_full_path(), safe="/")
+            return redirect(f"{_ADMIN_LOGIN_URL}?next={next_url}")
         if not request.user.is_staff:
             raise PermissionDenied('You do not have access to the administration area.')
         return view_func(request, *args, **kwargs)

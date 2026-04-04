@@ -6,7 +6,7 @@ from django.db.models import F
 from django.db.models.functions import Greatest
 
 from .models import Like, Item, ItemView, Bookmark, PostRepost, Comment
-from .search_utils import refresh_item_search_vector
+from .search_utils import schedule_search_vector_refresh
 from smart_blog.services.trending_service import TRENDING_API_CACHE_KEY
 
 
@@ -78,8 +78,12 @@ def comment_deleted_trending_cache(sender, instance, **kwargs):
 @receiver(post_save, sender=Item)
 def item_search_vector_sync(sender, instance, **kwargs):
     """Ensure search_vector is populated so new/updated posts appear in search immediately."""
-    if instance.pk:
-        refresh_item_search_vector(instance.pk)
+    if not instance.pk:
+        return
+    update_fields = kwargs.get("update_fields")
+    if update_fields is not None and not ({'title', 'text'} & set(update_fields)):
+        return
+    schedule_search_vector_refresh(instance.pk)
 
 
 @receiver(m2m_changed, sender=Item.tags.through)
@@ -87,7 +91,6 @@ def item_tags_search_vector_sync(sender, instance, action, **kwargs):
     """Refresh search_vector when tags are added/removed (M2M changes after initial save)."""
     if action not in ('post_add', 'post_remove', 'post_clear'):
         return
-    # instance is Item when using item.tags.add(); or through instance has item_id
     item_id = getattr(instance, 'item_id', None) or getattr(instance, 'pk', None)
     if item_id:
-        refresh_item_search_vector(item_id)
+        schedule_search_vector_refresh(item_id)

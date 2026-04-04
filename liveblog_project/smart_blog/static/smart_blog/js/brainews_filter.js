@@ -10,13 +10,14 @@
         const block = document.querySelector('.filter-block[data-filter-url]');
         if (block?.dataset?.filterUrl) return block.dataset.filterUrl;
         const a = document.createElement('a');
-        a.href = '/blog/brainews/filter/';
+        a.href = '/brainews/filter/';
         return a.href;
     }
 
     function isFilterablePage() {
         const path = location.pathname.replace(/\/$/, '') || '/';
-        if (path === '/blog/brainews' || path.endsWith('/brainews')) return true;
+        if (path === '/brainews' || path === '/blog/brainews' || path.endsWith('/brainews')) return true;
+        if (path.startsWith('/brainews/filter') || path.startsWith('/blog/brainews/filter')) return true;
         if (path === '/search' || path.startsWith('/search/')) return true;
         if (path.includes('/blog/tag/')) return true;
         return false;
@@ -24,7 +25,7 @@
 
     function isBraiNewsListing() {
         const path = location.pathname.replace(/\/$/, '') || '/';
-        return path === '/blog/brainews' || path.endsWith('/brainews');
+        return path === '/brainews' || path === '/blog/brainews' || path.endsWith('/brainews');
     }
 
     function getPageContextKey() {
@@ -70,7 +71,7 @@
                 }
             }
         } catch { }
-        return location.origin + '/blog/brainews/';
+        return location.origin + '/brainews/';
     }
 
     function setItem(k, v) { try { sessionStorage.setItem(k, v); } catch { } }
@@ -169,6 +170,9 @@
                 wrapper.offsetHeight; // reflow
                 wrapper.classList.remove('filter-cards-fade-in');
                 if (window.initFilterCardsPagination) window.initFilterCardsPagination();
+                if (typeof window.__gallery_adjustLastRow === 'function') {
+                    setTimeout(window.__gallery_adjustLastRow, 60);
+                }
             });
         });
     }
@@ -208,6 +212,9 @@
                 wrapper.classList.remove('filter-cards-fade-in');
                 if (window.applyListingChanges) window.applyListingChanges();
                 if (window.initFilterCardsPagination) window.initFilterCardsPagination();
+                if (typeof window.__gallery_adjustLastRow === 'function') {
+                    setTimeout(window.__gallery_adjustLastRow, 60);
+                }
             }, transitionMs);
         });
     }

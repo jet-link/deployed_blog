@@ -17,11 +17,24 @@ function lockScroll() {
     _scrollLockCount++;
 }
 function unlockScroll() {
-    _scrollLockCount = Math.max(0, _scrollLockCount - 1);
+    if (_scrollLockCount <= 0) {
+        return;
+    }
+    _scrollLockCount -= 1;
     if (_scrollLockCount === 0) {
+        const y = Math.max(0, Number(_scrollLockY) || 0);
         document.documentElement.classList.remove('scroll-locked');
         document.documentElement.style.removeProperty('--scroll-y');
-        window.scrollTo(0, _scrollLockY);
+        /* Synchronous restore: deferring scrollTo one frame lets the browser paint at scroll 0 (visible jump). */
+        const root = document.documentElement;
+        const prevBehavior = root.style.scrollBehavior;
+        root.style.scrollBehavior = 'auto';
+        window.scrollTo({ left: 0, top: y, behavior: 'auto' });
+        if (prevBehavior) {
+            root.style.scrollBehavior = prevBehavior;
+        } else {
+            root.style.removeProperty('scroll-behavior');
+        }
     }
 }
 
@@ -52,6 +65,16 @@ window.initAutoDismiss = initAutoDismiss;
 LB.lockScroll = lockScroll;
 LB.unlockScroll = unlockScroll;
 LB.initAutoDismiss = initAutoDismiss;
+
+/* Bootstrap modals: same iOS-safe scroll lock as gallery / overlays (backdrop must not scroll). */
+document.addEventListener('show.bs.modal', function (e) {
+    if (e.defaultPrevented) return;
+    lockScroll();
+}, false);
+document.addEventListener('hidden.bs.modal', function () {
+    unlockScroll();
+}, false);
+
 document.addEventListener('DOMContentLoaded', function () {
     initAutoDismiss(document);
 });
@@ -556,7 +579,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         modalEl.addEventListener('hidden.bs.modal', () => {
             if (lastTrigger && typeof lastTrigger.focus === 'function') {
-                lastTrigger.focus();
+                try {
+                    lastTrigger.focus({ preventScroll: true });
+                } catch (err) {
+                    try { lastTrigger.focus(); } catch (e2) { /* ignore */ }
+                }
             }
         });
     }
@@ -585,7 +612,19 @@ document.addEventListener('DOMContentLoaded', function () {
             (node.type === 'password' || node.type === 'text' || node.dataset.isPassword === '1');
     }
 
+    function isInsidePasswordToggle(toggle) {
+        return toggle.classList.contains('password-toggle--inside');
+    }
+
     function getPasswordFieldsForToggle(toggle) {
+        const wrap = toggle.closest('.form-floating-password');
+        if (wrap) {
+            const inp = wrap.querySelector('input:not([type="hidden"])');
+            if (inp && (inp.type === 'password' || inp.type === 'text')) {
+                return [inp];
+            }
+            return [];
+        }
         const form = toggle.closest('form');
         if (form) {
             return Array.from(form.querySelectorAll('input[type="password"], input[data-is-password="1"], input.password-field'));
@@ -595,6 +634,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateToggleVisibility(toggle, fields) {
         const anyValue = fields.some(f => String(f.value || '').trim() !== '');
+        const inside = isInsidePasswordToggle(toggle);
+
+        if (inside) {
+            if (anyValue) {
+                toggle.classList.add('visible');
+                toggle.setAttribute('aria-hidden', 'false');
+                const shown = toggle.dataset.state === 'shown';
+                toggle.innerHTML = shown
+                    ? '<i class="fa fa-eye-slash" aria-hidden="true"></i>'
+                    : '<i class="fa fa-eye" aria-hidden="true"></i>';
+                toggle.setAttribute('aria-label', shown ? 'Hide password' : 'Show password');
+            } else {
+                toggle.classList.remove('visible');
+                toggle.setAttribute('aria-hidden', 'true');
+                fields.forEach(f => {
+                    if (f.dataset._pwShown === '1') {
+                        try { f.type = 'password'; } catch (e) { }
+                        f.dataset._pwShown = '0';
+                    }
+                });
+                toggle.innerHTML = '<i class="fa fa-eye" aria-hidden="true"></i>';
+                toggle.setAttribute('aria-label', 'Show password');
+                toggle.setAttribute('aria-pressed', 'false');
+                toggle.dataset.state = 'hidden';
+            }
+            return;
+        }
+
         if (anyValue) {
             toggle.classList.add('visible');
             toggle.setAttribute('aria-hidden', 'false');
@@ -615,6 +682,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function togglePassword(toggle, fields) {
         const isShown = toggle.dataset.state === 'shown';
+        const inside = isInsidePasswordToggle(toggle);
 
         if (isShown) {
             fields.forEach(f => {
@@ -623,7 +691,12 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             toggle.dataset.state = 'hidden';
             toggle.setAttribute('aria-pressed', 'false');
-            toggle.innerHTML = `Show<i class="fa fa-eye mx-1"></i>password`;
+            if (inside) {
+                toggle.innerHTML = '<i class="fa fa-eye" aria-hidden="true"></i>';
+                toggle.setAttribute('aria-label', 'Show password');
+            } else {
+                toggle.innerHTML = `Show<i class="fa fa-eye mx-1"></i>password`;
+            }
         } else {
             fields.forEach(f => {
                 try { f.type = 'text'; } catch (e) { }
@@ -631,7 +704,12 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             toggle.dataset.state = 'shown';
             toggle.setAttribute('aria-pressed', 'true');
-            toggle.innerHTML = `Hide<i class="fa fa-eye-slash mx-1"></i>password`;
+            if (inside) {
+                toggle.innerHTML = '<i class="fa fa-eye-slash" aria-hidden="true"></i>';
+                toggle.setAttribute('aria-label', 'Hide password');
+            } else {
+                toggle.innerHTML = `Hide<i class="fa fa-eye-slash mx-1"></i>password`;
+            }
         }
     }
 

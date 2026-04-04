@@ -6,9 +6,9 @@ HOME_PAGE_DEFAULTS = {
     "hero_h1": "brainstorm.news",
     "hero_lede": "Read BraiNews, explore topics, and follow what’s trending — without endless scrolling.",
     "cta_primary_label": "Open BraiNews",
-    "cta_primary_url": "/blog/brainews/",
+    "cta_primary_url": "/brainews/",
     "cta_secondary_label": "In trend",
-    "cta_secondary_url": "/blog/brainews/trending/",
+    "cta_secondary_url": "/trending/",
     "trust_line": "",
     "trust_link_url": "",
     "show_quick_links": True,
@@ -22,9 +22,9 @@ HOME_PAGE_DEFAULTS = {
 }
 
 QUICK_LINK_SEED = [
-    {"label": "BraiNews", "url": "/blog/brainews/", "icon_class": "fa-newspaper-o", "order": 0},
-    {"label": "In trend", "url": "/blog/brainews/trending/", "icon_class": "fa-fire", "order": 1},
-    {"label": "Topics", "url": "/blog/topics/", "icon_class": "fa-folder-o", "order": 2},
+    {"label": "BraiNews", "url": "/brainews/", "icon_class": "fa-newspaper-o", "order": 0},
+    {"label": "In trend", "url": "/trending/", "icon_class": "fa-fire", "order": 1},
+    {"label": "Topics", "url": "/topics/", "icon_class": "fa-folder-o", "order": 2},
     {"label": "Search", "url": "/search/", "icon_class": "fa-search", "order": 3},
-    {"label": "For you", "url": "/blog/for-you/", "icon_class": "fa-user", "order": 4},
+    {"label": "For you", "url": "/for-you/", "icon_class": "fa-user", "order": 4},
 ]

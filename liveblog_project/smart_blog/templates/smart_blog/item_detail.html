@@ -11,11 +11,10 @@
     <!-- ===== Title + images + likes + views + bookmarks ===== -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 item-detail-head">
       <h2 class="text-muted m-0 item-detail-title">{{ item.title }}</h2>
-      <div class="d-flex gap-1 align-items-center">
-        <button type="button" class="item_share_btn"><i class="fa fa-bullhorn" aria-hidden="true"></i></button>
-
+      <div class="d-flex gap-1 align-items-center flex-wrap item-detail-actions">
+        <button type="button" class="item_share_btn">Share</button>
         {% if user != item.author and user.is_authenticated and not user.is_staff and not report_rate_limited and item.reports_count|default:0 < 10 %}
-          <button type="button" class="item_report_btn" data-item-id="{{ item.pk }}"><i class="fa fa-flag"></i></button>
+          <button type="button" class="item_report_btn" data-item-id="{{ item.pk }}">Report</button>
         {% endif %}
       </div>
     </div>
@@ -59,7 +58,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="text-muted d-flex align-items-center">
         <small class="d-flex align-items-center gap-2">
-          <i class="fa fa-calendar-check-o" aria-hidden="true"></i>
+          {% comment %} <i class="fa fa-calendar-check-o" aria-hidden="true"></i> {% endcomment %}
           <span>{{ item.human_published }}</span>
           {% if item.is_edited %}
             <span>/</span>
@@ -141,8 +140,6 @@
             <span class="text-muted manipulate expired_edit_delete" aria-label="Edit item" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Edit expired"><i class="fa fa-pencil"></i></span>
             <span class="text-muted manipulate expired_edit_delete" aria-label="Delete item" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Remove expired"><i class="fa fa-trash-o"></i></span>
           {% endif %}
-        {% else %}
-          <small class="text-muted perform-text">To perform any actions, please <a href="{% url 'login_app:login' %}" class="text-decoration-none primary_ fw-semibold">Sign in</a></small>
         {% endif %}
       </div>
     </div>
@@ -152,8 +149,8 @@
     {% comment %} <div class="mb-4 tags_block"> {% endcomment %}
       <div class="tag-list w-100">
         {% if item.tags.all %}
-          <small class="text-muted fw-semibold"><i class="fa fa-tags me-2"></i>Tags</small>
-          <div class="d-flex flex-wrap gap-1 mt-2">
+          {% comment %} <small class="text-muted fw-semibold"><i class="fa fa-tags me-2"></i>Tags</small> {% endcomment %}
+          <div class="item-detail-tag-row d-flex flex-nowrap gap-1 mt-2">
             {% for tag in item.tags.all %}
               <a class="badge text-bg-secondary text-decoration-none" href="{% url 'smart_blog:tag_list' tag.slug %}">{{ tag.tag_name }}</a>
             {% endfor %}
@@ -168,7 +165,7 @@
     {% comment %} <hr /> {% endcomment %}
     {% if user.is_authenticated and user.is_staff %}
       {% if item.reports_count|default:0 >= 10 or not item.author or item.author and not item.author.is_active %}
-      <div class="d-flex justify-content-start align-items-center mb-3">
+      <div class="d-flex justify-content-start align-items-center my-3">
         <button type="button" class="cstm-btn custom-danger-btn cstm-btn-sm" data-bs-toggle="modal" data-bs-target="#confirmItemDeleteModal-{{ item.pk }}" aria-label="Delete post">Delete post</button>
       </div>
       {% endif %}
@@ -228,7 +225,6 @@
 {% block extra_js %}
   <script defer src="{% static 'smart_blog/js/comment_restore_ui.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/comment_operate.js' %}"></script>
-  <script defer src="{% static 'smart_blog/js/image_gallery.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/liked_users_overlay.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/report_modal.js' %}"></script>
 {% endblock %}

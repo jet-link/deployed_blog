@@ -23,11 +23,12 @@
         const existingContainer = qs('#existingImages');
         const infoNode = qs('#imagesHelp');
         const addMoreBtn = qs('#btnAddMoreImages');
-        const itemForm = qs('#itemForm'); // <-- form element (make sure form has id="itemForm")
+        const itemForms = [qs('#itemForm'), qs('#itemEditForm')].filter(Boolean);
 
         const MAX = 10;
         const MIN_IF_ANY = 2; // --- CHANGED: require at least 2 images if any provided
-        const ALLOWED = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif', 'image/svg'];
+        // Keep in sync with smart_blog.image_utils.ALLOWED_MIME_TYPES (server rejects others)
+        const ALLOWED = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
 
         if (!mainInput || (!preview && !existingContainer)) {
             // nothing to do on pages without the file UI
@@ -328,23 +329,25 @@
         renderFilesFromInput();
         refreshAddMoreVisibility();
 
-        // --- CHANGED: BLOCK SUBMIT if resulting images = 1 (require 0 or >=2) ---
-        if (itemForm) {
-            itemForm.addEventListener('submit', function (ev) {
-                const resulting = computeResultingImagesCount();
-                if (resulting === 1) {
-                    ev.preventDefault();
-                    setInfo(`You must submit either no images or at least ${MIN_IF_ANY} images. Current selection would result in exactly 1 image.`, true);
-                    // bring user's attention to image area
-                    const nodeToScroll = preview || existingContainer || qs('#imagesHelp') || mainInput;
-                    if (nodeToScroll) {
-                        nodeToScroll.scrollIntoView({ behavior: 'auto', block: 'center' });
+        // BLOCK SUBMIT if resulting images = 1 (require 0 or >=2)
+        itemForms.forEach(function (itemForm) {
+            itemForm.addEventListener(
+                'submit',
+                function (ev) {
+                    const resulting = computeResultingImagesCount();
+                    if (resulting === 1) {
+                        ev.preventDefault();
+                        ev.stopImmediatePropagation();
+                        setInfo(`You must submit either no images or at least ${MIN_IF_ANY} images. Current selection would result in exactly 1 image.`, true);
+                        const nodeToScroll = preview || existingContainer || qs('#imagesHelp') || mainInput;
+                        if (nodeToScroll) {
+                            nodeToScroll.scrollIntoView({ behavior: 'auto', block: 'center' });
+                        }
                     }
-                    return false;
-                }
-                // otherwise allow submit (server will also validate)
-            });
-        }
+                },
+                true
+            );
+        });
     });
 
     // second DOMContentLoaded block remains, for existingContainer mark/unmark logic

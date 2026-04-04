@@ -20,7 +20,12 @@ class ItemAdminCreateForm(BaseItemCreateForm):
         self.fields['title'].label = 'Post title'
         self.fields['text'].label = 'Post body'
         self.fields['tags'].widget = forms.SelectMultiple(attrs={'class': 'admin-select', 'size': 6})
-        self.fields['new_tags'].widget = forms.TextInput(attrs={'class': 'admin-input', 'placeholder': 'Enter tag/s separate with spaces (optional)', 'spellcheck': 'true'})
+        self.fields['new_tags'].widget = forms.TextInput(attrs={
+            'class': 'admin-input',
+            'placeholder': 'New tags, space-separated · optional',
+            'spellcheck': 'true',
+        })
+        self.fields['images'].label = 'Upload images · optional'
         self.fields['images'].widget.attrs.update({'class': 'admin-file-input'})
 
 

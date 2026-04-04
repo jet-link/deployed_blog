@@ -5,10 +5,20 @@
 .breadcrumb-trail {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 7px;
     font-size: 0.8rem;
     color: var(--text-muted);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    min-width: 0;
+    padding-bottom: 2px;
+}
+
+.breadcrumb-trail > * {
+    flex-shrink: 0;
 }
 
 .breadcrumb-link {
@@ -30,6 +40,25 @@
 .breadcrumb-sep {
     color: var(--text-muted-alt);
     margin: 0 2px;
+}
+
+/* Root crumb: short label on small viewports (align with header .brand-short) */
+.breadcrumb-brand-full {
+    display: inline;
+}
+
+.breadcrumb-brand-short {
+    display: none;
+}
+
+@media (max-width: 991px) {
+    .breadcrumb-brand-full {
+        display: none;
+    }
+
+    .breadcrumb-brand-short {
+        display: inline;
+    }
 }
 
 /* h1,
@@ -253,6 +282,8 @@ h6 {
     backdrop-filter: blur(6px);
     transition: transform .3s ease;
     z-index: 200;
+    display: flex;
+    flex-direction: column;
 }
 
 .hero-card-body a {
@@ -261,19 +292,21 @@ h6 {
     font-size: .9rem;
 }
 
-.hero-card img {
+.hero-card > img {
+    flex: 1 1 auto;
+    min-height: 0;
     width: 100%;
-    height: 75%;
     object-fit: cover;
+    object-position: 50% 40%;
     transition: .3s ease;
 }
 
-.hero-card a:hover img {
+.hero-card:hover > img {
     transform: scale(1.03);
 }
 
-
 .hero-card-body {
+    flex: 0 0 auto;
     padding: 16px;
     color: #fff;
 }
@@ -724,14 +757,8 @@ body.error-page .main {
 .error-page-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.3rem;
     justify-content: center;
-}
-
-.error-page-btn-primary,
-.error-page-btn-secondary {
-    border-radius: var(--btn-radius, 8px);
-    font-weight: 500;
 }
 
 @media (max-width: 480px) {

@@ -1,13 +1,24 @@
-"""Load singleton About / Contacts content (DB + fallback)."""
-from pages.defaults_static_pages import ABOUT_DEFAULTS, CONTACTS_DEFAULTS
+"""Load singleton About / Contacts (backward-compatible names for admin & imports)."""
 from pages.models import AboutPageContent, ContactsPageContent
+from pages.services.static_content import (
+    get_about_page_for_public,
+    get_about_page_instance,
+    get_contacts_page_for_public,
+    get_contacts_page_instance,
+)
 
 
 def get_about_page() -> AboutPageContent:
-    obj, _ = AboutPageContent.objects.get_or_create(pk=1, defaults=ABOUT_DEFAULTS)
-    return obj
+    return get_about_page_instance()
 
 
 def get_contacts_page() -> ContactsPageContent:
-    obj, _ = ContactsPageContent.objects.get_or_create(pk=1, defaults=CONTACTS_DEFAULTS)
-    return obj
+    return get_contacts_page_instance()
+
+
+__all__ = [
+    "get_about_page",
+    "get_contacts_page",
+    "get_about_page_for_public",
+    "get_contacts_page_for_public",
+]

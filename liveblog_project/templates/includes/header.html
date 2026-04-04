@@ -4,7 +4,7 @@
     <div class="container-main">
       <nav class="nav header-nav d-flex align-items-center justify-content-between">
         <div class="bottom-left-nav header-brand">
-          <a href="/" class="brand-minimal">brainstorm.news</a>
+          <a href="/" class="brand-minimal" aria-label="brainstorm.news"><span class="brand-full">brainstorm.news</span><span class="brand-short">bstrm.news</span></a>
         </div>
         <div class="header-menu d-flex align-items-center small">
           {% with nav_name=request.resolver_match.url_name|default:'' %}
@@ -27,13 +27,10 @@
               <div class="user-menu" id="userMenu">
                 <a href="{% url 'login_app:profile' user.username %}" class="text-decoration-none user-avatar-btn">{% include 'includes/thumb_avatar.html' with user=user %}</a>
                 <div class="user-tooltip">
-                  <a href="{% url 'login_app:profile' user.username %}" class="text-muted"><i class="fa fa-user-circle-o me-3" aria-hidden="true"></i>View profile</a>
+                  <a href="{% url 'login_app:profile' user.username %}" class="user-tooltip-profile-row text-muted">
+                    <i class="fa fa-user-circle me-3" aria-hidden="true"></i><span class="user-tooltip-profile-name fw-semibold" title="{{ user.username }}">{% if user.username|length > 15 %}{{ user.username|slice:":12" }}…{% else %}{{ user.username }}{% endif %}</span>
+                  </a>
                   <a href="{% url 'login_app:profile-edit' request.user.username %}" class="text-muted"><i class="fa fa-cog me-3" aria-hidden="true"></i>Edit profile</a>
-                  {% if user|user_cannot_create_post %}
-                    <span class="text-muted disabled" title="You have been shadow banned"><i class="fa fa-plus me-3"></i>Create post</span>
-                  {% else %}
-                    <a href="{% url 'smart_blog:create_item' %}" class="text-muted"><i class="fa fa-plus me-3"></i>Create post</a>
-                  {% endif %}
                   <a href="{% url 'login_app:notifications' user.username %}" class="text-muted notification-btn{% if notifications_count %} has-unread{% endif %}" data-notifications-count="{{ notifications_count }}">
                     <i class="fa fa-bell me-2" aria-hidden="true"></i>
                     Notifications

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load i18n %}
 {% block title %}
   Edit profile - {{ user_obj.username }}
 {% endblock %}
@@ -63,7 +64,7 @@
                   <td>
                     <div class="form-floating">
                       {{ form.first_name }}
-                      <label for="floatingFirstNameProfile" class="text-muted">{{ form.first_name.label }} (optional)</label>
+                      <label for="floatingFirstNameProfile" class="text-muted">{{ form.first_name.label }}<span class="field-label-optional-suffix"> · {% trans "optional" %}</span></label>
                     </div>
                   </td>
                 </tr>
@@ -89,7 +90,7 @@
                   <td>
                     <div class="form-floating">
                       {{ form.last_name }}
-                      <label for="floatingLastNameProfile" class="text-muted">{{ form.last_name.label }} (optional)</label>
+                      <label for="floatingLastNameProfile" class="text-muted">{{ form.last_name.label }}<span class="field-label-optional-suffix"> · {% trans "optional" %}</span></label>
                     </div>
                   </td>
                 </tr>
@@ -115,7 +116,7 @@
                   <td>
                     <div class="form-floating">
                       {{ form.email }}
-                      <label for="floatingEmailProfile" class="text-muted">{{ form.email.label }} (optional)</label>
+                      <label for="floatingEmailProfile" class="text-muted">{{ form.email.label }}<span class="field-label-optional-suffix"> · {% trans "optional" %}</span></label>
                     </div>
                   </td>
                 </tr>
@@ -136,7 +137,7 @@
                     <div class="avatar-url-row-table d-flex gap-2 align-items-stretch">
                       <div class="form-floating flex-grow-1">
                         {{ form.avatar_url }}
-                        <label for="floatingAvatarProfile" class="text-muted">Avatar URL (optional)</label>
+                        <label for="floatingAvatarProfile" class="text-muted">{% trans "Avatar URL" %}<span class="field-label-optional-suffix"> · {% trans "optional" %}</span></label>
                       </div>
                       <button type="button" class="cstm-btn custom-primary-btn avatar-file-trigger" title="Upload image file"><i class="fa fa-folder-open"></i></button>
                     </div>

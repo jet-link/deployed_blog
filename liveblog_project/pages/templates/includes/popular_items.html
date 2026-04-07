@@ -3,6 +3,8 @@
 <div class="hero-snap">
   {% for item in popular_items %}
     <article class="hero-card">
+      {% comment %}
+      Card thumbnails — restore later.
       {% with im=item.images.all|first %}
       {% if im %}
         <img src="{{ im.get_thumbnail_url }}" alt="thumbnail" loading="lazy" width="300" height="200" />
@@ -10,6 +12,8 @@
         <img src="{% static 'img/no_image.jpg' %}" alt="thumbnail" />
       {% endif %}
       {% endwith %}
+      {% endcomment %}
+      <div class="hero-card__thumb-placeholder" aria-hidden="true"></div>
       <div class="d-flex hero-card-body flex-column">
         <h5 class="m-0">{{ item.title }}</h5>
         <hr />

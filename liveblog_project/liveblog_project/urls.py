@@ -21,6 +21,7 @@ def robots_txt(request):
 
 urlpatterns = [
     path('admin/', include('admin_panel.urls')),
+    path('accounts/', include('allauth.urls')),
     path('sitemap.xml', sitemap_index, {'sitemaps': PUBLIC_SITEMAPS}, name='sitemap_index'),
     path(
         'sitemap-<section>.xml',

@@ -108,6 +108,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.sitemaps',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.apple',
     # Third-party
     'compressor',
     'rest_framework',
@@ -128,6 +133,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'liveblog_project.security_middleware.AdminAuditMiddleware',
     'login.middleware.UserOnlineMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -155,6 +161,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'login.context_processors.user_obj_context',
+                'login.context_processors.turnstile_context',
+                'login.context_processors.oauth_buttons_context',
                 'smart_blog.context_processors.notifications_context',
                 'smart_blog.context_processors.spellcheck_context',
                 'smart_blog.context_processors.nav_categories_context',
@@ -213,6 +221,63 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# django-allauth (social login uses /accounts/…; password login stays at /profile/login/)
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_ADAPTER = 'login.adapters.AccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'login.adapters.CustomSocialAccountAdapter'
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/profile/login/'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http' if DEBUG else 'https'
+
+_goog_cid = os.environ.get('GOOGLE_OAUTH_CLIENT_ID', '').strip()
+_goog_secret = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', '').strip()
+_apple_cid = os.environ.get('APPLE_CLIENT_ID', '').strip()
+_apple_key_id = os.environ.get('APPLE_KEY_ID', '').strip()
+_apple_team = os.environ.get('APPLE_TEAM_ID', '').strip()
+_apple_pk = os.environ.get('APPLE_PRIVATE_KEY', '').strip().replace('\\n', '\n')
+
+SOCIALACCOUNT_PROVIDERS: dict = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'OAUTH_PKCE_ENABLED': True,
+    },
+}
+
+if _goog_cid and _goog_secret:
+    SOCIALACCOUNT_PROVIDERS['google']['APP'] = {
+        'client_id': _goog_cid,
+        'secret': _goog_secret,
+        'key': '',
+    }
+
+if _apple_cid and _apple_key_id and _apple_team and _apple_pk:
+    SOCIALACCOUNT_PROVIDERS['apple'] = {
+        'APPS': [
+            {
+                'client_id': _apple_cid,
+                'secret': _apple_key_id,
+                'key': _apple_team,
+                'settings': {'certificate_key': _apple_pk},
+            }
+        ]
+    }
+
+SOCIALACCOUNT_GOOGLE_ENABLED = bool(_goog_cid and _goog_secret)
+SOCIALACCOUNT_APPLE_ENABLED = bool(
+    _apple_cid and _apple_key_id and _apple_team and _apple_pk
+)
+
+# Cloudflare Turnstile (optional; registration check in login.views.auth_views)
+TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '').strip()
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '').strip()
 
 # Localization
 LANGUAGE_CODE = 'en'
@@ -317,6 +382,7 @@ TRENDING_API_CACHE_SECONDS = int(os.environ.get("TRENDING_API_CACHE_SECONDS", "4
 
 # Admin panel login redirect
 LOGIN_URL = '/profile/login/'
+LOGIN_REDIRECT_URL = '/'
 
 # Spellcheck language (ru/en) - used by spellcheck.js via data-spellcheck-lang
 SPELLCHECK_LANG = os.environ.get('SPELLCHECK_LANG', 'en')

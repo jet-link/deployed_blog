@@ -11,6 +11,7 @@ from django_ratelimit.decorators import ratelimit
 from login.forms import CustomUserCreationForm, LoginForm
 from login.middleware import is_user_online, clear_user_online
 from login.models import Profile
+from login.turnstile import client_ip_from_request, verify_turnstile_response
 
 
 @ratelimit(key='ip', rate=settings.RATELIMIT_LOGIN_RATE, method='POST', block=False)
@@ -81,6 +82,18 @@ def register_view(request):
                 'Too many registration attempts from this network. Please try again later.',
             )
             return render(request, 'accounts/register.html', {'form': form})
+        secret = getattr(settings, 'TURNSTILE_SECRET_KEY', '').strip()
+        if secret:
+            token = request.POST.get('cf-turnstile-response', '')
+            if not verify_turnstile_response(
+                token, secret, client_ip_from_request(request)
+            ):
+                form = CustomUserCreationForm(request.POST, request.FILES)
+                form.add_error(
+                    None,
+                    'Security check failed. Please complete the verification and try again.',
+                )
+                return render(request, 'accounts/register.html', {'form': form})
         form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()

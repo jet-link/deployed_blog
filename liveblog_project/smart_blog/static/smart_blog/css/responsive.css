@@ -326,10 +326,19 @@
 }
 
 @media (max-width: 575px) {
-    .comment-block > .d-flex.justify-content-between {
-        flex-wrap: wrap;
-        align-items: flex-start !important;
-        gap: 6px;
+    .comment-meta-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .comment-meta-time {
+        text-align: left;
+        width: 100%;
+    }
+
+    .comment-layout {
+        grid-template-columns: 36px minmax(0, 1fr);
+        gap: 0.25rem 0.55rem;
     }
 
     /* Username badge + actions: compact pill, actions in a dropdown */

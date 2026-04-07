@@ -211,6 +211,137 @@
   window.setThreadLinkCount = setThreadLinkCount;
   window.adjustThreadLinkCount = adjustThreadLinkCount;
 
+  const COMMENT_REPLIES_COLLAPSE_FROM = 2;
+
+  function formatRepliesToggleLabel(n) {
+    n = Number(n);
+    if (n === 1) return '1 reply';
+    return `${n} replies`;
+  }
+
+  function expandCommentThreadAncestors(commentEl) {
+    if (!commentEl) return;
+    let el = commentEl;
+    for (let i = 0; i < 48 && el; i++) {
+      const outer = el.closest?.('.comment-replies-outer');
+      if (outer) {
+        outer.classList.add('is-expanded');
+        const prev = outer.previousElementSibling;
+        if (prev && prev.classList.contains('comment-replies-toggle')) {
+          prev.setAttribute('aria-expanded', 'true');
+        }
+      }
+      const nextRoot = el.parentElement?.closest?.('.comment-block');
+      if (!nextRoot || nextRoot === el) break;
+      el = nextRoot;
+    }
+  }
+  window.expandCommentThreadAncestors = expandCommentThreadAncestors;
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.comment-replies-toggle');
+    if (!btn) return;
+    e.preventDefault();
+    const outer = btn.nextElementSibling;
+    if (!outer || !outer.classList.contains('comment-replies-outer')) return;
+    const expanded = outer.classList.toggle('is-expanded');
+    btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  });
+
+  function ensureRepliesBucketForAjax(parentComment, parentId, opts) {
+    const o = opts || {};
+    const isThreadView = !!getThreadContext();
+    const parentDepth = parseInt(parentComment?.dataset?.depth || '0', 10);
+    const main = parentComment.querySelector('.comment-main');
+    if (!main) return null;
+
+    let bucket = main.querySelector(`.replies[data-parent-id="${parentId}"]`);
+    if (bucket) return bucket;
+
+    if (isThreadView || parentDepth >= 2) {
+      const replies = document.createElement('div');
+      replies.className = 'replies';
+      replies.dataset.parentId = String(parentId);
+      const replyFormEl = main.querySelector(`#reply-form-${parentId}`);
+      if (replyFormEl) {
+        replyFormEl.after(replies);
+      } else {
+        const bar = main.querySelector('.comment-actions-bar');
+        if (bar) bar.after(replies);
+        else main.appendChild(replies);
+      }
+      return replies;
+    }
+
+    const initialCount = o.initialCount != null ? o.initialCount : 1;
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'comment-replies-toggle mt-2';
+    toggleBtn.dataset.repliesCount = String(initialCount);
+    toggleBtn.dataset.collapseFrom = String(COMMENT_REPLIES_COLLAPSE_FROM);
+    const expanded = initialCount < COMMENT_REPLIES_COLLAPSE_FROM;
+    toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    const label = document.createElement('span');
+    label.className = 'comment-replies-toggle__label';
+    label.textContent = formatRepliesToggleLabel(initialCount);
+    const chev = document.createElement('i');
+    chev.className = 'fa fa-chevron-down comment-replies-toggle__chev';
+    chev.setAttribute('aria-hidden', 'true');
+    toggleBtn.append(label, chev);
+
+    const outer = document.createElement('div');
+    outer.className = 'comment-replies-outer';
+    if (expanded) outer.classList.add('is-expanded');
+    const inner = document.createElement('div');
+    inner.className = 'comment-replies-inner';
+    const replies = document.createElement('div');
+    replies.className = 'replies';
+    replies.dataset.parentId = String(parentId);
+    inner.appendChild(replies);
+    outer.appendChild(inner);
+
+    const replyFormEl = main.querySelector(`#reply-form-${parentId}`);
+    const ref = replyFormEl || main.querySelector('.comment-actions-bar');
+    ref.after(toggleBtn);
+    toggleBtn.after(outer);
+    return replies;
+  }
+  window.ensureRepliesBucketForAjax = ensureRepliesBucketForAjax;
+
+  function bumpRepliesToggleCount(parentComment, parentId, delta) {
+    const main = parentComment.querySelector('.comment-main');
+    if (!main) return;
+    const bucket = main.querySelector(`.replies[data-parent-id="${parentId}"]`);
+    if (!bucket) return;
+    const outer = bucket.closest('.comment-replies-outer');
+    if (!outer) return;
+    const btn = outer.previousElementSibling;
+    if (!btn || !btn.classList.contains('comment-replies-toggle')) return;
+    const prev = parseInt(btn.dataset.repliesCount || '0', 10);
+    const next = Math.max(0, prev + (delta || 0));
+    btn.dataset.repliesCount = String(next);
+    const label = btn.querySelector('.comment-replies-toggle__label');
+    if (label) label.textContent = formatRepliesToggleLabel(next);
+  }
+  window.bumpRepliesToggleCount = bumpRepliesToggleCount;
+
+  function removeEmptyRepliesBucket(parentComment, parentId) {
+    const main = parentComment.querySelector('.comment-main');
+    const pid = String(parentId);
+    const replies =
+      main?.querySelector(`.replies[data-parent-id="${pid}"]`) ||
+      parentComment.querySelector('.replies');
+    if (!replies || countDirectReplyBlocks(replies) > 0) return;
+    const outer = replies.closest('.comment-replies-outer');
+    if (outer) {
+      const toggle = outer.previousElementSibling;
+      if (toggle && toggle.classList.contains('comment-replies-toggle')) toggle.remove();
+      outer.remove();
+    } else {
+      replies.remove();
+    }
+  }
+
   function showFieldError(textarea, message) {
     if (!textarea) return;
 
@@ -523,6 +654,7 @@
           // apply long-text toggle to the new root comment immediately
           if (commentsList?.firstElementChild) {
             window.initCommentToggles?.(commentsList.firstElementChild);
+            window.initCommentLikes?.();
           }
           window.refreshRootCommentsPagination?.();
 
@@ -650,26 +782,32 @@
             if (data.parent_id) {
               const parentComment = document.getElementById('comment-' + data.parent_id);
               if (parentComment) {
-                const replies = parentComment.querySelector('.replies');
-                if (replies && countDirectReplyBlocks(replies) === 0) {
-                  replies.remove();
+                const pid = data.parent_id;
+                bumpRepliesToggleCount(parentComment, pid, -1);
+                const repliesBefore =
+                  parentComment.querySelector(`.replies[data-parent-id="${pid}"]`) ||
+                  parentComment.querySelector('.replies');
+                if (repliesBefore && countDirectReplyBlocks(repliesBefore) === 0) {
+                  removeEmptyRepliesBucket(parentComment, pid);
                 }
                 const ctx = getThreadContext();
                 if (!ctx) {
                   const depth = parseInt(parentComment.dataset.depth || '0', 10);
-                  const link = document.getElementById('replies-thread-link-' + data.parent_id);
+                  const link = document.getElementById('replies-thread-link-' + pid);
+                  const replies = parentComment.querySelector(`.replies[data-parent-id="${pid}"]`) ||
+                    parentComment.querySelector('.replies');
                   if (depth >= 2) {
                     if (!replies || countDirectReplyBlocks(replies) === 0) {
                       if (link) link.remove();
                     } else if (!link) {
-                      const threadUrl = parentComment?.dataset?.threadUrl || `${window.location.origin}/blog/comment/${data.parent_id}/thread/`;
+                      const threadUrl = parentComment?.dataset?.threadUrl || `${window.location.origin}/blog/comment/${pid}/thread/`;
                       const replyCount = replies ? countDirectReplyBlocks(replies) : 1;
                       const wrap = document.createElement('div');
                       wrap.className = 'mt-4';
-                      wrap.appendChild(buildThreadLink(data.parent_id, threadUrl, replyCount));
+                      wrap.appendChild(buildThreadLink(pid, threadUrl, replyCount));
                       parentComment.appendChild(wrap);
                     } else {
-                      window.adjustThreadLinkCount?.(data.parent_id, -1);
+                      window.adjustThreadLinkCount?.(pid, -1);
                     }
                   }
                 }
@@ -1091,6 +1229,7 @@
           if (window.initCommentToggles) {
             restoreCommentUI(newNode);
           }
+          window.initCommentLikes?.();
           if (window.initAutoDismiss) window.initAutoDismiss(newNode);
           initEditButtons();
           return;
@@ -1246,6 +1385,8 @@
       btn.addEventListener('click', handleClick, { passive: false });
     });
   }
+
+  window.initCommentLikes = init;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once: true });
@@ -1734,15 +1875,21 @@
           return;
         }
 
-        let replies = parentComment.querySelector('.replies');
+        const main = parentComment.querySelector('.comment-main');
+        let replies = main?.querySelector(`.replies[data-parent-id="${parentId}"]`);
+        const hadBucket = !!replies;
         if (!replies) {
-          replies = document.createElement('div');
-          replies.className = 'replies';
-          parentComment.appendChild(replies);
+          replies = window.ensureRepliesBucketForAjax?.(parentComment, parentId, { initialCount: 1 });
+        }
+        if (!replies) {
+          errors.textContent = 'Render error.';
+          return;
         }
 
         replies.insertAdjacentHTML('afterbegin', data.comment_html);
+        if (hadBucket) window.bumpRepliesToggleCount?.(parentComment, parentId, 1);
         window.initCommentToggles?.(replies);
+        window.initCommentLikes?.();
         window.initAllReplyButtonsCooldown?.();
 
         // if we're on thread page, ensure empty state cleared and link removal flag reset
@@ -1876,6 +2023,7 @@
     }
     const comment = document.getElementById(`comment-${id}`);
     if (!comment) return;
+    window.expandCommentThreadAncestors?.(comment);
     setTimeout(() => highlightComment(comment), 120);
   }
 
@@ -1936,7 +2084,7 @@ function buildShortHTML(fullHTML, maxLen = 400) {
 
       const btn = document.createElement('button');
       btn.className = 'comment-toggle-btn';
-      btn.textContent = 'Show more';
+      btn.textContent = 'Read more';
 
       let expanded = false;
 
@@ -1945,7 +2093,7 @@ function buildShortHTML(fullHTML, maxLen = 400) {
           ? textEl.dataset.fullHtml
           : buildShortHTML(textEl.dataset.fullHtml, 350);
 
-        btn.textContent = expanded ? 'Show less' : 'Show more';
+        btn.textContent = expanded ? 'Read less' : 'Read more';
       }
 
       btn.addEventListener('click', () => {
@@ -2135,6 +2283,7 @@ function buildShortHTML(fullHTML, maxLen = 400) {
     if (!container) return false;
     const target = document.getElementById(`comment-${commentId}`);
     if (!target) return false;
+    window.expandCommentThreadAncestors?.(target);
     const rootTarget = findRootComment(container, target);
     if (!rootTarget) return false;
     const rootComments = Array.from(

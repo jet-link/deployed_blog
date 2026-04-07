@@ -2,7 +2,7 @@
 {% load mentions %}
 {% block title %}Content Violations{% endblock %}
 {% block breadcrumbs %}<nav class="admin-breadcrumbs" aria-label="Breadcrumb"><ol class="admin-breadcrumbs-list"><li class="admin-breadcrumbs-item"><a href="{% url 'admin_panel:dashboard' %}">Dashboard</a></li><li class="admin-breadcrumbs-item">Violations</li></ol></nav>{% endblock %}
-{% block page_title %}Content Violations{% endblock %}
+{% block page_title %}Violations{% endblock %}
 {% block content %}
 <div class="admin-toolbar">
     <form class="admin-search-form" method="get" action="{% url 'admin_panel:content_violations_list' %}">

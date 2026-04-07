@@ -228,6 +228,21 @@ html[data-theme="dark"] .password-toggle.password-toggle--inside:focus-visible {
     .auth-form-layout .form-floating > .form-control {
         font-size: 16px !important;
         line-height: 1.4;
+        /* чуть выше для пальцев на login / register */
+        min-height: calc(3.75rem + 2px);
+        padding: 1.05rem 0.9rem 0.8rem 0.9rem;
+    }
+
+    .auth-form-layout .form-floating.form-floating-password > .form-control {
+        padding-right: 2.75rem;
+    }
+
+    .auth-form-layout .form-floating > label {
+        padding: 1.05rem 0.9rem;
+    }
+
+    .auth-form-layout .password-toggle.password-toggle--inside {
+        bottom: 0.62rem;
     }
 
     .auth-form-layout .form-wrapper input[type="text"],
@@ -259,12 +274,20 @@ html[data-theme="dark"] .password-toggle.password-toggle--inside:focus-visible {
 
     .auth-form-layout .form-floating > label {
         font-size: 0.8125rem;
-        padding: 0.9rem 0.8rem;
+        padding: 1rem 0.85rem;
     }
 
     .auth-form-layout .form-floating > .form-control {
-        min-height: calc(3.35rem + 2px);
-        padding: 0.9rem 0.8rem;
+        min-height: calc(3.85rem + 2px);
+        padding: 1.05rem 0.85rem 0.88rem 0.85rem;
+    }
+
+    .auth-form-layout .form-floating.form-floating-password > .form-control {
+        padding-right: 2.75rem;
+    }
+
+    .auth-form-layout .password-toggle.password-toggle--inside {
+        bottom: 0.68rem;
     }
 
     /* Login / Register: equal-width primary actions */
@@ -293,4 +316,84 @@ html[data-theme="dark"] .password-toggle.password-toggle--inside:focus-visible {
         align-items: stretch;
         gap: 0.75rem;
     }
+}
+
+/* Login: inactive OAuth preview (full-width outlined buttons, like design mock) */
+.auth-oauth-mock {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-default, #e6e6e6);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+html[data-theme="dark"] .auth-oauth-mock {
+    border-top-color: var(--border-default, #30363d);
+}
+
+.auth-oauth-mock__label {
+    text-align: center;
+    font-size: 0.9375rem;
+    font-weight: 400;
+    color: var(--text-default, #1f2328);
+    margin: 0 0 0.85rem;
+    line-height: 1.4;
+}
+
+.auth-oauth-mock__stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: 100%;
+}
+
+.auth-oauth-mock__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0.9rem 1rem;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+    border: 2.5px solid var(--text-default, #1f2328);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-default, #1f2328);
+    cursor: not-allowed;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.15s ease;
+}
+
+.auth-oauth-mock__btn:disabled {
+    opacity: 1;
+    color: var(--text-default, #1f2328);
+    border-color: var(--text-default, #1f2328);
+    background: transparent;
+}
+
+.auth-oauth-mock__btn .fa {
+    font-size: 1.2rem;
+    line-height: 1;
+    width: 1.35rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.auth-oauth-mock__btn .fa-google {
+    color: #4285f4;
+}
+
+html[data-theme="dark"] .auth-oauth-mock__btn .fa-google {
+    color: #8ab4f8;
+}
+
+html[data-theme="dark"] .auth-oauth-mock__btn:disabled {
+    color: var(--text-default, #c9d1d9);
+    border-color: var(--text-default, #c9d1d9);
 }

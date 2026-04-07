@@ -19,7 +19,6 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="admin-body" data-spellcheck-lang="{{ spellcheck_lang|default:'en' }}">
-    <div class="admin-sidebar-overlay" id="adminSidebarOverlay" aria-hidden="true"></div>
     <div class="admin-layout">
         {% include 'admin/layout/sidebar.html' %}
         <div class="admin-main">
@@ -49,6 +48,7 @@
             </main>
         </div>
     </div>
+    <div class="admin-sidebar-overlay" id="adminSidebarOverlay" aria-hidden="true"></div>
     <!-- Bulk delete confirmation modal -->
     <div id="adminBulkDeleteModal" class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="adminBulkDeleteModalTitle" aria-hidden="true" hidden>
       <div class="admin-modal-backdrop" id="adminBulkDeleteModalBackdrop"></div>

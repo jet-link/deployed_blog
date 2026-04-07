@@ -6,11 +6,11 @@
 <div id="comment-{{ comment.pk }}" class="py-3 comment-block comment-card" data-reply-url="{% url 'smart_blog:add_comment' comment.item.slug %}" data-thread-url="{% url 'smart_blog:comment_thread' comment.pk %}" data-depth="{{ depth|default:0 }}" data-raw-html="{{ comment.text|escape }}" data-edit-text="{{ comment.text|mention_names|escape }}" data-mention-id="{{ comment.text|mention_first_id }}">
   <span class="comment-anchor" id="comment-anchor-{{ comment.pk }}"></span>
 
-  {% if comment.author %}
-    <div class="d-flex justify-content-between align-items-center">
-      <div class="d-flex gap-1 align-items-center">
+  <div class="comment-layout">
+    <div class="comment-avatar-col">
+      {% if comment.author %}
         <a href="{% url 'login_app:profile' comment.author.username %}"
-          class="d-flex align-items-center gap-1 text-decoration-none"
+          class="d-flex align-items-start text-decoration-none comment-avatar-link"
           title="{% user_status_title comment.author %}">
           <div class="little-avatar{% if user == comment.author %} avatar-ring{% endif %}">
             {% if comment.author.is_active %}
@@ -24,30 +24,124 @@
             {% endif %}
           </div>
         </a>
-        {% if user.is_authenticated %}
-          {% if user == comment.author %}
-            {% if comment.is_editable %}
-              <div class="comment-menu">
-                <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">
-                  {% if comment.author.is_active %}
-                    {{ comment.author }}
-                  {% else %}
-                    {% user_status_display comment.author %}
+      {% else %}
+        <a href="{% url 'login_app:vanished' %}" class="d-flex align-items-start text-decoration-none comment-avatar-link" title="{% user_status_display comment.author %}">
+          <div class="little-avatar">
+            <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display comment.author %}" class="user-avatar" width="40" height="40" loading="eager" decoding="async" />
+          </div>
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="comment-main">
+      <div class="comment-meta-row">
+        <div class="comment-meta-start">
+          {% if comment.author %}
+            {% if user.is_authenticated %}
+              {% if user == comment.author %}
+                {% if comment.is_editable %}
+                  <div class="comment-menu">
+                    <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">
+                      {% if comment.author.is_active %}
+                        {{ comment.author }}
+                      {% else %}
+                        {% user_status_display comment.author %}
+                      {% endif %}
+                    </button>
+                    <div class="comment-actions">
+                      <i class="fa fa-angle-right mx-1 success_"></i>
+                      <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
+                      {% if user|user_shadow_banned %}
+                      <span class="comment-menu-action custom_badge badge_primary fw-semibold disabled" title="You have been shadow banned">Edit</span>
+                      {% else %}
+                      <button type="button" class="edit_btn comment-menu-action custom_badge badge_primary fw-semibold btn-edit-comment" data-edit-url="{% url 'smart_blog:edit_comment' comment.pk %}" data-comment-id="{{ comment.pk }}" aria-label="Edit comment">Edit</button>
+                      {% endif %}
+                      <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold btn-delete-comment" data-delete-url="{% url 'smart_blog:delete_comment' comment.pk %}" data-comment-id="{{ comment.pk }}" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" aria-label="Delete comment">Remove</button>
+                    </div>
+                  </div>
+                {% else %}
+                  <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">
+                    {% if comment.author.is_active %}
+                      {{ comment.author }}
+                    {% else %}
+                      {% user_status_display comment.author %}
+                    {% endif %}
+                  </button>
+                {% endif %}
+              {% else %}
+                {% if user.is_staff %}
+                  {% if not hide_reply %}
+                    {% if not thread_view or depth|default:0 > 0 %}
+                      <div class="comment-menu">
+                        <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">
+                          {% if comment.author.is_active %}
+                            {{ comment.author }}
+                          {% else %}
+                            {% user_status_display comment.author %}
+                          {% endif %}
+                        </button>
+                        <div class="comment-actions">
+                          <i class="fa fa-angle-right mx-1 success_"></i>
+                          {% if comment.author.is_active %}
+                          {% if user|user_shadow_banned %}
+                          <span class="comment-menu-action custom_badge badge_primary fw-semibold disabled" title="You have been shadow banned">Reply</span>
+                          {% else %}
+                          <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="reply" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">Reply</button>
+                          {% endif %}
+                          {% endif %}
+                          <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
+                          {% if comment.reports_count|default:0 >= 10 or not comment.author.is_active %}
+                            <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold btn-delete-comment" data-delete-url="{% url 'smart_blog:delete_comment' comment.pk %}" data-comment-id="{{ comment.pk }}" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" aria-label="Delete comment">Remove</button>
+                          {% endif %}
+                        </div>
+                      </div>
+                    {% else %}
+                      {% if not comment.author.is_active %}
+                      <div class="comment-menu">
+                        <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}">{% user_status_display comment.author %}</button>
+                        <div class="comment-actions">
+                          <i class="fa fa-angle-right mx-1 success_"></i>
+                          <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
+                          <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold btn-delete-comment" data-delete-url="{% url 'smart_blog:delete_comment' comment.pk %}" data-comment-id="{{ comment.pk }}" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" aria-label="Delete comment">Remove</button>
+                        </div>
+                      </div>
+                      {% else %}
+                      <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
+                      {% endif %}
+                    {% endif %}
                   {% endif %}
-                </button>
-                <div class="comment-actions">
-                  <i class="fa fa-angle-right mx-1 success_"></i>
-                  <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
-                  {% if user|user_shadow_banned %}
-                  <span class="comment-menu-action custom_badge badge_primary fw-semibold disabled" title="You have been shadow banned">Edit</span>
-                  {% else %}
-                  <button type="button" class="edit_btn comment-menu-action custom_badge badge_primary fw-semibold btn-edit-comment" data-edit-url="{% url 'smart_blog:edit_comment' comment.pk %}" data-comment-id="{{ comment.pk }}" aria-label="Edit comment">Edit</button>
+                {% else %}
+                  {% if not hide_reply %}
+                    {% if not thread_view or depth|default:0 > 0 %}
+                      <div class="comment-menu">
+                        <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">
+                          {% if comment.author.is_active %}
+                            {{ comment.author }}
+                          {% else %}
+                            {% user_status_display comment.author %}
+                          {% endif %}
+                        </button>
+                        <div class="comment-actions">
+                          <i class="fa fa-angle-right mx-1 success_"></i>
+                          {% if user|user_shadow_banned %}
+                          <span class="comment-menu-action custom_badge badge_primary fw-semibold disabled" title="You have been shadow banned">Reply</span>
+                          {% else %}
+                          <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="reply" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">Reply</button>
+                          {% endif %}
+                          <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
+                          {% if not report_rate_limited %}
+                            <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold" data-action="report" data-comment-id="{{ comment.pk }}">Report</button>
+                          {% endif %}
+                        </div>
+                      </div>
+                    {% else %}
+                      <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
+                    {% endif %}
                   {% endif %}
-                  <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold btn-delete-comment" data-delete-url="{% url 'smart_blog:delete_comment' comment.pk %}" data-comment-id="{{ comment.pk }}" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" aria-label="Delete comment">Remove</button>
-                </div>
-              </div>
+                {% endif %}
+              {% endif %}
             {% else %}
-              <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">
+              <button type="button" class="comment-menu-action custom_badge badge_primary" data-action="share" data-comment-id="{{ comment.pk }}">
                 {% if comment.author.is_active %}
                   {{ comment.author }}
                 {% else %}
@@ -56,175 +150,97 @@
               </button>
             {% endif %}
           {% else %}
-            {% if user.is_staff %}
-              {% if not hide_reply %}
-                {% if not thread_view or depth|default:0 > 0 %}
-                  <div class="comment-menu">
-                    <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">
-                      {% if comment.author.is_active %}
-                        {{ comment.author }}
-                      {% else %}
-                        {% user_status_display comment.author %}
-                      {% endif %}
-                    </button>
-                    <div class="comment-actions">
-                      <i class="fa fa-angle-right mx-1 success_"></i>
-                      {% if comment.author.is_active %}
-                      {% if user|user_shadow_banned %}
-                      <span class="comment-menu-action custom_badge badge_primary fw-semibold disabled" title="You have been shadow banned">Reply</span>
-                      {% else %}
-                      <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="reply" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">Reply</button>
-                      {% endif %}
-                      {% endif %}
-                      <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
-                      {% if comment.reports_count|default:0 >= 10 or not comment.author.is_active %}
-                        <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold btn-delete-comment" data-delete-url="{% url 'smart_blog:delete_comment' comment.pk %}" data-comment-id="{{ comment.pk }}" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" aria-label="Delete comment">Remove</button>
-                      {% endif %}
-                    </div>
+            {% if user.is_authenticated %}
+              {% if user.is_staff %}
+                <div class="comment-menu">
+                  <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}">{% user_status_display comment.author %}</button>
+                  <div class="comment-actions">
+                    <i class="fa fa-angle-right mx-1 success_"></i>
+                    <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
+                    <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold btn-delete-comment" data-delete-url="{% url 'smart_blog:delete_comment' comment.pk %}" data-comment-id="{{ comment.pk }}" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" aria-label="Delete comment">Remove</button>
                   </div>
-                {% else %}
-                  {% if not comment.author.is_active %}
-                  <div class="comment-menu">
-                    <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}">{% user_status_display comment.author %}</button>
-                    <div class="comment-actions">
-                      <i class="fa fa-angle-right mx-1 success_"></i>
-                      <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
-                      <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold btn-delete-comment" data-delete-url="{% url 'smart_blog:delete_comment' comment.pk %}" data-comment-id="{{ comment.pk }}" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" aria-label="Delete comment">Remove</button>
-                    </div>
+                </div>
+              {% else %}
+                <div class="comment-menu">
+                  <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}">{% user_status_display comment.author %}</button>
+                  <div class="comment-actions">
+                    <i class="fa fa-angle-right mx-1 success_"></i>
+                    <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
+                    {% if not report_rate_limited %}
+                      <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold" data-action="report" data-comment-id="{{ comment.pk }}">Report</button>
+                    {% endif %}
                   </div>
-                  {% else %}
-                  <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
-                  {% endif %}
-                {% endif %}
+                </div>
               {% endif %}
             {% else %}
-              {% if not hide_reply %}
-                {% if not thread_view or depth|default:0 > 0 %}
-                  <div class="comment-menu">
-                    <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">
-                      {% if comment.author.is_active %}
-                        {{ comment.author }}
-                      {% else %}
-                        {% user_status_display comment.author %}
-                      {% endif %}
-                    </button>
-                    <div class="comment-actions">
-                      <i class="fa fa-angle-right mx-1 success_"></i>
-                      {% if user|user_shadow_banned %}
-                      <span class="comment-menu-action custom_badge badge_primary fw-semibold disabled" title="You have been shadow banned">Reply</span>
-                      {% else %}
-                      <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="reply" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">Reply</button>
-                      {% endif %}
-                      <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
-                      {% if not report_rate_limited %}
-                        <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold" data-action="report" data-comment-id="{{ comment.pk }}">Report</button>
-                      {% endif %}
-                    </div>
-                  </div>
-                {% else %}
-                  <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
-                {% endif %}
+              <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">{% user_status_display comment.author %}</button>
+            {% endif %}
+          {% endif %}
+        </div>
+
+        <div class="comment-meta-time text-muted small">
+          <span class="comment-meta-time__value fw-semibold">{{ comment.human_published }}</span>
+          {% if comment.is_edited %}
+            <span class="comment-meta-sep" aria-hidden="true">·</span>
+            <span class="primary_ fw-semibold">Edited</span>
+          {% endif %}
+          {% if just_edited %}
+            <span class="comment-meta-sep" aria-hidden="true">·</span>
+            <span class="comment-edited-success-msg d-inline-flex align-items-center gap-1" data-auto-dismiss="3000">
+              <span class="fw-semibold success-edit-note">Comment was successfully edited</span>
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="comment-body mt-2 mb-0">
+        <div class="comment-text-wrapper position-relative">
+          <div class="comment-text">
+            {% if no_mentions %}
+              {{ comment.text|linebreaksbr }}
+            {% else %}
+              {% if thread_view and depth|default:0 == 0 %}
+                {{ comment.text|linebreaksbr }}
+              {% else %}
+                {{ comment.text|render_mentions:comment.parent_id }}
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="comment-actions-bar" role="group" aria-label="Comment actions">
+        {% if comment.author and comment.author.is_active %}
+          <span class="comment-actions-bar__likes">
+            {% if user.is_authenticated and user != comment.author %}
+              {% if user.is_active %}
+                <button type="button" class="thumb_btn btn-comment-like comment-actions-bar__like-btn" data-url="{% url 'smart_blog:toggle_comment_like' comment.pk %}" data-comment-id="{{ comment.pk }}" aria-pressed="{{ comment.user_liked|yesno:'true,false' }}" aria-label="Like comment">
+                  <i id="comment-like-icon-{{ comment.pk }}" class="fa fa-{{ comment.user_liked|yesno:'thumbs-up,thumbs-o-up' }}"></i>
+                </button>
+              {% endif %}
+            {% endif %}
+            <span id="comment-likes-count-{{ comment.pk }}" class="comment-actions-bar__like-count fw-semibold">{{ comment.likes_count|default:comment.likes.count }}</span>
+          </span>
+        {% endif %}
+
+        {% if not hide_reply %}
+          {% if not thread_view or depth|default:0 > 0 %}
+            {% if user.is_authenticated and user != comment.author and comment.author and comment.author.is_active %}
+              {% if user|user_shadow_banned %}
+                <span class="comment-action-bar-pill disabled" title="You have been shadow banned">Reply</span>
+              {% else %}
+                <button type="button" class="btn-reply comment-action-bar-pill" data-comment-id="{{ comment.pk }}" data-mention-id="{{ comment.author.id }}">Reply</button>
               {% endif %}
             {% endif %}
           {% endif %}
-        {% else %}
-          <button type="button" class="comment-menu-action custom_badge badge_primary" data-action="share" data-comment-id="{{ comment.pk }}">
-            {% if comment.author.is_active %}
-              {{ comment.author }}
-            {% else %}
-              {% user_status_display comment.author %}
-            {% endif %}
-          </button>
         {% endif %}
+
+        <button type="button" class="comment-menu-action comment-action-bar-pill" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
       </div>
-    </div>
-  {% else %}
-    <div class="d-flex gap-1 align-items-center">
-      <div class="d-flex gap-1 align-items-center">
-        <a href="{% url 'login_app:vanished' %}" class="d-flex align-items-center text-decoration-none" title="{% user_status_display comment.author %}">
-          <div class="little-avatar">
-            <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display comment.author %}" class="user-avatar" width="40" height="40" loading="eager" decoding="async" />
-          </div>
-        </a>
-      </div>
-        {% if user.is_authenticated %}
-        {% if user.is_staff %}
-            <div class="comment-menu">
-              <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}">{% user_status_display comment.author %}</button>
-              <div class="comment-actions">
-                <i class="fa fa-angle-right mx-1 success_"></i>
-                <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
-                <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold btn-delete-comment" data-delete-url="{% url 'smart_blog:delete_comment' comment.pk %}" data-comment-id="{{ comment.pk }}" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal" aria-label="Delete comment">Remove</button>
-              </div>
-            </div>
-        {% else %}
-          <div class="comment-menu">
-            <button type="button" class="comment-menu-btn fw-semibold" aria-label="Comment actions" data-comment-id="{{ comment.pk }}">{% user_status_display comment.author %}</button>
-            <div class="comment-actions">
-              <i class="fa fa-angle-right mx-1 success_"></i>
-              <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">Share</button>
-              {% if not report_rate_limited %}
-                <button type="button" class="comment-menu-action custom_badge badge_danger fw-semibold" data-action="report" data-comment-id="{{ comment.pk }}">Report</button>
-              {% endif %}
-            </div>
-          </div>
-        {% endif %}
-      {% else %}
-        <button type="button" class="comment-menu-action custom_badge badge_primary fw-semibold" data-action="share" data-comment-id="{{ comment.pk }}">{% user_status_display comment.author %}</button>
+
+      {% if not skip_replies %}
+        {% include 'includes/replied_comments.html' with depth=depth|default:0 %}
       {% endif %}
     </div>
-  {% endif %}
-  <!-- comment body -->
-  <div class="comment-body my-3">
-    <div class="comment-text-wrapper position-relative">
-        {% if comment.author and comment.author.is_active %}
-        <div class="comment_likes_badge d-flex align-items-center gap-2">
-          <span id="comment-likes-count-{{ comment.pk }}" class="fw-semibold">{{ comment.likes_count|default:comment.likes.count }}</span>
-          <span>Likes</span>
-        </div>
-        {% endif %}
-      <div class="comment-text">
-        {% if no_mentions %}
-          {{ comment.text|linebreaksbr }}
-        {% else %}
-          {% if thread_view and depth|default:0 == 0 %}
-            {{ comment.text|linebreaksbr }}
-          {% else %}
-            {{ comment.text|render_mentions:comment.parent_id }}
-          {% endif %}
-        {% endif %}
-      </div>
-    </div>
   </div>
-
-  <div class="d-flex justify-content-between small text-muted align-items-center">
-    <div class="text-muted d-flex align-items-center">
-      <small class="d-flex align-items-center gap-2">
-        <span class="fw-semibold">
-          <i class="fa fa-calendar-check-o me-1"></i>
-          {{ comment.human_published }}
-        </span>
-        {% if comment.is_edited %}
-          <span>/</span>
-          <span class="primary_ fw-semibold">Edited</span>
-          {% if just_edited %}
-            <div class="comment-edited-success-msg d-flex align-items-center gap-2" data-auto-dismiss="3000">
-              <span>→</span>
-              <span class="fw-semibold" style="color:#27ae60">Comment was successfully edited</span>
-            </div>
-          {% endif %}
-        {% endif %}
-      </small>
-    </div>
-    {% if user.is_authenticated and user != comment.author and comment.author %}
-      <div class="d-flex gap-1 align-items-center">
-        {% if user.is_active %}
-          <button type="button" class="thumb_btn btn-comment-like" data-url="{% url 'smart_blog:toggle_comment_like' comment.pk %}" data-comment-id="{{ comment.pk }}" aria-pressed="{{ comment.user_liked|yesno:'true,false' }}"><i id="comment-like-icon-{{ comment.pk }}" class="fa fa-{{ comment.user_liked|yesno:'thumbs-up,thumbs-o-up' }}"></i></button>
-        {% endif %}
-      </div>
-    {% endif %}
-  </div>
-  {% if not skip_replies %}
-    {% include 'includes/replied_comments.html' with depth=depth|default:0 %}
-  {% endif %}
 </div>

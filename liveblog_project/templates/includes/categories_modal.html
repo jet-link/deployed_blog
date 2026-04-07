@@ -47,11 +47,14 @@
                 <a href="{{ row.item.get_absolute_url }}" class="categories-modal-card-link row g-0 h-100 flex-wrap flex-md-nowrap align-items-stretch text-decoration-none text-reset">
                   <div class="trending-card__img-wrap col-12 col-md-4 categories-modal-card__img-col">
                     <div class="d-block h-100 categories-modal-card__media">
+                      {% comment %}
                       {% if row.item.images.first %}
                         <img src="{{ row.item.images.first.get_thumbnail_url }}" alt="" class="trending-card__img" loading="lazy" decoding="async" />
                       {% else %}
                         <div class="categories-modal-card__media-empty" aria-hidden="true"></div>
                       {% endif %}
+                      {% endcomment %}
+                      <div class="categories-modal-card__media-empty" aria-hidden="true"></div>
                     </div>
                   </div>
                   <div class="col flex-grow-1 d-flex flex-column min-w-0">

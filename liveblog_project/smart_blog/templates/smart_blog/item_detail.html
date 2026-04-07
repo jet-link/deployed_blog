@@ -68,7 +68,7 @@
       </div>
       {% if item.author %}
         {% if user == item.author %}
-          <small class="primary_ fw-semibold">Your post</small>
+          <small class="primary_ fw-semibold">My post</small>
         {% else %}
           <a href="{% url 'login_app:profile' item.author.username %}" class="d-flex align-items-center gap-1 text-decoration-none" title="{% user_status_title item.author %}">
             <div class="little-avatar">
@@ -185,7 +185,7 @@
 
     <!-- ===== Comment form ===== -->
     {% include 'includes/comment_form.html' %}
-    <div id="commentsHeader" class="pt-5 d-flex gap-3 align-items-center justify-content-between">
+    <div id="commentsHeader" class="pt-5 d-flex gap-3 align-items-center">
       {% if comments %}
         <h5 class="m-0 text-muted">Comments</h5>
         <div class="d-inline-flex align-items-center gap-2 small">

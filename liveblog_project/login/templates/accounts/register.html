@@ -106,28 +106,32 @@
             {% endfor %}
           </div>
         {% endif %}
-        {# Form-level errors + username exists #}
-        {% comment %} <div class="errors-block">
-          {% if form.non_field_errors or form.username.errors %}
-            <div class="custom-alert custom-alert-danger mt-2" data-auto-dismiss="3000">
+
+        {% if form.non_field_errors %}
+          <div class="errors-block">
+            <div class="custom-alert custom-alert-danger mt-2" data-auto-dismiss="6000">
               {% for err in form.non_field_errors %}
                 {{ err }}{% if not forloop.last %}
                   <br />
                 {% endif %}
               {% endfor %}
-              {% for err in form.username.errors %}
-                {% if form.non_field_errors %}
-                  <br />
-                {% endif %}{{ err }}
-              {% endfor %}
             </div>
-          {% endif %}
-        </div> {% endcomment %}
+          </div>
+        {% endif %}
 
-        <div class="auth-form-register-footer d-flex justify-content-start align-items-center mt-3 gap-2">
-          <div class="auth-form-submit-row d-flex gap-2">
-            <button type="submit" class="cstm-btn-sm custom-primary-btn auth-form-submit-btn">Sign up</button>
-            <button type="button" id="genPassBtn" class="cstm-btn-sm custom-secondary-btn auth-form-submit-btn">Gen.Pass</button>
+        {% if turnstile_site_key %}
+          <div class="mb-3 mt-2 d-flex justify-content-start">
+            <div
+              class="cf-turnstile"
+              data-sitekey="{{ turnstile_site_key }}"
+              data-theme="auto"></div>
+          </div>
+        {% endif %}
+
+        <div class="auth-form-register-footer d-flex justify-content-start align-items-center mt-3">
+          <div class="auth-form-submit-row d-flex gap-1">
+            <button type="submit" class="cstm-btn custom-primary-btn auth-form-submit-btn">Sign up</button>
+            <button type="button" id="genPassBtn" class="cstm-btn custom-secondary-btn auth-form-submit-btn">Gen.Pass</button>
           </div>
         </div>
       </form>
@@ -137,5 +141,8 @@
   </div>
 {% endblock %}
 {% block extra_js %}
+  {% if turnstile_site_key %}
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  {% endif %}
   <script defer src="{% static 'login/js/password_generator.js' %}"></script>
 {% endblock %}

@@ -5,6 +5,7 @@
   <div class="row g-0 h-100 {% if variant == 'hot' %}flex-wrap flex-md-nowrap{% endif %}">
     <div class="trending-card__img-wrap col-12 col-md-{{ img_cols|default:'4' }}">
       <a href="{{ item.get_absolute_url }}?from=trending&amp;source_url={{ source_url|urlencode }}" class="d-block h-100 stretched-link trending-card__img-link text-decoration-none">
+        {% comment %}
         {% if item.images.first %}
           <img src="{{ item.images.first.get_thumbnail_url }}" alt="" class="trending-card__img" loading="lazy" decoding="async" />
         {% else %}
@@ -12,6 +13,10 @@
             {% if variant == 'hot' %}<span class="trending-card__placeholder-icon"><i class="fa fa-fire text-danger"></i></span>{% endif %}
           </div>
         {% endif %}
+        {% endcomment %}
+        <div class="trending-card__placeholder{% if variant == 'hot' %} trending-card__placeholder--hot{% endif %}" aria-hidden="true">
+          {% if variant == 'hot' %}<span class="trending-card__placeholder-icon"><i class="fa fa-fire text-danger"></i></span>{% endif %}
+        </div>
         {% if rank %}<span class="trending-card__rank">#{{ rank }}</span>{% endif %}
       </a>
     </div>

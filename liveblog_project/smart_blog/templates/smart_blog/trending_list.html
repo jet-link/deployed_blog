@@ -23,6 +23,7 @@
             <div class="row g-0 h-100 flex-wrap flex-md-nowrap">
               <div class="trending-card__img-wrap col-12 col-md-{% if forloop.first %}5{% else %}4{% endif %}">
                 <a href="{{ item.get_absolute_url }}?from=trending&amp;source_url={{ request.get_full_path|urlencode }}" class="d-block h-100 stretched-link trending-card__img-link text-decoration-none">
+                  {% comment %}
                   {% if item.images.first %}
                     <img src="{{ item.images.first.get_thumbnail_url }}" alt="" class="trending-card__img" loading="lazy" decoding="async" />
                   {% else %}
@@ -30,6 +31,10 @@
                       <span class="trending-card__placeholder-icon"><i class="fa fa-fire text-danger"></i></span>
                     </div>
                   {% endif %}
+                  {% endcomment %}
+                  <div class="trending-card__placeholder trending-card__placeholder--hot" aria-hidden="true">
+                    <span class="trending-card__placeholder-icon"><i class="fa fa-fire text-danger"></i></span>
+                  </div>
                   <span class="trending-card__rank">#{{ forloop.counter }}</span>
                 </a>
               </div>
@@ -76,11 +81,14 @@
           <article class="trending-card trending-card--rising card border-0 overflow-hidden h-100" data-trending-slug="{{ item.slug }}">
             <div class="trending-card__img-wrap trending-card__img-wrap--sm">
               <a href="{{ item.get_absolute_url }}?from=trending&amp;source_url={{ request.get_full_path|urlencode }}" class="d-block stretched-link trending-card__img-link text-decoration-none">
+                {% comment %}
                 {% if item.images.first %}
                   <img src="{{ item.images.first.get_thumbnail_url }}" alt="" class="trending-card__img" loading="lazy" decoding="async" />
                 {% else %}
                   <div class="trending-card__placeholder" aria-hidden="true"></div>
                 {% endif %}
+                {% endcomment %}
+                <div class="trending-card__placeholder" aria-hidden="true"></div>
               </a>
               <span class="trending-badge trending-badge--rising">Rising</span>
               <span class="trending-growth-badge">+<span data-metric="growth_rate"><span class="trending-val">{{ t.growth_rate|floatformat:2 }}</span></span>×</span>
@@ -113,11 +121,14 @@
             <div class="row g-0 h-100">
               <div class="trending-card__img-wrap col-12 col-md-4">
                 <a href="{{ item.get_absolute_url }}?from=trending&amp;source_url={{ request.get_full_path|urlencode }}" class="d-block h-100 stretched-link trending-card__img-link text-decoration-none">
+                  {% comment %}
                   {% if item.images.first %}
                     <img src="{{ item.images.first.get_thumbnail_url }}" alt="" class="trending-card__img" loading="lazy" decoding="async" />
                   {% else %}
                     <div class="trending-card__placeholder" aria-hidden="true"></div>
                   {% endif %}
+                  {% endcomment %}
+                  <div class="trending-card__placeholder" aria-hidden="true"></div>
                 </a>
               </div>
               <div class="col flex-grow-1 d-flex flex-column">

@@ -33,10 +33,20 @@
       </a>
       {% endwith %}
   {% else %}
-    <div class="replies" data-parent-id="{{ comment.pk }}">
-      {% for reply in comment.replies.all %}
-        {% include 'includes/_comments.html' with comment=reply depth=depth|add:1 %}
-      {% endfor %}
+    {% with rc=comment.replies.count collapse_from=2 %}
+    <button type="button" class="comment-replies-toggle mt-2" aria-expanded="{% if rc < collapse_from %}true{% else %}false{% endif %}" data-replies-count="{{ rc }}" data-collapse-from="{{ collapse_from }}">
+      <span class="comment-replies-toggle__label">{% if rc == 1 %}1 reply{% else %}{{ rc }} replies{% endif %}</span>
+      <i class="fa fa-chevron-down comment-replies-toggle__chev" aria-hidden="true"></i>
+    </button>
+    <div class="comment-replies-outer{% if rc < collapse_from %} is-expanded{% endif %}">
+      <div class="comment-replies-inner">
+        <div class="replies" data-parent-id="{{ comment.pk }}">
+          {% for reply in comment.replies.all %}
+            {% include 'includes/_comments.html' with comment=reply depth=depth|add:1 %}
+          {% endfor %}
+        </div>
+      </div>
     </div>
+    {% endwith %}
   {% endif %}
 {% endif %}

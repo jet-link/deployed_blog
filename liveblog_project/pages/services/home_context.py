@@ -9,6 +9,7 @@ from django.core.cache import cache
 from pages.home_content import get_home_page
 from pages.models import HomePageContent, HomeQuickLink
 from smart_blog.models import Item, TrendingItem
+from smart_blog.feed_queryset import feed_list_optimizations
 from smart_blog.search_utils import get_popularity_queryset
 
 logger = logging.getLogger(__name__)
@@ -45,10 +46,8 @@ def _fetch_trending_strip_pks(home: HomePageContent) -> List[int]:
 def _hydrate_items_ordered(pks: List[int]) -> List[Item]:
     if not pks:
         return []
-    qs = (
-        Item.objects.filter(pk__in=pks)
-        .with_counters()
-        .prefetch_related("images")
+    qs = feed_list_optimizations(
+        Item.objects.filter(pk__in=pks).with_counters()
     )
     by_id = {i.pk: i for i in qs}
     return [by_id[i] for i in pks if i in by_id]
@@ -102,10 +101,8 @@ def _ordered_editor_picks(home: HomePageContent) -> List[Item]:
     ]
     if not id_order:
         return []
-    qs = (
-        Item.objects.filter(pk__in=id_order, is_published=True)
-        .with_counters()
-        .prefetch_related("images")
+    qs = feed_list_optimizations(
+        Item.objects.filter(pk__in=id_order, is_published=True).with_counters()
     )
     by_id = {i.pk: i for i in qs}
     return [by_id[i] for i in id_order if i in by_id]

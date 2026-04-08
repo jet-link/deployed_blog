@@ -10,19 +10,20 @@ from urllib.parse import urlencode
 from smart_blog.models import Bookmark, Item, Like, Tag
 from smart_blog.search_utils import build_search_filter
 from smart_blog.utils import breadcrumb, build_breadcrumbs
+from smart_blog.feed_queryset import feed_list_optimizations
 from smart_blog.views._helpers import annotate_user_bookmarked, annotate_user_liked
 
 FILTER_AJAX_PAGE_SIZE = 20
 
 
 def items_list(request):
-    qs = (
+    qs = feed_list_optimizations(
         Item.objects
         .filter(is_published=True)
         .with_counters()
         .select_related("category", "author", "author__profile")
         .order_by('-published_date')
-        .prefetch_related("images", "tags")
+        .prefetch_related("tags")
     )
     qs = annotate_user_liked(qs, request.user)
     qs = annotate_user_bookmarked(qs, request.user)
@@ -92,7 +93,9 @@ def items_filtered(request):
             user_bookmark_date=Subquery(bookmark_date_subq)
         ).order_by('-user_bookmark_date', '-pk')
         empty_msg = 'Nothing was bookmarked'
-    qs = qs.select_related("category", "author", "author__profile").prefetch_related("images", "tags")
+    qs = feed_list_optimizations(
+        qs.select_related("category", "author", "author__profile").prefetch_related("tags")
+    )
     paginator = Paginator(qs, FILTER_AJAX_PAGE_SIZE)
     page_obj = paginator.get_page(request.GET.get("page"))
     items = list(page_obj.object_list)
@@ -143,13 +146,13 @@ def items_filtered(request):
 def tag_list(request, slug):
     tag = get_object_or_404(Tag, slug=slug)
 
-    qs = (
+    qs = feed_list_optimizations(
         tag.items
         .filter(is_published=True)
         .with_counters()
         .select_related("category", "author", "author__profile")
         .order_by('-published_date')
-        .prefetch_related("images", "tags")
+        .prefetch_related("tags")
     )
     qs = annotate_user_liked(qs, request.user)
     qs = annotate_user_bookmarked(qs, request.user)

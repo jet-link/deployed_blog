@@ -31,7 +31,7 @@
           <span class="badge trending-badge trending-badge--{{ variant }}">In trend</span>
         </div>
         <h3 class="{{ heading_class|default:'h6' }} mb-2"><a href="{{ item.get_absolute_url }}?from=trending&amp;source_url={{ source_url|urlencode }}" class="text-decoration-none stretched-link trending-card__title">{{ item.title }}</a></h3>
-        {% if show_excerpt %}<p class="text-muted small mb-{% if variant == 'hot' %}3{% else %}2{% endif %} flex-grow-1">{{ item.short_text|truncatechars:excerpt_len }}</p>{% endif %}
+        {% if show_excerpt %}<p class="text-muted small mb-{% if variant == 'hot' %}3{% else %}2{% endif %} flex-grow-1">{{ item.list_excerpt|truncatechars:excerpt_len }}</p>{% endif %}
         <div class="trending-metrics d-flex flex-wrap gap-{% if variant == 'hot' %}3{% else %}2{% endif %} small" data-trending-slug="{{ item.slug }}">
           <span data-metric="views_24h" class="trending-metric" title="Views in 24h"><i class="fa fa-eye me-2"></i><strong class="trending-val">{{ m.views_24h }}</strong> (24h)</span>
           <span data-metric="likes_24h" class="trending-metric" title="Likes in 24h"><i class="fa fa-heart me-2"></i><strong class="trending-val">{{ m.likes_24h }}</strong> (24h)</span>

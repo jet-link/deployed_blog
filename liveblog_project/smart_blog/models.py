@@ -169,6 +169,12 @@ class Item(models.Model):
     tags = models.ManyToManyField(Tag, related_name="items", blank=True)
     slug = models.SlugField(max_length=300, unique=True, blank=True)
     search_vector = SearchVectorField(editable=False, null=True)  # PostgreSQL FTS, filled by DB
+    excerpt_plain = models.CharField(
+        max_length=620,
+        blank=True,
+        default="",
+        help_text="Plain excerpt for list cards (synced from text on save).",
+    )
     likes_count = models.PositiveIntegerField(default=0, db_index=True)  # Denormalized for Popular filter
     views_count = models.PositiveIntegerField(default=0, db_index=True)  # Denormalized, synced from ItemView (user not null)
     bookmarks_count = models.PositiveIntegerField(default=0, db_index=True)  # Denormalized, synced from Bookmark
@@ -186,6 +192,10 @@ class Item(models.Model):
         ordering = ("-published_date",)
         indexes = [
             models.Index(fields=["is_published", "-published_date"]),
+            models.Index(
+                fields=["is_published", "category", "-published_date"],
+                name="smart_blog__topic_li_idx",
+            ),
         ]
 
     def __str__(self):
@@ -204,19 +214,26 @@ class Item(models.Model):
         out = render_editorjs_to_html(cj)
         return out if out else None
 
-    def short_text(self, length=600):
-        # 1. Удаляем HTML теги
-        plain = strip_tags(self.text)
-
-        # 2. Убираем &nbsp и специальные пробелы
+    @staticmethod
+    def plain_excerpt_from_html(html_text, length=600):
+        if not html_text:
+            return ""
+        plain = strip_tags(html_text)
         plain = plain.replace("\xa0", " ").replace("&nbsp;", " ")
-
-        # 3. Если текст меньше length — возвращаем как есть
+        plain = plain.strip()
         if len(plain) <= length:
             return plain
+        return plain[:length].rsplit(" ", 1)[0] + " …"
 
-        # 4. Обрезаем, но аккуратно (не посреди слова)
-        return plain[:length].rsplit(' ', 1)[0] + " …"
+    def short_text(self, length=600):
+        return Item.plain_excerpt_from_html(self.text or "", length)
+
+    @property
+    def list_excerpt(self):
+        """Use persisted excerpt on list pages (avoids strip_tags per request)."""
+        if self.excerpt_plain:
+            return self.excerpt_plain
+        return self.short_text()
     
 
    
@@ -279,6 +296,8 @@ class Item(models.Model):
                 slug_candidate = f"{base_slug}-{counter}"
                 counter += 1
             self.slug = slug_candidate
+
+        self.excerpt_plain = Item.plain_excerpt_from_html(self.text or "", length=600)
 
         super().save(*args, **kwargs)
 

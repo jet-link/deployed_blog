@@ -685,7 +685,19 @@ html[data-theme="dark"] .faq-item-answer {
     }
 }
 
-/* Error pages (404 / 403) — same tokens as smart_blog theme */
+/* Error pages (404 / 403 / 429) — tokens + typography; no Bootstrap reboot */
+body.error-page {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    background: var(--bg-default, #ffffff);
+    color: var(--text-default, #1f2328);
+    min-height: 100vh;
+}
+
+[data-theme='dark'] body.error-page {
+    background: var(--bg-default);
+    color: var(--text-default);
+}
+
 .error-page-section {
     padding: clamp(2rem, 6vw, 4rem) 0 clamp(3rem, 8vw, 5rem);
     min-height: min(70vh, calc(100vh - 2 * var(--main-pad-y, 76px) - 120px));
@@ -774,7 +786,8 @@ body.error-page .main {
         align-items: stretch;
     }
 
-    .error-page-actions .btn {
+    .error-page-actions .cstm-btn,
+    .error-page-actions .cstm-btn-sm {
         width: 100%;
     }
 }

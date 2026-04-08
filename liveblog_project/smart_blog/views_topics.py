@@ -10,7 +10,11 @@ from django.utils import timezone
 
 from smart_blog.models import Category, Item, TrendingItem
 from smart_blog.utils import breadcrumb, build_breadcrumbs
-from smart_blog.views import annotate_user_bookmarked, annotate_user_liked
+from smart_blog.views import (
+    annotate_user_bookmarked,
+    annotate_user_liked,
+    feed_list_optimizations,
+)
 
 TOPICS_CACHE_TTL = 600
 
@@ -117,11 +121,11 @@ def topic_detail(request, slug):
     if sort not in _VALID_TOPIC_SORT:
         sort = "latest"
 
-    qs = (
+    qs = feed_list_optimizations(
         Item.objects.filter(is_published=True, category=category)
         .with_counters()
         .select_related("category", "author", "author__profile")
-        .prefetch_related("images", "tags")
+        .prefetch_related("tags")
     )
     qs = annotate_user_liked(qs, request.user)
     qs = annotate_user_bookmarked(qs, request.user)

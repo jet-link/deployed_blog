@@ -6,6 +6,7 @@ from django.db.models import Q, Count
 from django.utils import timezone
 
 from .models import Notification, Category, Item
+from smart_blog.feed_queryset import feed_list_optimizations
 from .search_utils import apply_popular_filter
 
 NOTIFICATIONS_CACHE_TIMEOUT = 30  # seconds
@@ -79,7 +80,7 @@ def nav_categories_context(request):
     categories_modal_popular_cards = []
 
     for cat in top_categories:
-        scoped = (
+        scoped = feed_list_optimizations(
             Item.objects.filter(
                 category=cat,
                 is_published=True,
@@ -87,15 +88,17 @@ def nav_categories_context(request):
             )
             .with_counters()
             .select_related("category", "author", "author__profile")
-            .prefetch_related("images", "tags")
+            .prefetch_related("tags")
         )
         popular_item = apply_popular_filter(scoped).first()
         if not popular_item:
             popular_item = (
-                Item.objects.filter(category=cat, is_published=True)
-                .with_counters()
-                .select_related("category", "author", "author__profile")
-                .prefetch_related("images", "tags")
+                feed_list_optimizations(
+                    Item.objects.filter(category=cat, is_published=True)
+                    .with_counters()
+                    .select_related("category", "author", "author__profile")
+                    .prefetch_related("tags")
+                )
                 .order_by("-published_date", "-pk")
                 .first()
             )

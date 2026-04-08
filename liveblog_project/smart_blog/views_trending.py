@@ -17,6 +17,13 @@ FEED_PER_PAGE = 20
 API_CACHE_TTL = settings.TRENDING_API_CACHE_SECONDS
 
 
+def _preview_from_list_excerpt(item, max_len=220):
+    s = (item.list_excerpt or "").strip()
+    if len(s) <= max_len:
+        return s
+    return s[:max_len].rsplit(" ", 1)[0] + " …"
+
+
 def _base_qs():
     return TrendingItem.objects.select_related(
         "item",
@@ -54,7 +61,7 @@ def _serialize_item(request, t: TrendingItem, rank=None):
         "title": item.title,
         "url": abs_url,
         "path": url,
-        "preview": item.short_text(220),
+        "preview": _preview_from_list_excerpt(item),
         "category": item.category.name if item.category else None,
         "trend_score": round(t.trend_score, 6),
         # Real-time totals (updated instantly via signals)

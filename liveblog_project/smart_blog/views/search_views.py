@@ -10,6 +10,7 @@ from django_ratelimit.decorators import ratelimit
 from smart_blog.models import Item, SearchHistory
 from smart_blog.search_utils import build_search_filter
 from smart_blog.utils import breadcrumb, build_breadcrumbs
+from smart_blog.feed_queryset import feed_list_optimizations
 from smart_blog.views._helpers import annotate_user_bookmarked, annotate_user_liked
 
 SEARCH_RESULTS_PER_PAGE = 40
@@ -67,12 +68,12 @@ def search_view(request):
         if not (by_title or by_text or by_tags):
             by_title = by_text = by_tags = True
 
-        items_qs = (
+        items_qs = feed_list_optimizations(
             Item.objects
             .with_counters()
             .select_related("category", "author", "author__profile")
             .filter(is_published=True)
-            .prefetch_related("images", "tags")
+            .prefetch_related("tags")
         )
         items_qs = build_search_filter(items_qs, q, by_title, by_text, by_tags)
         items_qs = annotate_user_liked(items_qs, request.user)

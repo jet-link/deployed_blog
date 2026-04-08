@@ -28,6 +28,7 @@ from login.views._helpers import (
 )
 from login.views.vanished_views import user_not_found_view
 from smart_blog.models import Item
+from smart_blog.feed_queryset import feed_list_optimizations
 
 
 def profile_view(request, username):
@@ -40,11 +41,11 @@ def profile_view(request, username):
 
     is_owner = request.user.is_authenticated and request.user == user_obj
 
-    user_items_qs = (
+    user_items_qs = feed_list_optimizations(
         Item.objects
         .filter(is_published=True, author=user_obj)
         .select_related("category")
-        .prefetch_related("images", "tags")
+        .prefetch_related("tags")
         .with_counters()
         .order_by('-published_date')
     )
@@ -136,11 +137,11 @@ def profile_section_view(request, username, section):
         status = "deleted" if getattr(user_obj, "deleted_queue_entry", None) else "banned"
         return user_not_found_view(request, user_obj, vanished_status=status)
 
-    user_items_qs = (
+    user_items_qs = feed_list_optimizations(
         Item.objects
         .filter(is_published=True, author=user_obj)
         .select_related("category")
-        .prefetch_related("images", "tags")
+        .prefetch_related("tags")
         .with_counters()
         .order_by('-published_date')
     )

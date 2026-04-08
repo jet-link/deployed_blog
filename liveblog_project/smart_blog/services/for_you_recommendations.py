@@ -10,11 +10,12 @@ from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from django.core.cache import cache
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from smart_blog.models import Bookmark, Item, ItemView, Like, TrendingItem
 from smart_blog.search_utils import apply_popular_filter
+from smart_blog.feed_queryset import feed_list_optimizations
 
 FORYOU_CACHE_TTL = 300
 
@@ -142,10 +143,10 @@ def _compute_for_you(user):
         user=user
     ).exists()
 
-    qs = (
+    qs = feed_list_optimizations(
         _base_item_filter(since)
         .select_related("category", "author", "author__profile")
-        .prefetch_related("images", "tags")
+        .prefetch_related("tags")
         .order_by("-published_date", "-pk")
     )
 
@@ -197,9 +198,11 @@ def for_you_items_for_authenticated_user(user: AbstractUser) -> ForYouResult:
 
     items_by_pk = {
         it.pk: it
-        for it in Item.objects.filter(pk__in=ordered_ids, is_published=True)
-        .select_related("category", "author", "author__profile")
-        .prefetch_related("images", "tags")
+        for it in feed_list_optimizations(
+            Item.objects.filter(pk__in=ordered_ids, is_published=True)
+            .select_related("category", "author", "author__profile")
+            .prefetch_related("tags")
+        )
     }
     ordered = [items_by_pk[pk] for pk in ordered_ids if pk in items_by_pk]
 
@@ -209,10 +212,17 @@ def for_you_items_for_authenticated_user(user: AbstractUser) -> ForYouResult:
 def for_you_items_guest() -> ForYouResult:
     """Trending + quality recent (popular heuristic), batch-fetched."""
     trending_rows = list(
-        TrendingItem.objects
-        .select_related("item", "item__category", "item__author", "item__author__profile")
-        .prefetch_related("item__images", "item__tags")
-        .filter(item__is_published=True)
+        TrendingItem.objects.filter(item__is_published=True)
+        .prefetch_related(
+            Prefetch(
+                "item",
+                queryset=feed_list_optimizations(
+                    Item.objects.select_related(
+                        "category", "author", "author__profile"
+                    ).prefetch_related("tags")
+                ),
+            )
+        )
         .order_by("-trend_score")[:120]
     )
 
@@ -233,13 +243,14 @@ def for_you_items_guest() -> ForYouResult:
         seen.add(pk)
 
     since = timezone.now() - timedelta(days=CANDIDATE_DAYS)
-    pop_qs = apply_popular_filter(
-        Item.objects.filter(is_published=True, published_date__gte=since)
-        .filter(Q(author__isnull=True) | Q(author__is_active=True))
-        .exclude(author__profile__trust_banned=True)
-    )
-    pop_qs = pop_qs.select_related("category", "author", "author__profile").prefetch_related(
-        "images", "tags"
+    pop_qs = feed_list_optimizations(
+        apply_popular_filter(
+            Item.objects.filter(is_published=True, published_date__gte=since)
+            .filter(Q(author__isnull=True) | Q(author__is_active=True))
+            .exclude(author__profile__trust_banned=True)
+        )
+        .select_related("category", "author", "author__profile")
+        .prefetch_related("tags")
     )
     for it in pop_qs[:200]:
         if it.pk not in seen:

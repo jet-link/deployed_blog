@@ -6,7 +6,11 @@ from smart_blog.services.for_you_recommendations import (
     for_you_items_guest,
 )
 from smart_blog.utils import breadcrumb, build_breadcrumbs
-from smart_blog.views import annotate_user_bookmarked, annotate_user_liked
+from smart_blog.views import (
+    annotate_user_bookmarked,
+    annotate_user_liked,
+    feed_list_optimizations,
+)
 from smart_blog.models import Item
 
 LIST_PER_PAGE = 40
@@ -17,11 +21,11 @@ def _annotate_page_items(user, page_obj):
     pks = [obj.pk for obj in page_obj.object_list]
     if not pks:
         return []
-    qs = (
+    qs = feed_list_optimizations(
         Item.objects.filter(pk__in=pks)
         .with_counters()
         .select_related("category", "author", "author__profile")
-        .prefetch_related("images", "tags")
+        .prefetch_related("tags")
     )
     qs = annotate_user_liked(qs, user)
     qs = annotate_user_bookmarked(qs, user)

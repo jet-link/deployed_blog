@@ -52,6 +52,7 @@
   {% include 'includes/profile_avatar_viewer.html' %}
 </div>
 {% if user.is_authenticated and user.username == user_obj.username %}
+<hr class="text-muted" />
   <div class="d-flex justify-content-between align-items-center mt-3">
     <div>
       {% if user|user_cannot_create_post %}
@@ -59,7 +60,7 @@
       {% else %}
       <a class="cstm-btn-sm custom-primary-btn" href="{% url 'smart_blog:create_item' %}">Create post</a>
       {% endif %}
-      <a class="cstm-btn-sm custom-primary-btn" href="{% url 'login_app:profile-edit' request.user.username %}"><i class="fa fa-cog" aria-hidden="true"></i></a>
+      <a class="cstm-btn-sm custom-primary-btn" href="{% url 'login_app:profile-edit' request.user.username %}">Edit profile</a>
     </div>
     <div class="d-flex align-items-center gap-1">
       {% if user_obj.is_staff and user.username == user_obj.username %}

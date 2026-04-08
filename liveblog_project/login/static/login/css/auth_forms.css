@@ -361,21 +361,61 @@ html[data-theme="dark"] .auth-oauth-mock {
     font-weight: 500;
     line-height: 1.3;
     letter-spacing: 0.01em;
-    border: 2.5px solid var(--text-default, #1f2328);
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-default, #1f2328);
+    border-radius: 8px;
     cursor: not-allowed;
     -webkit-tap-highlight-color: transparent;
-    transition: opacity 0.15s ease;
+    transition:
+        opacity 0.15s ease,
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
 }
 
-.auth-oauth-mock__btn:disabled {
-    opacity: 1;
-    color: var(--text-default, #1f2328);
-    border-color: var(--text-default, #1f2328);
-    background: transparent;
+/* Google: white surface, #3c4043 text, icon #4285F4; dark = Material dark panel */
+.auth-oauth-mock__btn--google {
+    background: #ffffff;
+    border: 1px solid #dadce0;
+    color: #3c4043;
 }
+
+.auth-oauth-mock__btn--google .fa-google {
+    color: #4285f4;
+}
+
+html[data-theme="dark"] .auth-oauth-mock__btn--google {
+    background: #131314;
+    border-color: #8e918f;
+    color: #e3e3e3;
+}
+
+html[data-theme="dark"] .auth-oauth-mock__btn--google .fa-google {
+    color: #8ab4f8;
+}
+
+/* Apple: black + white (light page); inverted on dark theme per HIG contrast */
+.auth-oauth-mock__btn--apple {
+    background: #000000;
+    border: 1px solid #000000;
+    color: #ffffff;
+}
+
+.auth-oauth-mock__btn--apple .fa-apple {
+    color: #ffffff;
+}
+
+html[data-theme="dark"] .auth-oauth-mock__btn--apple {
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #000000;
+}
+
+html[data-theme="dark"] .auth-oauth-mock__btn--apple .fa-apple {
+    color: #000000;
+}
+
+/* .auth-oauth-mock__btn:disabled {
+    opacity: 0.58;
+} */
 
 .auth-oauth-mock__btn .fa {
     font-size: 1.2rem;
@@ -383,17 +423,4 @@ html[data-theme="dark"] .auth-oauth-mock {
     width: 1.35rem;
     text-align: center;
     flex-shrink: 0;
-}
-
-.auth-oauth-mock__btn .fa-google {
-    color: #4285f4;
-}
-
-html[data-theme="dark"] .auth-oauth-mock__btn .fa-google {
-    color: #8ab4f8;
-}
-
-html[data-theme="dark"] .auth-oauth-mock__btn:disabled {
-    color: var(--text-default, #c9d1d9);
-    border-color: var(--text-default, #c9d1d9);
 }

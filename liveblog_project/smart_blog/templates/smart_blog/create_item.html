@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load static i18n %}
 {% block title %}
   Create item
 {% endblock %}
 
 {% block extra_head %}
   {# form.media belongs in extra_head when base.html supports it #}
+  <link rel="preconnect" href="https://cdn.ckeditor.com" crossorigin />
   {{ form.media }}
 {% endblock %}
 
@@ -89,6 +90,14 @@
       </form>
     </main>
   </div>
+{% endblock %}
+
+{% block editor_scripts %}
+  <script defer src="{% static 'ckeditor/ckeditor_main.js' %}"></script>
+  <script defer src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+{% endblock %}
+
+{% block extra_js %}
   <script>
     (function () {
       function clearListing() {

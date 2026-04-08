@@ -1,6 +1,10 @@
 """smart_blog views package — re-exports all view functions for backward compatibility."""
 
-from smart_blog.views._helpers import annotate_user_liked, annotate_user_bookmarked  # noqa: F401
+from smart_blog.feed_queryset import feed_list_optimizations  # noqa: F401
+from smart_blog.views._helpers import (  # noqa: F401
+    annotate_user_bookmarked,
+    annotate_user_liked,
+)
 
 from smart_blog.views.listing_views import (  # noqa: F401
     items_list,

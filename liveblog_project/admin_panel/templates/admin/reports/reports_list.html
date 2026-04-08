@@ -120,7 +120,7 @@
     var btn = form.querySelector('button[type="submit"]');
     if (btn) btn.disabled = true;
     var action = form.dataset.action;
-    var row = form.closest('tr');
+    var row = form.closest('tr') || (window.adminFormAnchorRow && window.adminFormAnchorRow(form));
     fetch(form.action, {
       method: 'POST',
       headers: {
@@ -141,13 +141,13 @@
             : '<span class="admin-badge admin-badge-warning">Ignored</span>';
         }
         row.dataset.status = data.new_status;
-        var menu = row.querySelector('.admin-dropdown-menu');
+        var dd = row.querySelector('.admin-dropdown');
+        var menu = window.adminFindDropdownMenu ? window.adminFindDropdownMenu(dd) : row.querySelector('.admin-dropdown-menu');
         if (menu) {
           var forms = menu.querySelectorAll('.admin-report-ajax-form');
           forms.forEach(function(f) { f.remove(); });
         }
-        var dd = row.querySelector('.admin-dropdown');
-        if (dd) dd.classList.remove('is-open');
+        if (window.adminCloseDropdown) window.adminCloseDropdown(dd);
       }
     })
     .catch(function() {

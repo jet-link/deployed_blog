@@ -4375,9 +4375,37 @@ html[data-theme="dark"] .item_report_btn:hover {
     background: transparent;
 }
 
+/* Secondary actions: same surface as .tag-vlb grey chips */
 .custom-secondary-btn {
-    color: var(--text-muted);
-    border-color: var(--text-muted);
+    box-sizing: border-box;
+    font-weight: 600;
+    line-height: 1.2;
+    border-radius: var(--radius-md);
+    color: #3d454d;
+    border-color: color-mix(in srgb, #6c757d 40%, var(--border-default));
+    background: color-mix(in srgb, #6c757d 11%, var(--card-bg));
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.custom-secondary-btn:hover {
+    color: var(--text-default);
+    border-color: color-mix(in srgb, #6c757d 58%, var(--border-default));
+    background: color-mix(in srgb, #6c757d 16%, var(--card-bg));
+}
+
+html[data-theme="dark"] .custom-secondary-btn {
+    color: #c9d1d9;
+    border-color: color-mix(in srgb, #8b949e 38%, var(--border-default));
+    background: color-mix(in srgb, #8b949e 14%, var(--card-bg));
+}
+
+html[data-theme="dark"] .custom-secondary-btn:hover {
+    color: var(--text-default);
+    border-color: color-mix(in srgb, #8b949e 50%, var(--border-default));
+    background: color-mix(in srgb, #8b949e 20%, var(--card-bg));
 }
 
 .custom-success-btn {
@@ -4385,21 +4413,86 @@ html[data-theme="dark"] .item_report_btn:hover {
     border-color: var(--success-bg);
 }
 
+/* Danger actions: same accent treatment as .item-stats--feed .stat--likes */
 .custom-danger-btn {
-    color: var(--danger-fg);
-    border-color: var(--danger-fg);
+    box-sizing: border-box;
+    font-weight: 600;
+    line-height: 1.2;
+    border-radius: var(--radius-md);
+    color: #c53030;
+    border-color: color-mix(in srgb, #e74c3c 48%, var(--border-default));
+    background: color-mix(in srgb, #e74c3c 14%, var(--card-bg));
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
 }
 
+.custom-danger-btn:hover {
+    color: var(--text-default);
+    border-color: color-mix(in srgb, #e74c3c 55%, var(--border-default));
+    background: color-mix(in srgb, #e74c3c 18%, var(--card-bg));
+}
+
+html[data-theme="dark"] .custom-danger-btn {
+    color: #ff8a87;
+    border-color: color-mix(in srgb, #ff7b72 38%, var(--border-default));
+    background: color-mix(in srgb, #ff7b72 14%, var(--card-bg));
+}
+
+html[data-theme="dark"] .custom-danger-btn:hover {
+    color: var(--text-default);
+    border-color: color-mix(in srgb, #ff7b72 48%, var(--border-default));
+    background: color-mix(in srgb, #ff7b72 18%, var(--card-bg));
+}
+
+/* Primary actions: same accent treatment as .item-stats--feed .stat--views */
 .custom-primary-btn {
-    color: var(--text-link);
-    border-color: var(--text-link);
+    box-sizing: border-box;
+    font-weight: 600;
+    line-height: 1.2;
+    border-radius: var(--radius-md);
+    color: #1a6cad;
+    border-color: color-mix(in srgb, #2980b9 52%, var(--border-default));
+    background: color-mix(in srgb, #2980b9 14%, var(--card-bg));
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
 }
 
-.comment-btn.is-blocked {
+.custom-primary-btn:hover {
+    color: var(--text-default);
+    border-color: color-mix(in srgb, #2980b9 58%, var(--border-default));
+    background: color-mix(in srgb, #2980b9 18%, var(--card-bg));
+}
+
+html[data-theme="dark"] .custom-primary-btn {
+    color: #79b8ff;
+    border-color: color-mix(in srgb, #58a6ff 42%, var(--border-default));
+    background: color-mix(in srgb, #58a6ff 16%, var(--card-bg));
+}
+
+html[data-theme="dark"] .custom-primary-btn:hover {
+    color: var(--text-default);
+    border-color: color-mix(in srgb, #58a6ff 50%, var(--border-default));
+    background: color-mix(in srgb, #58a6ff 20%, var(--card-bg));
+}
+
+/* Comment submit cooldown: danger surface (must beat html[data-theme=dark] .custom-primary-btn*) */
+.comment-btn.custom-primary-btn.is-blocked,
+.comment-btn.custom-primary-btn.is-blocked:hover {
     border-color: var(--danger-fg);
     color: var(--danger-fg);
     cursor: auto;
-    /* border: none; */
+    background: color-mix(in srgb, var(--danger-fg) 12%, var(--card-bg));
+}
+
+html[data-theme="dark"] .comment-btn.custom-primary-btn.is-blocked,
+html[data-theme="dark"] .comment-btn.custom-primary-btn.is-blocked:hover {
+    border-color: var(--danger-fg);
+    color: var(--danger-fg);
+    background: color-mix(in srgb, var(--danger-fg) 14%, var(--card-bg));
 }
 
 .liked-users-close {

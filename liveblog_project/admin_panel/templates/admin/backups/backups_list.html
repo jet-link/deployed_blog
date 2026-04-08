@@ -148,7 +148,8 @@
       }
     }
     if (data.status === 'completed' && data.has_file) {
-      var actionsCell = tr.querySelector('.admin-backup-actions-cell .admin-dropdown-menu');
+      var dd = tr.querySelector('.admin-backup-actions-cell .admin-dropdown');
+      var actionsCell = window.adminFindDropdownMenu ? window.adminFindDropdownMenu(dd) : tr.querySelector('.admin-backup-actions-cell .admin-dropdown-menu');
       if (actionsCell && !actionsCell.querySelector('a[href*="download"]')) {
         var id = tr.getAttribute('data-backup-id');
         var dl = document.createElement('a');

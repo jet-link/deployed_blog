@@ -200,7 +200,7 @@
     e.preventDefault();
     var btn = form.querySelector('button[type="submit"]');
     if (btn) btn.disabled = true;
-    var row = form.closest('tr');
+    var row = form.closest('tr') || (window.adminFormAnchorRow && window.adminFormAnchorRow(form));
     fetch(form.action, {
       method: 'POST',
       headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -218,7 +218,8 @@
             : '<span class="admin-badge admin-badge-warning">Ignored</span>';
         }
         row.dataset.status = data.new_status;
-        var menu = row.querySelector('.admin-dropdown-menu');
+        var ddMenu = row.querySelector('.admin-dropdown');
+        var menu = window.adminFindDropdownMenu ? window.adminFindDropdownMenu(ddMenu) : row.querySelector('.admin-dropdown-menu');
         if (menu) {
           var forms = menu.querySelectorAll('.admin-violation-ajax-form');
           forms.forEach(function(f) { f.remove(); });

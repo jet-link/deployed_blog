@@ -722,6 +722,11 @@
   padding: 20px;
 }
 
+/* Tables: allow action dropdowns (portaled to body) not to be masked by rounded card */
+.admin-card:has(.admin-table-wrapper) {
+  overflow: visible;
+}
+
 /* Assistant page: stretch logs block to fill remaining height (only when assistant is present) */
 @media (min-width: 993px) {
   .admin-layout:has(.admin-assistant-page) {
@@ -1782,12 +1787,13 @@ a.admin-link {
   border: 1px solid var(--admin-border);
   border-radius: var(--admin-radius);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: 9999;
+  /* Above mobile sidebar (160) / overlay (140), below modals (9999) */
+  z-index: 5000;
   padding: 6px 0;
   overflow: hidden;
 }
 
-.admin-dropdown.is-open .admin-dropdown-menu {
+.admin-dropdown-menu.is-open {
   display: flex;
   flex-direction: column;
 }

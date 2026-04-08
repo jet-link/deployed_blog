@@ -66,6 +66,7 @@
   var mobileNavScrollY = 0;
 
   function openSidebar() {
+    closeAllAdminDropdowns();
     if (window.innerWidth > 1019) return;
     if (sidebar) sidebar.classList.add('is-open');
     if (overlay) { overlay.classList.add('is-open'); overlay.setAttribute('aria-hidden', 'false'); }
@@ -149,6 +150,7 @@
   }
 
   window.addEventListener('resize', function() {
+    closeAllAdminDropdowns();
     if (window.innerWidth > 1019 && sidebar && sidebar.classList.contains('is-open')) {
       closeSidebar();
     }
@@ -162,9 +164,12 @@
     }
   });
 
-  // Close sidebar on nav click (mobile) or escape
+  // Close sidebar on nav click (mobile) or escape (dropdowns first)
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeSidebar();
+    if (e.key === 'Escape') {
+      if (document.querySelector('.admin-dropdown.is-open')) closeAllAdminDropdowns();
+      else closeSidebar();
+    }
   });
   document.querySelectorAll('.admin-nav-item').forEach(function(link) {
     link.addEventListener('click', function() {
@@ -191,55 +196,117 @@
     }
   });
 
-  // Dropdowns: close others when opening one, position fixed overlay
+  // Dropdowns: portal menu to body so overflow on .admin-table-wrapper / .admin-card never clips it
+  var adminDdSeq = 0;
+
+  function ensureAdminDdId(dd) {
+    if (!dd.id) dd.id = 'admin-dd-' + (++adminDdSeq);
+    return dd.id;
+  }
+
+  function findAdminDropdownMenu(dd) {
+    if (!dd) return null;
+    var m = dd.querySelector(':scope > .admin-dropdown-menu');
+    if (m) return m;
+    var id = dd.id;
+    if (!id) return null;
+    return document.querySelector('.admin-dropdown-menu[data-admin-dropdown-portal-of="' + id + '"]');
+  }
+
+  var adminFormAnchorRow = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+
+  function attachMenuFormRows(menu, tr) {
+    if (!adminFormAnchorRow || !tr) return;
+    menu.querySelectorAll('form').forEach(function(f) {
+      adminFormAnchorRow.set(f, tr);
+    });
+  }
+
+  function detachMenuFormRows(menu) {
+    if (!adminFormAnchorRow) return;
+    menu.querySelectorAll('form').forEach(function(f) {
+      adminFormAnchorRow.delete(f);
+    });
+  }
+
+  window.adminFormAnchorRow = function(form) {
+    return adminFormAnchorRow ? adminFormAnchorRow.get(form) : undefined;
+  };
+
+  function restoreAdminDropdownMenu(dd, menu) {
+    if (!dd || !menu) return;
+    detachMenuFormRows(menu);
+    menu.removeAttribute('data-admin-dropdown-portal-of');
+    menu.classList.remove('is-open');
+    menu.style.left = '';
+    menu.style.top = '';
+    if (menu.parentNode !== dd) dd.appendChild(menu);
+  }
+
+  function closeAdminDropdown(dd) {
+    if (!dd) return;
+    var menu = findAdminDropdownMenu(dd);
+    dd.classList.remove('is-open');
+    if (menu) {
+      menu.classList.remove('is-open');
+      if (menu.parentNode === document.body) restoreAdminDropdownMenu(dd, menu);
+    }
+  }
+
+  function closeAllAdminDropdowns() {
+    document.querySelectorAll('.admin-dropdown.is-open').forEach(closeAdminDropdown);
+  }
+
+  window.adminFindDropdownMenu = findAdminDropdownMenu;
+  window.adminCloseDropdown = closeAdminDropdown;
+
   document.querySelectorAll('.admin-dropdown').forEach(function(dd) {
     var trigger = dd.querySelector('.admin-dropdown-trigger');
     var menu = dd.querySelector('.admin-dropdown-menu');
-    if (trigger && menu) {
-      trigger.addEventListener('click', function(e) {
-        e.stopPropagation();
-        var wasOpen = dd.classList.contains('is-open');
-        document.querySelectorAll('.admin-dropdown.is-open').forEach(function(other) {
-          other.classList.remove('is-open');
-        });
-        if (!wasOpen) {
-          dd.classList.add('is-open');
-          function positionMenu() {
-            var tr = trigger.getBoundingClientRect();
-            var mw = menu.offsetWidth || 140;
-            var mh = menu.offsetHeight || 200;
-            var gap = 4;
-            var pad = 8;
-            var winW = window.innerWidth;
-            var winH = window.innerHeight;
-            var left = tr.right - mw;
-            if (left < pad) left = pad;
-            if (left + mw > winW - pad) left = winW - mw - pad;
-            var top = tr.bottom + gap;
-            if (top + mh > winH - pad) {
-              top = tr.top - mh - gap;
-              if (top < pad) top = pad;
-            }
-            menu.style.left = Math.round(left) + 'px';
-            menu.style.top = Math.round(top) + 'px';
-          }
-          positionMenu();
-          requestAnimationFrame(positionMenu);
+    if (!trigger || !menu) return;
+    menu.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+    trigger.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var wasOpen = dd.classList.contains('is-open');
+      closeAllAdminDropdowns();
+      if (wasOpen) return;
+      dd.classList.add('is-open');
+      menu.classList.add('is-open');
+      menu.setAttribute('data-admin-dropdown-portal-of', ensureAdminDdId(dd));
+      document.body.appendChild(menu);
+      attachMenuFormRows(menu, dd.closest('tr'));
+      function positionMenu() {
+        var tr = trigger.getBoundingClientRect();
+        var mw = menu.offsetWidth || 140;
+        var mh = menu.offsetHeight || 200;
+        var gap = 4;
+        var pad = 8;
+        var winW = window.innerWidth;
+        var winH = window.innerHeight;
+        var left = tr.right - mw;
+        if (left < pad) left = pad;
+        if (left + mw > winW - pad) left = Math.max(pad, winW - mw - pad);
+        var top = tr.bottom + gap;
+        if (top + mh > winH - pad) {
+          top = tr.top - mh - gap;
+          if (top < pad) top = pad;
         }
-      });
-    }
-  });
-  document.addEventListener('click', function() {
-    document.querySelectorAll('.admin-dropdown.is-open').forEach(function(dd) {
-      dd.classList.remove('is-open');
+        menu.style.left = Math.round(left) + 'px';
+        menu.style.top = Math.round(top) + 'px';
+      }
+      positionMenu();
+      requestAnimationFrame(positionMenu);
     });
   });
 
-  // Close dropdown when scrolling
+  document.addEventListener('click', function() {
+    closeAllAdminDropdowns();
+  });
+
   window.addEventListener('scroll', function() {
-    document.querySelectorAll('.admin-dropdown.is-open').forEach(function(dd) {
-      dd.classList.remove('is-open');
-    });
+    closeAllAdminDropdowns();
   }, true);
 
   // Sign out confirmation modal

@@ -38,14 +38,14 @@ def notifications_view(request, username):
     for notif in notifications:
         notif.actor_name = getattr(notif.actor, "username", "")
         if notif.notif_type == Notification.TYPE_REPLY:
-            notif.header_text = "replied to your comment in the post"
+            notif.header_text = "replied comment in post"
             notif.body_text = strip_mention_tokens(getattr(notif.reply_comment, "text", ""))
         elif notif.notif_type == Notification.TYPE_COMMENT_LIKE:
-            notif.header_text = "liked your comment in the post"
+            notif.header_text = "liked comment in post"
             liked_comment = notif.parent_comment or notif.reply_comment
             notif.body_text = strip_mention_tokens(getattr(liked_comment, "text", ""))
         else:
-            notif.header_text = "liked your post."
+            notif.header_text = "liked post"
             notif.body_text = ""
     unread_count = notifications.filter(is_read=False).count()
     return render(request, "accounts/notifications.html", {

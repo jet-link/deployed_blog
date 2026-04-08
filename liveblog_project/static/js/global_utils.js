@@ -10,7 +10,10 @@ var _scrollLockCount = 0;
 var _scrollLockY = 0;
 function lockScroll() {
     if (_scrollLockCount === 0) {
-        _scrollLockY = window.scrollY || window.pageYOffset || 0;
+        var se = document.scrollingElement || document.documentElement;
+        var st = se ? Math.round(se.scrollTop) : 0;
+        var wy = Math.round(window.scrollY || window.pageYOffset || 0);
+        _scrollLockY = Math.max(0, st, wy);
         document.documentElement.style.setProperty('--scroll-y', '-' + _scrollLockY + 'px');
         document.documentElement.classList.add('scroll-locked');
     }
@@ -30,6 +33,10 @@ function unlockScroll() {
         const prevBehavior = root.style.scrollBehavior;
         root.style.scrollBehavior = 'auto';
         window.scrollTo({ left: 0, top: y, behavior: 'auto' });
+        var se = document.scrollingElement || document.documentElement;
+        if (se) {
+            se.scrollTop = y;
+        }
         if (prevBehavior) {
             root.style.scrollBehavior = prevBehavior;
         } else {
@@ -278,153 +285,6 @@ document.addEventListener('DOMContentLoaded', function () {
 })();
 
 
-
-// static/js/search_field_overlay.js
-(function () {
-    'use strict';
-
-    const floatingBtn = document.getElementById('floatingSearchBtn');
-    const overlayRoot = document.getElementById('overlaySearchRoot');
-    const overlayBackdrop = document.getElementById('overlaySearchBackdrop');
-    const overlayContent = document.getElementById('overlaySearchContent');
-    const overlayCloseBtn = document.getElementById('overlayCloseBtn');
-
-    // element we track for visibility
-    const originalSearchInner = document.querySelector('.header-search-inner');
-    // overlay_search.html не включён на всех страницах (e.g. notifications)
-    if (!originalSearchInner || !floatingBtn || !overlayRoot || !overlayCloseBtn) {
-        if (floatingBtn) floatingBtn.style.display = 'none';
-        return;
-    }
-
-    // build floating button behaviour: show when originalSearchInner is not in viewport
-    // use IntersectionObserver
-    let isOriginalVisible = true;
-    const io = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-            isOriginalVisible = entry.isIntersecting;
-            if (!isOriginalVisible) {
-                // show floating
-                floatingBtn.style.display = 'flex';
-            } else {
-                floatingBtn.style.display = 'none';
-            }
-        });
-    }, {
-        root: null,
-        threshold: 0.1
-    });
-
-    io.observe(originalSearchInner);
-
-    // helper: open overlay (clone the .header-search-inner so the existing form stays on page)
-    function openOverlay() {
-        if (!overlayRoot) return;
-        overlayContent.innerHTML = ''; // clear
-        const clone = originalSearchInner.cloneNode(true);
-        // ensure input has same id inside clone; but avoid duplicate ids: remove id on clone inputs
-        // we'll keep names for submission
-        clone.querySelectorAll('[id]').forEach(el => {
-            el.dataset.origId = el.id;
-            el.removeAttribute('id');
-        });
-
-        overlayContent.appendChild(clone);
-
-        overlayRoot.classList.remove('hidden');
-        overlayRoot.classList.add('fade-in');
-
-        // focus the search input inside clone
-        const input = overlayContent.querySelector('input[type="search"], input[type="text"], textarea');
-        if (input) {
-            input.focus();
-            input.select?.();
-        }
-
-        // bind submit on Enter — either form exists or we intercept keydown Enter
-        bindOverlayHandlers();
-        lockScroll();
-        overlayRoot.setAttribute('aria-hidden', 'false');
-    }
-
-    function closeOverlay() {
-        if (!overlayRoot) return;
-        overlayRoot.classList.add('hidden');
-        overlayContent.innerHTML = '';
-        unlockScroll();
-        overlayRoot.setAttribute('aria-hidden', 'true');
-    }
-
-    // build query and navigate (default target /items/search/ — change if needed)
-    function doSearchAndClose(inputEl, container) {
-        const q = (inputEl && inputEl.value || '').trim();
-        // find checkboxes inside container
-        const by_title = container.querySelector('#searchByTitle, input[name="by_title"]')?.checked ? '1' : '';
-        const by_text = container.querySelector('#searchByText, input[name="by_text"]')?.checked ? '1' : '';
-        const by_tags = container.querySelector('#searchByTags, input[name="by_tags"]')?.checked ? '1' : '';
-
-        // if you have a server route for search, put it here
-        const base = '/items/search/'; // change to your search view URL if needed
-        const params = new URLSearchParams();
-        if (q) params.set('q', q);
-        if (by_title) params.set('by_title', '1');
-        if (by_text) params.set('by_text', '1');
-        if (by_tags) params.set('by_tags', '1');
-
-        const url = base + (params.toString() ? ('?' + params.toString()) : '');
-        // close overlay first then navigate (small timeout for UX)
-        closeOverlay();
-        window.location.href = url;
-    }
-
-    // wire handlers inside overlay
-    function bindOverlayHandlers() {
-        const container = overlayContent;
-        if (!container) return;
-
-        // handle Enter key on search input -> submit
-        const inputEl = container.querySelector('input[type="search"], input[type="text"], textarea');
-        if (inputEl) {
-            // avoid duplicate handlers
-            inputEl.removeEventListener('keydown', onInputKeydown);
-            inputEl.addEventListener('keydown', onInputKeydown);
-        }
-
-        // backdrop click no longer closes — only overlay-close or Escape
-    }
-
-    function onInputKeydown(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            const container = overlayContent;
-            const inputEl = container.querySelector('input[type="search"], input[type="text"], textarea');
-            doSearchAndClose(inputEl, container);
-        }
-    }
-
-    // global close handlers
-    floatingBtn.addEventListener('click', openOverlay);
-    overlayCloseBtn.addEventListener('click', closeOverlay);
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !overlayRoot.classList.contains('hidden')) {
-            closeOverlay();
-        }
-    });
-
-    // Accessibility: trap focus inside overlay when opened (basic)
-    document.addEventListener('focus', (ev) => {
-        if (overlayRoot && !overlayRoot.classList.contains('hidden')) {
-            if (!overlayRoot.contains(ev.target)) {
-                // redirect focus into overlay
-                const focusable = overlayRoot.querySelector('input,button,select,textarea,a[href]');
-                if (focusable) focusable.focus();
-            }
-        }
-    }, true);
-
-})();
-
-
 // Share button
 document.addEventListener('DOMContentLoaded', function () {
     // Elements
@@ -433,21 +293,30 @@ document.addEventListener('DOMContentLoaded', function () {
     const linkInput = document.getElementById('shareLinkInput');
     const feedback = document.getElementById('shareCopyFeedback');
 
-    // Open source: if you want clicking .share_link to open modal (works with bootstrap attr too)
+    let lastTrigger = null;
+
+    function showShareItemModal(triggerEl) {
+        if (!modalEl) return;
+        if (triggerEl) lastTrigger = triggerEl;
+        const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        bsModal.show();
+        setTimeout(() => {
+            if (linkInput) {
+                try { linkInput.select(); } catch (err) { }
+            }
+        }, 250);
+    }
+
     document.querySelectorAll('.item_share_btn').forEach(el => {
         el.addEventListener('click', function (e) {
             e.preventDefault();
-            // Use Bootstrap 5 modal JS API to show
-            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            bsModal.show();
-
-            // After modal shown, select input for easy copying
-            setTimeout(() => {
-                if (linkInput) {
-                    try { linkInput.select(); } catch (err) { }
-                }
-            }, 250);
+            showShareItemModal(el);
         });
+    });
+
+    window.addEventListener('open-item-share-modal', function (ev) {
+        const t = ev.detail && ev.detail.trigger;
+        showShareItemModal(t || null);
     });
 
     // Repost API: send repost event, update counter
@@ -559,15 +428,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btnTelegram) btnTelegram.addEventListener('click', shareMap.telegram);
     if (btnFacebook) btnFacebook.addEventListener('click', shareMap.facebook);
     if (btnWhatsapp) btnWhatsapp.addEventListener('click', shareMap.whatsapp);
-
-    // Manage focus return to trigger (accessibility)
-    let lastTrigger = null;
-
-    document.querySelectorAll('.item_share_btn').forEach(el => {
-        el.addEventListener('click', () => {
-            lastTrigger = el;
-        });
-    });
 
     if (modalEl) {
         modalEl.addEventListener('hide.bs.modal', () => {
@@ -1003,6 +863,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let isOpen = false;
 
+    function syncThemeColorForChrome() {
+        const m = document.getElementById('meta-theme-color');
+        if (!m) return;
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        m.setAttribute('content', dark ? '#0d1117' : '#ffffff');
+    }
+
     function openBottomMenu() {
         if (isOpen) return;
         isOpen = true;
@@ -1017,6 +884,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         menu.removeAttribute('inert');
         menu.setAttribute('aria-hidden', 'false');
+
+        /* Safari: re-assert theme-color after the dim overlay paints so the status / chrome area matches the drawer. */
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                syncThemeColorForChrome();
+            });
+        });
 
         closeBtn.focus();
     }
@@ -1036,6 +910,7 @@ document.addEventListener('DOMContentLoaded', function () {
             menu.setAttribute('inert', '');
 
             unlockScroll();
+            syncThemeColorForChrome();
         }, 250);
     }
 

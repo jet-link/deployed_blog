@@ -9,6 +9,7 @@ from login.views._helpers import (
     _safe_referer_url,
     _referer_breadcrumb_info,
     _vanished_items_qs,
+    annotate_user_bookmarked,
     annotate_user_liked,
     apply_human_counts,
     build_breadcrumbs,
@@ -20,6 +21,7 @@ def vanished_generic_view(request):
     """Page for author=None: avatar, Deleted user, item cards."""
     qs = _vanished_items_qs()
     qs = annotate_user_liked(qs, request.user)
+    qs = annotate_user_bookmarked(qs, request.user)
     SECTION_LIMIT = 10
     created_items = list(qs[:SECTION_LIMIT])
     all_count = qs.count()
@@ -48,6 +50,7 @@ def vanished_created_view(request):
     """Full paginated list of items by deleted users."""
     qs = _vanished_items_qs()
     qs = annotate_user_liked(qs, request.user)
+    qs = annotate_user_bookmarked(qs, request.user)
     paginator = Paginator(qs, 50)
     page_obj = paginator.get_page(request.GET.get('page', 1))
     page_range = paginator.get_elided_page_range(page_obj.number, on_each_side=1, on_ends=1)
@@ -78,6 +81,7 @@ def user_not_found_view(request, user_obj, vanished_status="banned"):
         .prefetch_related("images")
     )
     user_items_qs = annotate_user_liked(user_items_qs, request.user)
+    user_items_qs = annotate_user_bookmarked(user_items_qs, request.user)
 
     SECTION_LIMIT = 10
     created_items = list(user_items_qs[:SECTION_LIMIT])

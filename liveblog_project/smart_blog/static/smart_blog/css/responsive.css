@@ -123,30 +123,86 @@
     }
 }
 
-/* Floating search (overlay) */
+/* Floating search + fullscreen search overlay (do not use old centered-panel rules) */
 @media (max-width: 575px) {
-    .floating-search-btn {
-        width: 50px;
-        height: 50px;
-        bottom: 14px;
-        font-size: 18px;
-    }
-
-    .floating-search-btn .floating-search-label {
-        display: none;
+    .overlay-search-root {
+        max-width: 100%;
     }
 
     .overlay-panel {
-        top: 6%;
-        width: calc(100% - 24px);
-        padding: 14px;
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        top: auto !important;
+        padding: 0 !important;
     }
 
-    .floating-search-btn {
-        bottom: 18px;
-        width: 48px;
-        height: 48px;
-        font-size: 18px;
+    .overlay-search-content {
+        max-width: none;
+        width: 100%;
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+        padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+        padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    }
+
+    .overlay-search-topbar {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-top: 0;
+    }
+
+    .overlay-search-body {
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        margin-top: 0.5rem;
+    }
+
+    .overlay-search-history .search-history-header-row {
+        flex-wrap: wrap;
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .overlay-search-history .search-history-clear-btn {
+        padding: 6px 12px;
+        font-size: 0.65rem;
+    }
+
+    .overlay-search-history .search-history-item {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        padding: 12px;
+        gap: 6px 8px;
+    }
+
+    .overlay-search-history .search-history-item-icon {
+        margin-top: 2px;
+        order: 0;
+    }
+
+    .overlay-search-history .search-history-item-text {
+        order: 1;
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .overlay-search-history .search-history-item-remove {
+        order: 2;
+        margin-left: auto;
+        align-self: flex-start;
+    }
+
+    .overlay-search-history .search-history-item-meta {
+        order: 3;
+        flex: 1 1 100%;
+        margin-left: 0;
+        padding-left: 1.5rem;
+        font-size: 0.68rem;
+        box-sizing: border-box;
     }
 }
 
@@ -156,15 +212,11 @@
     }
 }
 
-/* Mobile slide menu — avoid 100vw (horizontal scrollbar); lock scroll handled via html.scroll-locked */
+/* Mobile slide menu — full width; dimmed overlay restores contrast (was display:none → looked broken on iOS) */
 @media (max-width: 575px) {
     .bottom-side-menu {
         width: 100%;
         max-width: 100%;
-    }
-
-    .bottom-menu-overlay {
-        display: none;
     }
 }
 
@@ -183,18 +235,14 @@
 }
 
 @media (max-width: 767px) {
-    .item-detail-meta-row {
-        align-items: flex-start !important;
-    }
-
     .VLB {
-        padding: 10px 14px;
+        /* padding: 10px 14px; */
         font-size: 0.78rem;
         border-radius: var(--radius-md, 8px);
     }
 
     .VLB .item-stats {
-        gap: 18px;
+        gap: 5px;
     }
 
     .VLB .item-stats .stat {
@@ -221,19 +269,28 @@
     }
 
     .item-detail-head {
-        flex-direction: column;
-        align-items: flex-start !important;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .item-detail-head .item-detail-title {
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
 
     .VLB {
-        padding: 9px 12px;
+        /* padding: 9px 12px; */
         font-size: 0.74rem;
         line-height: 1.25;
         border-radius: var(--radius-md, 8px);
     }
 
     .VLB .item-stats {
-        gap: 16px;
+        gap: 5px;
         justify-content: flex-end;
         flex-wrap: wrap;
         row-gap: 6px;
@@ -307,13 +364,13 @@
 
 /* ---------- Comments: nesting depth + overflow ---------- */
 @media (max-width: 767px) {
-    .replies {
+    /* .replies {
         padding-left: 0.75rem;
-    }
+    } */
 
-    .replies .replies {
+    /* .replies .replies {
         padding-left: 0.75rem;
-    }
+    } */
 
     .comment-text {
         word-break: break-word;
@@ -323,154 +380,20 @@
     .comment-block {
         min-width: 0;
     }
-}
 
-@media (max-width: 575px) {
     .comment-meta-row {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .comment-meta-time {
-        text-align: left;
-        width: 100%;
+        align-items: center;
     }
 
     .comment-layout {
         grid-template-columns: 36px minmax(0, 1fr);
-        gap: 0.25rem 0.55rem;
+        column-gap: 0.55rem;
+        row-gap: 0.25rem;
     }
 
-    /* Username badge + actions: compact pill, actions in a dropdown */
-    .comment-menu {
-        position: relative;
-        flex-wrap: nowrap;
-        align-items: flex-start;
-        flex-direction: column;
-        max-width: 100%;
-    }
+}
 
-    .comment-menu .comment-actions {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        flex-wrap: nowrap;
-        gap: 0;
-        margin-left: 0;
-        margin-top: 10px;
-        padding: 6px 0;
-        width: max-content;
-        min-width: 132px;
-        max-width: min(200px, calc(100vw - 32px));
-        background: var(--card-bg);
-        border: 1px solid var(--border-default);
-        border-radius: var(--card-radius, 8px);
-        box-shadow: 3px 12px 25px rgba(0, 0, 0, 0.14);
-        position: absolute;
-        left: 0;
-        top: 100%;
-        z-index: 25;
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(-6px);
-        pointer-events: none;
-        transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
-    }
-
-    /* Tooltip-style arrow: points up toward the username badge */
-    /* --comment-menu-arrow-x = horizontal center of badge, set in comment_operate.js */
-    .comment-menu .comment-actions::before {
-        content: "";
-        position: absolute;
-        bottom: 100%;
-        left: var(--comment-menu-arrow-x, 50%);
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-bottom: 8px solid var(--border-default);
-        pointer-events: none;
-    }
-
-    .comment-menu .comment-actions::after {
-        content: "";
-        position: absolute;
-        bottom: 100%;
-        left: var(--comment-menu-arrow-x, 50%);
-        transform: translateX(-50%);
-        margin-bottom: -1px;
-        width: 0;
-        height: 0;
-        border-left: 7px solid transparent;
-        border-right: 7px solid transparent;
-        border-bottom: 7px solid var(--card-bg);
-        pointer-events: none;
-    }
-
-    .comment-menu.open .comment-actions {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0);
-        pointer-events: auto;
-    }
-
-    .comment-actions > .fa {
-        display: none;
-    }
-
-    .comment-menu-btn {
-        min-height: 0;
-        min-width: 0;
-        padding: 5px 12px;
-        font-size: 0.72rem;
-    }
-
-    /* Match header user-tooltip rows: flat list, no pill borders */
-    .comment-menu .comment-actions .comment-menu-action {
-        min-height: 0 !important;
-        min-width: 0 !important;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        width: 100%;
-        box-sizing: border-box;
-        margin: 0;
-        padding: 12px 22px !important;
-        font-size: 0.85rem !important;
-        line-height: 1.35 !important;
-        font-weight: 500;
-        border: none !important;
-        border-radius: 0 !important;
-        background: transparent !important;
-        color: var(--text-default) !important;
-        text-align: left;
-        transition: background 0.15s ease;
-    }
-
-    .comment-menu .comment-actions .comment-menu-action:not(.disabled):hover {
-        background: #f1f2f6 !important;
-    }
-
-    html[data-theme="dark"] .comment-menu .comment-actions .comment-menu-action:not(.disabled):hover {
-        background: var(--bg-muted) !important;
-    }
-
-    .comment-menu .comment-actions .comment-menu-action.badge_danger,
-    .comment-menu .comment-actions .comment-menu-action.btn-delete-comment {
-        color: #e74c3c !important;
-    }
-
-    html[data-theme="dark"] .comment-menu .comment-actions .comment-menu-action.badge_danger,
-    html[data-theme="dark"] .comment-menu .comment-actions .comment-menu-action.btn-delete-comment {
-        color: var(--danger-fg) !important;
-    }
-
-    .comment-menu .comment-actions .comment-menu-action.disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-    }
-
+@media (max-width: 575px) {
     .comment-form-btn {
         min-height: 0 !important;
         min-width: 0 !important;
@@ -485,9 +408,24 @@
         font-size: 0.68rem;
     }
 
-    .comment-menu-btn {
+    .comment-menu-btn:not(.overflow-more-btn) {
         padding: 5px 11px;
         font-size: 0.7rem;
+    }
+
+    .comment-menu--actions-bar > .comment-menu-btn.overflow-more-btn {
+        min-width: 40px;
+        min-height: 40px;
+        padding: 8px;
+    }
+
+    .overflow-more-btn__dots {
+        gap: 4px;
+    }
+
+    .overflow-more-btn__dot {
+        width: 4px;
+        height: 4px;
     }
 }
 
@@ -554,20 +492,7 @@
     }
 }
 
-/* ---------- Touch targets (align with header 44px search / burger) ---------- */
-@media (max-width: 991px) {
-    .search-btn,
-    .theme-toggle-btn {
-        min-width: 44px;
-        min-height: 44px;
-        font-size: 1rem;
-    }
-
-    .bottom-burger {
-        min-width: 44px;
-        min-height: 44px;
-    }
-}
+/* Touch targets: размеры задаёт --header-icon-size в styles.css */
 
 /*
  * Post gallery on small phones: strict 2-column rows; when count is odd, the last

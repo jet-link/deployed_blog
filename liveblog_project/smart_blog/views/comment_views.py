@@ -2,7 +2,7 @@
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -77,9 +77,18 @@ def add_comment(request, slug):
         )
         from smart_blog.context_processors import invalidate_notifications_cache
         invalidate_notifications_cache(parent.author.pk)
-    comment = Comment.objects.annotate(
-        replies_count=Count('replies')
-    ).get(pk=comment.pk)
+    comment = (
+        Comment.objects.filter(pk=comment.pk)
+        .annotate(
+            replies_count=Count('replies', filter=Q(replies__is_draft=False), distinct=True),
+            user_liked=Exists(
+                CommentLike.objects.filter(comment=OuterRef('pk'), user=request.user)
+            ),
+            likes_count=Count('likes', distinct=True),
+            reports_count=Count('reports', distinct=True),
+        )
+        .get(pk=comment.pk)
+    )
 
     html = render_to_string(
         "includes/_comments.html",
@@ -128,10 +137,21 @@ def edit_comment(request, pk):
 
     form.save()
 
+    comment = (
+        Comment.objects.filter(pk=comment.pk)
+        .annotate(
+            user_liked=Exists(
+                CommentLike.objects.filter(comment=OuterRef('pk'), user=request.user)
+            ),
+            likes_count=Count('likes', distinct=True),
+            reports_count=Count('reports', distinct=True),
+        )
+        .get(pk=comment.pk)
+    )
+
     html = render_to_string("includes/_comments.html", {
         "comment": comment, "user": request.user,
         "report_rate_limited": False,
-        "just_edited": True,
     })
     total_comments = Comment.objects.filter(item=comment.item, is_draft=False).count()
     return JsonResponse({'success': True, 'comment_html': html, 'comment_id': comment.pk, 'total_comments': total_comments})

@@ -118,21 +118,23 @@
 (function () {
   'use strict';
 
-  function humanCount(n) {
-    n = Number(n);
-    if (isNaN(n) || n < 0) return '0';
-    if (n < 1000) return String(n);
-    if (n >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
-    if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
-    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
-    return String(n);
-  }
-
   function getCookie(name) {
     return document.cookie
       .split('; ')
       .find(c => c.startsWith(name + '='))
       ?.split('=')[1];
+  }
+
+  function setReadingBadgeForItem(itemId, visible) {
+    if (itemId) {
+      const cardBadge = document.getElementById('reading-badge-' + itemId);
+      if (cardBadge) cardBadge.hidden = !visible;
+    }
+    const bodyId = document.body.dataset.itemId;
+    if (bodyId != null && String(bodyId) === String(itemId)) {
+      const detailBadge = document.getElementById('itemReadingBadge');
+      if (detailBadge) detailBadge.hidden = !visible;
+    }
   }
 
   document.addEventListener('click', async function (e) {
@@ -148,6 +150,7 @@
     if (!url || !icon) return;
 
     const wasBookmarked = icon.classList.contains('fa-bookmark');
+    setReadingBadgeForItem(itemId, !wasBookmarked);
     icon.classList.toggle('fa-bookmark', !wasBookmarked);
     icon.classList.toggle('fa-bookmark-o', !!wasBookmarked);
     icon.classList.remove('btn-bounce');
@@ -174,6 +177,7 @@
 
       const data = await resp.json().catch(() => null);
       if (!resp.ok || !data) {
+        setReadingBadgeForItem(itemId, wasBookmarked);
         icon.classList.toggle('fa-bookmark', wasBookmarked);
         icon.classList.toggle('fa-bookmark-o', !wasBookmarked);
         console.error('BOOKMARK ERROR', resp.status);
@@ -182,6 +186,7 @@
 
       icon.classList.toggle('fa-bookmark', !!data.bookmarked);
       icon.classList.toggle('fa-bookmark-o', !data.bookmarked);
+      setReadingBadgeForItem(itemId, !!data.bookmarked);
 
       // if we came from profile listing, ensure it refreshes on return
       try {
@@ -206,16 +211,8 @@
         try { document.dispatchEvent(new CustomEvent('brainews-filter-refresh')); } catch (e) { }
       } catch { }
 
-      // instant detail update
-      const detailBookmarks = document.getElementById('bookmarkCount');
-      if (detailBookmarks && data.bookmarks_count != null) {
-        detailBookmarks.textContent = humanCount(data.bookmarks_count);
-      }
-      const cardBookmarks = document.getElementById('bookmark-count-' + itemId);
-      if (cardBookmarks && data.bookmarks_count != null) {
-        cardBookmarks.textContent = humanCount(data.bookmarks_count);
-      }
     } catch (err) {
+      setReadingBadgeForItem(itemId, wasBookmarked);
       icon.classList.toggle('fa-bookmark', wasBookmarked);
       icon.classList.toggle('fa-bookmark-o', !wasBookmarked);
     } finally {

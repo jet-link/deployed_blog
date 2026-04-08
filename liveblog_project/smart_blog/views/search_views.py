@@ -13,6 +13,26 @@ from smart_blog.utils import breadcrumb, build_breadcrumbs
 from smart_blog.views._helpers import annotate_user_bookmarked, annotate_user_liked
 
 SEARCH_RESULTS_PER_PAGE = 40
+SEARCH_SUGGEST_LIMIT = 10
+
+
+@ratelimit(key='ip', rate=settings.RATELIMIT_SEARCH_SUGGEST_RATE, method='GET', block=False)
+def api_search_suggest(request):
+    """Lightweight FTS suggestions for the search overlay (titles + links only)."""
+    if getattr(request, 'limited', False):
+        return JsonResponse({'items': []}, status=429)
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'items': []})
+
+    items_qs = Item.objects.filter(is_published=True)
+    items_qs = build_search_filter(items_qs, q, True, True, True)
+    rows = list(items_qs.values('title', 'slug')[:SEARCH_SUGGEST_LIMIT])
+    items = [
+        {'title': r['title'], 'url': reverse('smart_blog:item_detail', args=[r['slug']])}
+        for r in rows
+    ]
+    return JsonResponse({'items': items})
 
 
 @ratelimit(key='ip', rate=settings.RATELIMIT_SEARCH_RATE, method='GET', block=False)

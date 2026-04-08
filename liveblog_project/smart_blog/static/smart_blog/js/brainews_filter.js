@@ -2,6 +2,12 @@
 (function () {
     'use strict';
 
+    function showBrainPreloader() {
+        if (window.__brainPreloader && typeof window.__brainPreloader.show === 'function') {
+            window.__brainPreloader.show();
+        }
+    }
+
     const FILTER_KEY = 'brainews_filter_active';
     const FILTER_STORAGE_KEY_PREFIX = 'brainews_original_cards_';
     let latestFilterRequestId = 0;
@@ -229,6 +235,7 @@
                 restoreOriginalContent();
                 showEmptyHint('');
             } else {
+                showBrainPreloader();
                 window.location.href = getBraiNewsUrl();
             }
             return;

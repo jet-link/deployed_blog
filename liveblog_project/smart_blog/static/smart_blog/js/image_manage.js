@@ -26,7 +26,6 @@
         const itemForms = [qs('#itemForm'), qs('#itemEditForm')].filter(Boolean);
 
         const MAX = 10;
-        const MIN_IF_ANY = 2; // --- CHANGED: require at least 2 images if any provided
         // Keep in sync with smart_blog.image_utils.ALLOWED_MIME_TYPES (server rejects others)
         const ALLOWED = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
 
@@ -150,7 +149,10 @@
         function updateInfo() {
             const count = (mainInput.files && mainInput.files.length) || 0;
             const cntObj = countThumbnails();
-            setInfo(`Selected ${count} / ${MAX} files (JPEG/PNG/WebP/JPG).`, (cntObj.total > MAX));
+            setInfo(
+                `You can upload up to ${MAX} images per post · selected ${count} new file(s).`,
+                (cntObj.total > MAX),
+            );
         }
 
         function mergeFilesToMainInput(newFiles) {
@@ -164,7 +166,7 @@
                 kept.forEach(f => dt.items.add(f));
                 mainInput.files = dt.files;
                 renderFilesFromInput();
-                setInfo(`You reached maximum ${MAX} files. Extra files were not added.`, true);
+                setInfo(`You can upload up to ${MAX} images per post. Extra files were not added.`, true);
                 refreshAddMoreVisibility();
                 return;
             }
@@ -197,7 +199,7 @@
                         if (currentCount + files.length > MAX) {
                             const allowedCount = Math.max(0, MAX - currentCount);
                             if (allowedCount === 0) {
-                                setInfo(`Maximum ${MAX} images allowed. Remove some first to add more.`, true);
+                                setInfo(`You can upload up to ${MAX} images per post. Remove some first to add more.`, true);
                                 tmpInput.value = '';
                                 return;
                             }
@@ -222,7 +224,7 @@
                 const dt = new DataTransfer();
                 files.forEach(f => dt.items.add(f));
                 mainInput.files = dt.files;
-                setInfo(`Maximum ${MAX} images allowed. Extra were removed.`, true);
+                setInfo(`You can upload up to ${MAX} images per post. Extra files were removed.`, true);
             }
 
             const bad = files.filter(f => !ALLOWED.includes(f.type));
@@ -329,25 +331,6 @@
         renderFilesFromInput();
         refreshAddMoreVisibility();
 
-        // BLOCK SUBMIT if resulting images = 1 (require 0 or >=2)
-        itemForms.forEach(function (itemForm) {
-            itemForm.addEventListener(
-                'submit',
-                function (ev) {
-                    const resulting = computeResultingImagesCount();
-                    if (resulting === 1) {
-                        ev.preventDefault();
-                        ev.stopImmediatePropagation();
-                        setInfo(`You must submit either no images or at least ${MIN_IF_ANY} images. Current selection would result in exactly 1 image.`, true);
-                        const nodeToScroll = preview || existingContainer || qs('#imagesHelp') || mainInput;
-                        if (nodeToScroll) {
-                            nodeToScroll.scrollIntoView({ behavior: 'auto', block: 'center' });
-                        }
-                    }
-                },
-                true
-            );
-        });
     });
 
     // second DOMContentLoaded block remains, for existingContainer mark/unmark logic

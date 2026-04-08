@@ -2,7 +2,7 @@
 <div class="header-wrapper">
   <header class="header">
     <div class="container-main">
-      <nav class="nav header-nav d-flex align-items-center justify-content-between">
+      <nav class="nav header-nav" aria-label="Primary">
         <div class="bottom-left-nav header-brand">
           <a href="/" class="brand-minimal" aria-label="brainstorm.news"><span class="brand-full">brainstorm.news</span><span class="brand-short">bstrm.news</span></a>
         </div>
@@ -51,10 +51,5 @@
       </nav>
     </div>
   </header>
-  <div id="headerSearchDropdown" class="header-search-dropdown hidden" aria-hidden="true">
-    <div class="container-main">
-      {% include 'includes/search_form.html' %}
-    </div>
-  </div>
 </div>
 {% include 'includes/overlay-menu.html' %}

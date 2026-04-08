@@ -8,7 +8,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from smart_blog.models import Comment, Item, TrendingItem
 from smart_blog.utils import count_convert, build_breadcrumbs, breadcrumb  # noqa: F401
-from smart_blog.views._helpers import annotate_user_liked  # noqa: F401
+from smart_blog.views._helpers import annotate_user_bookmarked, annotate_user_liked  # noqa: F401
 
 FUNNY_NAMES = [
     "Bobby McWobble",
@@ -113,13 +113,10 @@ def _referer_breadcrumb_info(request, referer_url):
         elif url_name == "home":
             return "brainstorm.news", referer_url
         elif url_name == "comment_thread" and kwargs.get("pk"):
-            comment = (
-                Comment.objects.filter(is_draft=False)
-                .select_related("item")
-                .filter(pk=kwargs["pk"])
-                .values("item__title")
-                .first()
-            )
+            qs = Comment.objects.filter(is_draft=False).select_related("item").filter(pk=kwargs["pk"])
+            if kwargs.get("slug"):
+                qs = qs.filter(item__slug=kwargs["slug"])
+            comment = qs.values("item__title").first()
             if comment and comment.get("item__title"):
                 return f"{comment['item__title']} - Replies", referer_url
             return "Replies", referer_url

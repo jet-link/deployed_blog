@@ -13,6 +13,9 @@ from datetime import timedelta
 from django.utils.html import strip_tags
 from django.db.models import Q, Count
 
+from .utils import human_time_relative_youtube
+from .image_utils import ORIENTATION_LANDSCAPE, compute_orientation_kind
+
 
 User = get_user_model()
 
@@ -155,6 +158,7 @@ class Item(models.Model):
     )
     title = models.CharField(max_length=255)
     text = models.TextField()
+    content_json = models.JSONField(default=dict, blank=True)
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
@@ -187,6 +191,19 @@ class Item(models.Model):
     def __str__(self):
         return self.title
     
+    def get_editor_body_html(self):
+        """Safe HTML from Editor.js `content_json` if it contains renderable blocks; else None."""
+        cj = self.content_json
+        if not cj or not isinstance(cj, dict):
+            return None
+        blocks = cj.get("blocks")
+        if not blocks:
+            return None
+        from smart_blog.editor.render import render_editorjs_to_html
+
+        out = render_editorjs_to_html(cj)
+        return out if out else None
+
     def short_text(self, length=600):
         # 1. Удаляем HTML теги
         plain = strip_tags(self.text)
@@ -268,7 +285,10 @@ class Item(models.Model):
     def get_absolute_url(self):
         # для удобства
         return reverse("smart_blog:item_detail", kwargs={"slug": self.slug})
-    
+
+    def get_comments_absolute_url(self):
+        """Dedicated comments page for this post (all threads)."""
+        return reverse("smart_blog:item_comments", kwargs={"slug": self.slug})
 
     EDITABLE_HOURS = 24  # или 1 день = 24 часа
 
@@ -289,41 +309,45 @@ class Item(models.Model):
 
     @property
     def human_published(self):
-        dt = self.published_date
-        t = timezone.localtime(dt)
-        now_local = timezone.localtime(timezone.now())
-        dt_local = timezone.localtime(dt)
-        delta_days = (now_local.date() - dt_local.date()).days
-
-        if delta_days == 0:
-            return "Today"
-        elif delta_days == 1:
-            return "Yesterday"
-        elif 2 <= delta_days <= 5:
-            return f"{delta_days} days ago"
-        else:
-            return f"{dt_local.strftime("%d.%m.%Y")}"
-            # return f"{dt_local.strftime("%d.%m.%Y")} at {t.strftime('%H:%M')}"
-            # return dt_local.strftime("%d.%m.%Y")
-        
-        
+        ref = self.published_date or self.created
+        return human_time_relative_youtube(ref)
 
 
 class ItemImage(models.Model):
     """Хранит одно изображение, связанное с публикацией.
        Поддерживает responsive: thumbnail (~300px), medium (~800px), large (~1600px).
        image — основное (large); image_thumbnail, image_medium — для списков и srcset."""
+    ORIENTATION_CHOICES = (
+        ("landscape", "Landscape"),
+        ("portrait", "Portrait"),
+        ("wide", "Ultra-wide"),
+        ("square", "Square"),
+    )
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to="items/%Y/%m/%d/")
     image_thumbnail = models.ImageField(upload_to="items/", blank=True, null=True)
     image_medium = models.ImageField(upload_to="items/", blank=True, null=True)
     width = models.PositiveIntegerField(blank=True, null=True)
     height = models.PositiveIntegerField(blank=True, null=True)
+    sort_order = models.PositiveSmallIntegerField(default=0, db_index=True)
+    caption = models.CharField(max_length=500, blank=True)
+    orientation_kind = models.CharField(
+        max_length=16,
+        choices=ORIENTATION_CHOICES,
+        default=ORIENTATION_LANDSCAPE,
+    )
     alt_text = models.CharField(max_length=255, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ("sort_order", "pk")
+
     def __str__(self):
         return f"Image for {self.item_id}"
+
+    def save(self, *args, **kwargs):
+        self.orientation_kind = compute_orientation_kind(self.width, self.height)
+        super().save(*args, **kwargs)
 
     def get_thumbnail_url(self):
         """URL для превью (списки, карточки). Fallback на image."""
@@ -374,19 +398,7 @@ class Comment(models.Model):
 
     @property
     def human_published(self):
-        created = timezone.localtime(self.created)
-        now_local = timezone.localtime(timezone.now())
-        delta_days = (now_local.date() - created.date()).days
-
-        if delta_days == 0:
-            return "Today"
-        elif delta_days == 1:
-            return "Yesterday"
-        elif 2 <= delta_days <= 5:
-            return f"{delta_days} days ago"
-        else:
-            return f"{created.strftime("%d.%m.%Y")}"
-            # return f"{created.strftime("%d.%m.%Y")} at {created.strftime('%H:%M')}"
+        return human_time_relative_youtube(self.created)
 
     class Meta:
         ordering = ("created",)
@@ -425,11 +437,17 @@ class Comment(models.Model):
         super().save(*args, **kwargs)
 
     def get_comment_url(self):
-        """URL to view this comment: thread page for replies, item page for root."""
+        """URL to view this comment: thread page for replies, item comments page for root."""
         anchor = f"#comment-anchor-{self.pk}"
         if self.parent_id:
-            return reverse("smart_blog:comment_thread", args=[self.parent_id]) + anchor
-        return self.item.get_absolute_url() + anchor
+            return (
+                reverse(
+                    "smart_blog:comment_thread",
+                    kwargs={"slug": self.item.slug, "pk": self.parent_id},
+                )
+                + anchor
+            )
+        return self.item.get_comments_absolute_url() + anchor
 
 
 class CommentLike(models.Model):
@@ -740,18 +758,21 @@ class Notification(models.Model):
         if self.reply_comment_id:
             reply = self.reply_comment
             if reply.parent_id:
-                # If reply is directly under root, it's visible on item page.
+                # If reply is directly under root, it's visible on the comments page.
                 if reply.parent and reply.parent.parent_id is None:
                     return _item_comment_url(
-                        self.item.get_absolute_url(), reply.pk, reply.pk
+                        self.item.get_comments_absolute_url(), reply.pk, reply.pk
                     )
                 # Otherwise go to thread page for its parent.
-                thread_url = reverse("smart_blog:comment_thread", args=[reply.parent_id])
+                thread_url = reverse(
+                    "smart_blog:comment_thread",
+                    kwargs={"slug": self.item.slug, "pk": reply.parent_id},
+                )
                 return _item_comment_url(thread_url, reply.pk, reply.pk)
-            return _item_comment_url(self.item.get_absolute_url(), reply.pk, reply.pk)
+            return _item_comment_url(self.item.get_comments_absolute_url(), reply.pk, reply.pk)
         if self.parent_comment_id:
             pc = self.parent_comment.pk
-            return _item_comment_url(self.item.get_absolute_url(), pc, pc)
+            return _item_comment_url(self.item.get_comments_absolute_url(), pc, pc)
         return self.item.get_absolute_url()
 
 

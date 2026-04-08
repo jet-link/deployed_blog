@@ -18,7 +18,6 @@ from smart_blog.services.item_write import (
     attach_item_images_from_uploads,
     delete_item_images_by_ids,
     merge_item_tags,
-    validate_create_image_rules,
     validate_edit_image_totals,
     validate_uploaded_image_files,
 )
@@ -74,9 +73,7 @@ def _json_form_errors(form):
 
 
 def _image_validation_ok_create(form, files) -> bool:
-    return validate_uploaded_image_files(files, form) and validate_create_image_rules(
-        files, form
-    )
+    return validate_uploaded_image_files(files, form)
 
 
 def _image_validation_ok_edit(form, item, files, delete_ids) -> bool:
@@ -159,21 +156,24 @@ def edit_item(request, slug):
         return HttpResponseForbidden("Editing period expired (24 hours after publication).")
 
     if request.method != "POST":
-        form = ItemCreateForm(initial={
-            "title": item.title,
-            "text": item.text,
-            "category": item.category_id,
-            "tags": item.tags.all(),
-        })
+        form = ItemCreateForm(
+            item=item,
+            initial={
+                "title": item.title,
+                "text": item.text,
+                "category": item.category_id,
+                "tags": item.tags.all(),
+            },
+        )
         selected_tag_ids = list(item.tags.values_list("pk", flat=True))
         return render(request, "smart_blog/edit_item.html", {
             "form": form,
             "item": item,
-            "existing_images": item.images.order_by("pk"),
+            "existing_images": item.images.all(),
             "selected_tag_ids": selected_tag_ids,
         })
 
-    form = ItemCreateForm(request.POST)
+    form = ItemCreateForm(request.POST, item=item)
     delete_ids = request.POST.getlist("delete_images")
 
     if not form.is_valid():
@@ -183,7 +183,7 @@ def edit_item(request, slug):
         return render(request, "smart_blog/edit_item.html", {
             "form": form,
             "item": item,
-            "existing_images": item.images.order_by("pk"),
+            "existing_images": item.images.all(),
             "selected_tag_ids": selected_tag_ids,
         })
 
@@ -195,7 +195,7 @@ def edit_item(request, slug):
         return render(request, "smart_blog/edit_item.html", {
             "form": form,
             "item": item,
-            "existing_images": item.images.order_by("pk"),
+            "existing_images": item.images.all(),
             "selected_tag_ids": selected_tag_ids,
         })
 
@@ -234,7 +234,7 @@ def edit_item(request, slug):
         return render(request, "smart_blog/edit_item.html", {
             "form": form,
             "item": item,
-            "existing_images": item.images.order_by("pk"),
+            "existing_images": item.images.all(),
             "selected_tag_ids": selected_tag_ids,
         })
 

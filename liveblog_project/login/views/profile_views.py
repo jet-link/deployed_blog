@@ -18,6 +18,7 @@ from login.middleware import is_user_online
 from login.models import Profile
 from login.views._helpers import (
     annotate_user_liked,
+    annotate_user_bookmarked,
     apply_human_counts,
     build_breadcrumbs,
     build_profile_field,
@@ -48,6 +49,7 @@ def profile_view(request, username):
         .order_by('-published_date')
     )
     user_items_qs = annotate_user_liked(user_items_qs, request.user)
+    user_items_qs = annotate_user_bookmarked(user_items_qs, request.user)
 
     all_count = user_items_qs.count()
     if all_count > 9:
@@ -143,6 +145,7 @@ def profile_section_view(request, username, section):
         .order_by('-published_date')
     )
     user_items_qs = annotate_user_liked(user_items_qs, request.user)
+    user_items_qs = annotate_user_bookmarked(user_items_qs, request.user)
 
     section = (section or '').lower()
     if section != 'created':

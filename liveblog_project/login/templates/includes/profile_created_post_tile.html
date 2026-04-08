@@ -12,10 +12,16 @@
     </div>
     <div class="d-flex flex-column flex-grow-1 min-w-0 profile-created-post-tile__meta">
       <span class="profile-created-post-tile__line text-muted">{{ item.human_published }}</span>
-      <span class="profile-created-post-tile__line text-muted profile-created-post-tile__stats">
-        <span class="me-3 text-nowrap"><i class="fa fa-eye me-1" aria-hidden="true"></i>{{ item.views_count_human }}</span>
-        <span class="text-nowrap"><i class="fa fa-heart me-1" aria-hidden="true"></i>{{ item.likes_count_human }}</span>
-      </span>
+      <div class="profile-created-post-tile__line profile-created-post-tile__stats item-stats item-stats--feed d-inline-flex align-items-center flex-wrap">
+        <div class="stat stat--views">
+          <span>{{ item.views_count_human }}</span>
+          <i class="fa fa-eye" aria-hidden="true"></i>
+        </div>
+        <div class="stat stat--likes">
+          <span>{{ item.likes_count_human }}</span>
+          <i class="fa fa-heart" aria-hidden="true"></i>
+        </div>
+      </div>
       {% if item.category %}
         <span class="profile-created-post-tile__line profile-created-post-tile__footer text-truncate topic-tile__latest mt-auto" title="{{ item.category.name }}">
           <span class="text-muted">Topic:</span> <span class="text-muted fw-semibold">{{ item.category.name }}</span>

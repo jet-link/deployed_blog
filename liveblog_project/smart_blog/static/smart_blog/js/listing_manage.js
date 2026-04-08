@@ -546,11 +546,6 @@
                 if (n) n.textContent = humanCount(data.likes_count);
             }
 
-            if (data.bookmarks_count != null) {
-                const n = document.getElementById('bookmark-count-' + itemId);
-                if (n) n.textContent = humanCount(data.bookmarks_count);
-            }
-
             if (data.comments_count != null) {
                 const n = document.getElementById('comments-count-' + itemId);
                 if (n) n.textContent = humanCount(data.comments_count);
@@ -571,6 +566,13 @@
                 if (icon) {
                     icon.classList.toggle('fa-bookmark', data.bookmarked);
                     icon.classList.toggle('fa-bookmark-o', !data.bookmarked);
+                }
+                const cardRb = document.getElementById('reading-badge-' + itemId);
+                if (cardRb) cardRb.hidden = !data.bookmarked;
+                const bodyId = document.body.dataset.itemId;
+                if (bodyId != null && String(bodyId) === String(itemId)) {
+                    const detailRb = document.getElementById('itemReadingBadge');
+                    if (detailRb) detailRb.hidden = !data.bookmarked;
                 }
             }
 

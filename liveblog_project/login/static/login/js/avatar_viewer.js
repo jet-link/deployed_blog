@@ -54,17 +54,12 @@
         const img = document.createElement('img');
         img.className = 'avatar-lightbox-img';
 
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'avatar-lightbox-close';
-        closeBtn.innerHTML = '&times;';
-
         container.appendChild(img);
         overlay.appendChild(container);
-        overlay.appendChild(closeBtn);
         document.body.appendChild(overlay);
 
-        bindEvents({ overlay, img, closeBtn });
-        return { overlay, img, closeBtn };
+        bindEvents({ overlay, img });
+        return { overlay, img };
     }
 
     function openLightbox(src, alt) {
@@ -93,10 +88,9 @@
 
     function bindEvents(lb) {
         lb.overlay.addEventListener('click', e => {
-            if (e.target === lb.overlay) closeLightbox();
+            if (e.target === lb.img) return;
+            closeLightbox();
         });
-
-        lb.closeBtn.addEventListener('click', closeLightbox);
 
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') closeLightbox();

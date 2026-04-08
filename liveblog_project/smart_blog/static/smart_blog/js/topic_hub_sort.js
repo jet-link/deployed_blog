@@ -86,6 +86,9 @@
         } catch (err) { /* ignore */ }
       })
       .catch(function () {
+        if (window.__brainPreloader && typeof window.__brainPreloader.show === 'function') {
+          window.__brainPreloader.show();
+        }
         window.location.href = base.replace(/\/?$/, '/') + buildHistoryQuery(sort);
       });
   });

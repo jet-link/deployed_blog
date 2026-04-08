@@ -17,8 +17,10 @@
 
         // 🔄 autosize textarea if any
         root.querySelectorAll('textarea.auto-grow').forEach(ta => {
+            const cs = getComputedStyle(ta);
+            const minH = parseFloat(cs.minHeight) || 0;
             ta.style.height = 'auto';
-            ta.style.height = ta.scrollHeight + 'px';
+            ta.style.height = Math.max(minH, ta.scrollHeight) + 'px';
         });
     }
     window.restoreCommentUI = restoreCommentUI;

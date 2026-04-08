@@ -78,8 +78,48 @@
   }
 
   function updateDetailCounter(count) {
+    const txt = humanCount(count);
     const el = document.getElementById('commentsCount');
-    if (el) el.textContent = humanCount(count);
+    if (el) el.textContent = txt;
+    document.querySelectorAll('.js-item-detail-comments-count').forEach(function (node) {
+      node.textContent = txt;
+    });
+  }
+
+  function syncItemDetailCommentsShell(rootCount) {
+    const n = Number(rootCount);
+    const section = document.getElementById('detailCommentsSection');
+    const emptyEl = document.getElementById('detailCommentsEmpty');
+    if (section) {
+      if (n > 0) section.removeAttribute('hidden');
+      else section.setAttribute('hidden', '');
+    }
+    if (emptyEl) {
+      if (n > 0) emptyEl.setAttribute('hidden', '');
+      else emptyEl.removeAttribute('hidden');
+    }
+    const readWrap = document.getElementById('detailCommentsReadMoreWrap');
+    const preview = document.getElementById('commentsListPreview');
+    if (readWrap && preview) {
+      const th = parseInt(preview.dataset.previewLimit || '5', 10) || 5;
+      if (n > th) readWrap.removeAttribute('hidden');
+      else readWrap.setAttribute('hidden', '');
+    }
+  }
+
+  /** Detail preview: roots are newest-first (same idea as liked-users queue). Cap at max roots; drop the oldest visible (end of list). */
+  function trimDetailCommentsPreview(preview) {
+    if (!preview) return;
+    const max = parseInt(preview.dataset.previewLimit || '5', 10) || 5;
+    const roots = preview.querySelectorAll(':scope > .comment-block');
+    if (roots.length <= max) return;
+    for (let i = max; i < roots.length; i++) {
+      roots[i].remove();
+    }
+  }
+
+  function getRootCommentsContainer() {
+    return document.getElementById('commentsListPreview') || document.getElementById('commentsList');
   }
 
   function updateCardCounter(itemId, count) {
@@ -95,9 +135,12 @@
     if (n > 0) {
       header.innerHTML = `
         <h5 class="m-0 text-muted ">Comments</h5>
-        <div class="d-flex gap-2 align-items-center small">
-          <span id="commentsCount">${humanCount(n)}</span>
-          <i class="fa fa-comment stat-comment"></i>
+        <div class="vr comments-header-divider align-self-stretch flex-shrink-0 my-1" role="presentation"></div>
+        <div class="item-stats item-stats--feed item-stats--solo d-inline-flex align-items-center">
+          <div class="stat stat--comments">
+            <span id="commentsCount">${humanCount(n)}</span>
+            <i class="fa fa-comment" aria-hidden="true"></i>
+          </div>
         </div>
       `;
     } else {
@@ -128,15 +171,18 @@
 
   function applyThreadLinkClasses(link) {
     if (!link) return;
-    link.classList.remove('primary_');
-    link.classList.add(
+    link.classList.remove(
       'text-decoration-none',
       'small',
       'd-flex',
       'gap-2',
       'align-items-center',
       'success_',
+      'primary_',
+      'mt-4',
+      'ms-1'
     );
+    link.classList.add('comment-replies-thread-link');
   }
 
   function formatRepliesCountLabel(count) {
@@ -145,18 +191,14 @@
 
   function renderThreadLinkContents(link, count) {
     if (!link) return;
-    link.textContent = '';
-    const circle = document.createElement('span');
-    circle.className = 'replies-circle';
+    link.replaceChildren();
     const label = document.createElement('span');
+    label.className = 'comment-replies-toggle__label';
     label.textContent = 'View deep replies';
-    const arrow = document.createElement('span');
-    arrow.className = 'replies-arrow';
-    arrow.textContent = '→';
     const badge = document.createElement('span');
     badge.className = 'replies-count';
     badge.textContent = formatRepliesCountLabel(count);
-    link.append(circle, label, arrow, badge);
+    link.append(label, badge);
   }
 
   function buildThreadLink(parentId, threadUrl, count) {
@@ -180,6 +222,19 @@
   }
   window.getThreadContext = getThreadContext;
 
+  /** Canonical thread path /item/<slug>/comment/<id>/thread/; legacy /blog/.../ if slug unknown. */
+  function defaultThreadUrl(parentId) {
+    const pid = parentId == null ? '' : String(parentId);
+    if (!pid) return `${window.location.origin}/`;
+    const ctx =
+      document.getElementById('commentsContext') || document.getElementById('threadViewMarker');
+    const slug = ctx?.dataset?.itemSlug;
+    if (slug) {
+      return `${window.location.origin}/item/${encodeURIComponent(slug)}/comment/${pid}/thread/`;
+    }
+    return `${window.location.origin}/blog/comment/${pid}/thread/`;
+  }
+
   function setThreadLinkCount(parentId, count) {
     const link = document.getElementById('replies-thread-link-' + parentId);
     if (!link) return;
@@ -195,7 +250,8 @@
     link.dataset.count = String(next);
     applyThreadLinkClasses(link);
     const badge = link.querySelector('.replies-count');
-    if (!link.querySelector('.replies-circle') || !badge) {
+    const label = link.querySelector('.comment-replies-toggle__label');
+    if (!badge || !label) {
       renderThreadLinkContents(link, next);
       return;
     }
@@ -211,8 +267,6 @@
   window.setThreadLinkCount = setThreadLinkCount;
   window.adjustThreadLinkCount = adjustThreadLinkCount;
 
-  const COMMENT_REPLIES_COLLAPSE_FROM = 2;
-
   function formatRepliesToggleLabel(n) {
     n = Number(n);
     if (n === 1) return '1 reply';
@@ -226,10 +280,14 @@
       const outer = el.closest?.('.comment-replies-outer');
       if (outer) {
         outer.classList.add('is-expanded');
-        const prev = outer.previousElementSibling;
-        if (prev && prev.classList.contains('comment-replies-toggle')) {
-          prev.setAttribute('aria-expanded', 'true');
+        const panelId = outer.id;
+        let toggle =
+          panelId && document.querySelector(`[aria-controls="${panelId}"]`);
+        if (!toggle) {
+          const prev = outer.previousElementSibling;
+          if (prev && prev.classList.contains('comment-replies-toggle')) toggle = prev;
         }
+        if (toggle) toggle.setAttribute('aria-expanded', 'true');
       }
       const nextRoot = el.parentElement?.closest?.('.comment-block');
       if (!nextRoot || nextRoot === el) break;
@@ -242,7 +300,12 @@
     const btn = e.target.closest('.comment-replies-toggle');
     if (!btn) return;
     e.preventDefault();
-    const outer = btn.nextElementSibling;
+    const panelId = btn.getAttribute('aria-controls');
+    let outer =
+      panelId && document.getElementById(panelId) ? document.getElementById(panelId) : null;
+    if (!outer) {
+      outer = btn.nextElementSibling;
+    }
     if (!outer || !outer.classList.contains('comment-replies-outer')) return;
     const expanded = outer.classList.toggle('is-expanded');
     btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
@@ -278,9 +341,10 @@
     toggleBtn.type = 'button';
     toggleBtn.className = 'comment-replies-toggle mt-2';
     toggleBtn.dataset.repliesCount = String(initialCount);
-    toggleBtn.dataset.collapseFrom = String(COMMENT_REPLIES_COLLAPSE_FROM);
-    const expanded = initialCount < COMMENT_REPLIES_COLLAPSE_FROM;
-    toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    const panelId = `comment-replies-panel-${parentId}`;
+    toggleBtn.id = `comment-replies-toggle-${parentId}`;
+    toggleBtn.setAttribute('aria-controls', panelId);
     const label = document.createElement('span');
     label.className = 'comment-replies-toggle__label';
     label.textContent = formatRepliesToggleLabel(initialCount);
@@ -291,7 +355,9 @@
 
     const outer = document.createElement('div');
     outer.className = 'comment-replies-outer';
-    if (expanded) outer.classList.add('is-expanded');
+    outer.id = panelId;
+    outer.setAttribute('role', 'region');
+    outer.setAttribute('aria-labelledby', `comment-replies-toggle-${parentId}`);
     const inner = document.createElement('div');
     inner.className = 'comment-replies-inner';
     const replies = document.createElement('div');
@@ -308,6 +374,31 @@
   }
   window.ensureRepliesBucketForAjax = ensureRepliesBucketForAjax;
 
+  function getToggleForRepliesOuter(outer) {
+    if (!outer) return null;
+    if (outer.id) {
+      const byAria = document.querySelector(`[aria-controls="${outer.id}"]`);
+      if (byAria && byAria.classList.contains('comment-replies-toggle')) return byAria;
+    }
+    const prev = outer.previousElementSibling;
+    if (prev && prev.classList.contains('comment-replies-toggle')) return prev;
+    return null;
+  }
+
+  /** Keep replies panel open after posting a reply; user collapses manually via the toggle. */
+  function expandRepliesBucketForParent(parentComment, parentId) {
+    const main = parentComment?.querySelector('.comment-main');
+    if (!main) return;
+    const bucket = main.querySelector(`.replies[data-parent-id="${parentId}"]`);
+    if (!bucket) return;
+    const outer = bucket.closest('.comment-replies-outer');
+    if (!outer) return;
+    outer.classList.add('is-expanded');
+    const btn = getToggleForRepliesOuter(outer);
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+  }
+  window.expandRepliesBucketForParent = expandRepliesBucketForParent;
+
   function bumpRepliesToggleCount(parentComment, parentId, delta) {
     const main = parentComment.querySelector('.comment-main');
     if (!main) return;
@@ -315,8 +406,8 @@
     if (!bucket) return;
     const outer = bucket.closest('.comment-replies-outer');
     if (!outer) return;
-    const btn = outer.previousElementSibling;
-    if (!btn || !btn.classList.contains('comment-replies-toggle')) return;
+    const btn = getToggleForRepliesOuter(outer);
+    if (!btn) return;
     const prev = parseInt(btn.dataset.repliesCount || '0', 10);
     const next = Math.max(0, prev + (delta || 0));
     btn.dataset.repliesCount = String(next);
@@ -334,8 +425,8 @@
     if (!replies || countDirectReplyBlocks(replies) > 0) return;
     const outer = replies.closest('.comment-replies-outer');
     if (outer) {
-      const toggle = outer.previousElementSibling;
-      if (toggle && toggle.classList.contains('comment-replies-toggle')) toggle.remove();
+      const toggle = getToggleForRepliesOuter(outer);
+      toggle?.remove();
       outer.remove();
     } else {
       replies.remove();
@@ -492,16 +583,36 @@
     return diff > 0 ? diff : 0;
   }
 
+  function renderReplyCooldownContent(btn, remaining, labelText) {
+    const label = document.createElement('span');
+    label.className = 'reply-cooldown-label';
+    label.textContent = labelText;
+    const timer = document.createElement('span');
+    timer.className = 'reply-cooldown-timer';
+    timer.textContent = `${remaining}s`;
+    timer.setAttribute('aria-live', 'polite');
+    timer.setAttribute(
+      'title',
+      `${remaining} seconds until Reply is available`
+    );
+    btn.replaceChildren(label, timer);
+  }
+
   function updateReplyButtonCooldown(btn, commentId) {
     if (!btn || !commentId) return;
     const remaining = getReplyCooldownRemaining(commentId);
-    const originalText = btn.dataset.originalReplyText || 'Reply';
-    if (!btn.dataset.originalReplyText) btn.dataset.originalReplyText = originalText;
+    let originalText = btn.dataset.originalReplyText;
+    if (!originalText) {
+      const labelEl = btn.querySelector('.reply-cooldown-label');
+      originalText =
+        (labelEl?.textContent || btn.textContent || 'Reply').trim() || 'Reply';
+      btn.dataset.originalReplyText = originalText;
+    }
 
     if (remaining > 0) {
       btn.disabled = true;
       btn.classList.add('is-reply-blocked');
-      btn.innerHTML = `<span class="reply-cooldown-timer">${remaining}s</span>`;
+      renderReplyCooldownContent(btn, remaining, originalText);
       if (!btn.__replyCooldownTimer) {
         btn.__replyCooldownTimer = setInterval(() => {
           const left = getReplyCooldownRemaining(commentId);
@@ -515,7 +626,10 @@
             return;
           }
           const timerEl = btn.querySelector('.reply-cooldown-timer');
-          if (timerEl) timerEl.textContent = left + 's';
+          if (timerEl) {
+            timerEl.textContent = `${left}s`;
+            timerEl.setAttribute('title', `${left} seconds until Reply is available`);
+          }
         }, 1000);
       }
       return;
@@ -534,16 +648,19 @@
     if (!commentId) return;
     const until = Date.now() + seconds * 1000;
     localStorage.setItem(`${REPLY_COOLDOWN_KEY_PREFIX}${commentId}`, String(until));
-    document.querySelectorAll(`.comment-menu-action[data-action="reply"][data-comment-id="${commentId}"]`).forEach(btn => {
+    const sel = `.comment-menu-action[data-action="reply"][data-comment-id="${commentId}"], .btn-reply[data-comment-id="${commentId}"]`;
+    document.querySelectorAll(sel).forEach(btn => {
       updateReplyButtonCooldown(btn, commentId);
     });
   }
 
   function initAllReplyButtonsCooldown() {
-    document.querySelectorAll('.comment-menu-action[data-action="reply"]').forEach(btn => {
-      const commentId = btn.dataset.commentId;
-      if (commentId) updateReplyButtonCooldown(btn, commentId);
-    });
+    document
+      .querySelectorAll('.comment-menu-action[data-action="reply"], .btn-reply[data-comment-id]')
+      .forEach(btn => {
+        const commentId = btn.dataset.commentId;
+        if (commentId) updateReplyButtonCooldown(btn, commentId);
+      });
   }
 
   function parseCooldownSeconds(message) {
@@ -591,7 +708,7 @@
     const toggleUp = toggleBtn?.querySelector('.fa-angle-up');
     const btn = document.getElementById('submitCommentBtn');
     const textarea = form.querySelector('textarea[name="text"]');
-    const commentsList = document.getElementById('commentsList');
+    const commentsList = getRootCommentsContainer();
     const itemId = form.dataset.itemId;
     const userId = form.dataset.userId;
     const clearBtn = document.getElementById('clearComment');
@@ -650,13 +767,18 @@
 
         const data = await parseJsonSafe(resp);
         if (resp.ok && data?.success) {
+          const count = data.comments_count;
+
           commentsList?.insertAdjacentHTML('afterbegin', data.comment_html);
+          const preview = document.getElementById('commentsListPreview');
+          if (preview && commentsList === preview) {
+            trimDetailCommentsPreview(preview);
+          }
           // apply long-text toggle to the new root comment immediately
           if (commentsList?.firstElementChild) {
             window.initCommentToggles?.(commentsList.firstElementChild);
             window.initCommentLikes?.();
           }
-          window.refreshRootCommentsPagination?.();
 
           textarea.value = '';
           textarea.style.height = 'auto';
@@ -664,8 +786,7 @@
           // 🔥 ВАЖНО: скрываем кнопку Clear после отправки
           clearBtn?.classList.add('hidden');
 
-          const count = data.comments_count;
-
+          syncItemDetailCommentsShell(count);
           updateDetailCounter(count);
           updateCardCounter(itemId, count);
           updateListingComments(itemId, count);
@@ -729,7 +850,9 @@
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('.btn-delete-comment');
       if (!btn) return;
- 
+
+      window.closeAllCommentMenus?.();
+
       confirmBtn.dataset.deleteUrl = btn.dataset.deleteUrl;
       confirmBtn.dataset.itemId = modal.dataset.itemId; // КЛЮЧ
     });
@@ -756,22 +879,26 @@
           const deleted = document.getElementById('comment-' + data.comment_id);
           if (!deleted) return;
 
-          const container = document.getElementById('commentsList');
+          const container = getRootCommentsContainer();
           const isRootComment = container && deleted.parentElement === container;
           const threadContext = getThreadContext();
           const isThreadRoot = threadContext && String(data.comment_id) === String(threadContext.parentId);
 
           if (isThreadRoot) {
+            const leaveUrl =
+              (window.getCommentThreadReturnUrl && window.getCommentThreadReturnUrl()) ||
+              threadContext.backUrl ||
+              '/';
             try {
               sessionStorage.setItem('thread_back_anchor', 'replies-thread-link-' + threadContext.parentId);
-              sessionStorage.setItem('thread_back_url', threadContext.backUrl || window.location.origin);
+              sessionStorage.setItem('thread_back_url', leaveUrl);
               sessionStorage.setItem('thread_remove_link_' + threadContext.parentId, '1');
               sessionStorage.setItem('thread_deleted_parent_' + threadContext.parentId, '1');
             } catch { }
             if (history.length > 1) {
               history.back();
             } else {
-              window.location.href = threadContext.backUrl || '/';
+              window.location.href = leaveUrl;
             }
             return;
           }
@@ -800,7 +927,8 @@
                     if (!replies || countDirectReplyBlocks(replies) === 0) {
                       if (link) link.remove();
                     } else if (!link) {
-                      const threadUrl = parentComment?.dataset?.threadUrl || `${window.location.origin}/blog/comment/${pid}/thread/`;
+                      const threadUrl =
+                        parentComment?.dataset?.threadUrl || defaultThreadUrl(pid);
                       const replyCount = replies ? countDirectReplyBlocks(replies) : 1;
                       const wrap = document.createElement('div');
                       wrap.className = 'mt-4';
@@ -813,7 +941,6 @@
                 }
               }
             }
-            if (isRootComment) window.refreshRootCommentsPagination?.();
             if (threadContext) {
               const tid = threadContext.parentId;
               const threadRoot = document.getElementById('comment-' + tid);
@@ -827,6 +954,7 @@
               } else if (threadEmpty) threadEmpty.classList.add('d-none');
             }
             const count = data.comments_count;
+            syncItemDetailCommentsShell(count);
             updateDetailCounter(count);
             updateCardCounter(itemId, count);
             updateListingComments(itemId, count);
@@ -890,8 +1018,7 @@
               let link = document.getElementById('replies-thread-link-' + parentId);
               if (!link) {
                 const threadUrl =
-                  parentComment?.dataset?.threadUrl ||
-                  `${window.location.origin}/blog/comment/${parentId}/thread/`;
+                  parentComment?.dataset?.threadUrl || defaultThreadUrl(parentId);
                 const wrap = document.createElement('div');
                 wrap.className = 'mt-4';
                 wrap.appendChild(buildThreadLink(parentId, threadUrl, count));
@@ -1085,15 +1212,15 @@
     form.noValidate = true;
 
     const wrap = document.createElement('div');
-    wrap.className = 'form-floating mb-2';
+    wrap.className = 'mb-2';
 
     const textarea = document.createElement('textarea');
     textarea.name = 'text';
-    textarea.className = 'form-control';
+    textarea.className = 'form-control auto-grow';
     textarea.id = `comment-edit-text-${commentId}`;
     textarea.rows = 1;
     textarea.required = true;
-    textarea.placeholder = 'Edited text';
+    textarea.placeholder = 'Edit your comment…';
     textarea.value = originalText;
 
     if (mention) {
@@ -1103,16 +1230,11 @@
       textarea.dataset.mentionId = mentionId;
     }
 
-    const label = document.createElement('label');
-    label.textContent = 'Edited text';
-    label.htmlFor = textarea.id;
-
     wrap.appendChild(textarea);
-    wrap.appendChild(label);
     form.appendChild(wrap);
 
     const btnRow = document.createElement('div');
-    btnRow.className = 'd-flex gap-1';
+    btnRow.className = 'd-flex gap-1 comment-edit-actions';
 
     const btnSave = document.createElement('button');
     btnSave.type = 'submit';
@@ -1268,6 +1390,7 @@
     const commentNode = document.getElementById('comment-' + commentId);
     if (!commentNode) return;
 
+    window.closeAllCommentMenus?.();
     openEditor(commentNode, commentId, editUrl);
   }
 
@@ -1429,10 +1552,9 @@
 // to top comments list
 (function () {
   const btn = document.getElementById('commentsBackToTop');
-  const commentsHeader = document.getElementById('commentsHeader');
   const commentsList = document.getElementById('commentsList');
 
-  if (!btn || !commentsHeader || !commentsList) return;
+  if (!btn || !commentsList) return;
 
   // сколько пикселей = 1–2 комментария
   const SHOW_AFTER_PX = 200;
@@ -1464,8 +1586,11 @@
 (function () {
   function autoResize(textarea) {
     if (!textarea) return;
+    const cs = getComputedStyle(textarea);
+    const minH = parseFloat(cs.minHeight) || 0;
     textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    const sh = textarea.scrollHeight;
+    textarea.style.height = Math.max(minH, sh) + 'px';
   }
 
   function initAutosize() {
@@ -1551,6 +1676,18 @@
   }
   window.closeAllCommentEditForms = closeAllCommentEditForms;
 
+  function scrollReplyFormIntoView(container) {
+    if (!container) return;
+    const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    requestAnimationFrame(() => {
+      container.scrollIntoView({
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'center',
+        inline: 'nearest',
+      });
+    });
+  }
+
   function openReplyForm(commentId, mentionId) {
     const container = document.getElementById(`reply-form-${commentId}`);
     if (!container) return;
@@ -1568,32 +1705,29 @@
 
     textarea.value = '';
     textarea.dataset.mentionId = mentionId;
-    textarea.focus();
+    try {
+      textarea.focus({ preventScroll: true });
+    } catch {
+      textarea.focus();
+    }
 
     document.getElementById(`comment-${commentId}`)
       ?.classList.add('comment-active');
+
+    scrollReplyFormIntoView(container);
   }
 
-  function positionCommentMenuArrow(menu) {
-    const btn = menu.querySelector('.comment-menu-btn');
-    const panel = menu.querySelector('.comment-actions');
-    if (!btn || !panel) return;
-    requestAnimationFrame(() => {
-      const br = btn.getBoundingClientRect();
-      const pr = panel.getBoundingClientRect();
-      let x = br.left + br.width / 2 - pr.left;
-      const inset = 12;
-      x = Math.max(inset, Math.min(x, pr.width - inset));
-      panel.style.setProperty('--comment-menu-arrow-x', `${x}px`);
-    });
+  function positionCommentMenuArrow() {
+    /* Triangle ::before/::after on .comment-actions removed — keep hook for resize/menu open */
   }
 
   function closeAllCommentMenus() {
     document.querySelectorAll('.comment-menu.open').forEach(menu => {
       menu.classList.remove('open');
-      menu.querySelector('.comment-actions')?.style.removeProperty('--comment-menu-arrow-x');
+      menu.querySelector('.comment-menu-btn')?.setAttribute('aria-expanded', 'false');
     });
   }
+  window.closeAllCommentMenus = closeAllCommentMenus;
 
   let _commentMenuResizeTimer;
   window.addEventListener('resize', () => {
@@ -1602,6 +1736,16 @@
       document.querySelectorAll('.comment-menu.open').forEach(positionCommentMenuArrow);
     }, 100);
   });
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (document.querySelector('.comment-menu.open')) {
+        closeAllCommentMenus();
+      }
+    },
+    { passive: true, capture: true }
+  );
 
   /* ===============================
      CLOSE FORMS ON OUTSIDE CLICK
@@ -1681,7 +1825,12 @@
     const commentId = btn.dataset.commentId;
     const mentionId = btn.dataset.mentionId;
     if (window.getReplyCooldownRemaining?.(commentId) > 0) return;
+    window.closeAllCommentMenus?.();
     openReplyForm(commentId, mentionId);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAllCommentMenus();
   });
 
   /* ===============================
@@ -1697,6 +1846,7 @@
       closeAllCommentMenus();
       if (!wasOpen) {
         menu.classList.add('open');
+        menuBtn.setAttribute('aria-expanded', 'true');
         positionCommentMenuArrow(menu);
       }
       return;
@@ -1704,6 +1854,7 @@
 
     const actionBtn = e.target.closest('.comment-menu-action');
     if (actionBtn) {
+      if (actionBtn.classList.contains('disabled')) return;
       if (actionBtn.classList.contains('btn-delete-comment') || actionBtn.classList.contains('btn-edit-comment')) {
         closeAllCommentMenus();
         return;
@@ -1721,6 +1872,13 @@
         shareCommentUrl(url);
       } else if (action === 'report') {
         window.dispatchEvent(new CustomEvent('comment-report', { detail: { commentId } }));
+      } else if (action === 'item-open-share') {
+        window.dispatchEvent(new CustomEvent('open-item-share-modal', { detail: { trigger: actionBtn } }));
+      } else if (action === 'item-report') {
+        const itemId = actionBtn.dataset.itemId;
+        if (itemId) {
+          window.dispatchEvent(new CustomEvent('item-report', { detail: { itemId } }));
+        }
       }
 
       closeAllCommentMenus();
@@ -1831,8 +1989,7 @@
         return;
       }
       const threadUrl =
-        parentComment?.dataset?.threadUrl ||
-        `${window.location.origin}/blog/comment/${parentId}/thread/`;
+        parentComment?.dataset?.threadUrl || defaultThreadUrl(parentId);
 
       const csrfToken =
         document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
@@ -1888,6 +2045,11 @@
 
         replies.insertAdjacentHTML('afterbegin', data.comment_html);
         if (hadBucket) window.bumpRepliesToggleCount?.(parentComment, parentId, 1);
+        window.expandRepliesBucketForParent?.(parentComment, parentId);
+        const insertedRoot = replies.firstElementChild?.classList?.contains('comment-block')
+          ? replies.firstElementChild
+          : replies.querySelector('.comment-block');
+        if (insertedRoot) window.expandCommentThreadAncestors?.(insertedRoot);
         window.initCommentToggles?.(replies);
         window.initCommentLikes?.();
         window.initAllReplyButtonsCooldown?.();
@@ -1934,6 +2096,15 @@
   'use strict';
   let scrollTimer = null;
 
+  function ensureCommentVisible(commentId) {
+    const target = document.getElementById(`comment-${commentId}`);
+    if (!target) return false;
+    window.expandCommentThreadAncestors?.(target);
+    return true;
+  }
+  window.ensureCommentVisible = ensureCommentVisible;
+  window.ensureRootCommentVisible = ensureCommentVisible;
+
   document.addEventListener('click', (e) => {
     const link = e.target.closest('.mention-link');
     if (!link) return;
@@ -1942,11 +2113,7 @@
     e.stopImmediatePropagation();
 
     const commentId = link.dataset.parentId;
-    if (window.ensureCommentVisible) {
-      window.ensureCommentVisible(commentId);
-    } else if (window.ensureRootCommentVisible) {
-      window.ensureRootCommentVisible(commentId);
-    }
+    ensureCommentVisible(commentId);
     const comment = document.getElementById(`comment-${commentId}`);
     if (!comment) {
       return;
@@ -2016,19 +2183,17 @@
     if (!hash.startsWith('#comment-anchor-')) return;
     const id = hash.replace('#comment-anchor-', '').trim();
     if (!id) return;
-    if (window.ensureCommentVisible) {
-      window.ensureCommentVisible(id);
-    } else if (window.ensureRootCommentVisible) {
-      window.ensureRootCommentVisible(id);
-    }
+    ensureCommentVisible(id);
     const comment = document.getElementById(`comment-${id}`);
     if (!comment) return;
-    window.expandCommentThreadAncestors?.(comment);
     setTimeout(() => highlightComment(comment), 120);
   }
 
   window.highlightCommentFromHash = highlightCommentFromHash;
   window.addEventListener('hashchange', highlightCommentFromHash);
+  document.addEventListener('DOMContentLoaded', () => {
+    highlightCommentFromHash();
+  });
 })();
 
 
@@ -2094,6 +2259,7 @@ function buildShortHTML(fullHTML, maxLen = 400) {
           : buildShortHTML(textEl.dataset.fullHtml, 350);
 
         btn.textContent = expanded ? 'Read less' : 'Read more';
+        textEl.classList.toggle('comment-text--truncated', !expanded);
       }
 
       btn.addEventListener('click', () => {
@@ -2112,204 +2278,6 @@ function buildShortHTML(fullHTML, maxLen = 400) {
   });
 
   window.initCommentToggles = initCommentToggles;
-})();
-
-
-// comments-root-pagination.js (STEP must match COMMENT_ROOT_PAGINATION_STEP in views.py)
-(function () {
-  const STEP = 50;
-  let paginationState = null; // Сохраняем состояние пагинации
-  let collapseMode = false;
-
-  function initialVisibleCount(container) {
-    const parsed = parseInt(container?.dataset?.minRootVisible || '', 10);
-    return Number.isFinite(parsed) && parsed > 0 ? Math.max(STEP, parsed) : STEP;
-  }
-
-  function initRootCommentsPagination(preserveState = false) {
-    const container = document.getElementById('commentsList');
-    const btn = document.getElementById('showMoreBtn');
-    const wrapper = document.getElementById('showMoreWrapper');
-
-    // Если контейнера нет, выходим
-    if (!container) return;
-
-    const rootComments = Array.from(
-      container.querySelectorAll(':scope > .comment-block')
-    );
-
-    const total = rootComments.length;
-    const chunkStart = preserveState ? STEP : initialVisibleCount(container);
-
-    // 👉 если комментариев <= STEP — скрываем кнопку (если она есть)
-    if (total <= STEP) {
-      if (wrapper) {
-        wrapper.classList.add('d-none');
-      }
-      rootComments.forEach(el => (el.style.display = ''));
-      paginationState = null; // Сбрасываем состояние
-      return;
-    }
-
-    // 👉 если > STEP — кнопка ОБЯЗАНА быть видимой
-    // Если wrapper не существует, создаем его динамически
-    if (!wrapper) {
-      const newWrapper = document.createElement('div');
-      newWrapper.id = 'showMoreWrapper';
-      newWrapper.className = 'd-flex justify-content-start align-items-center mt-2';
-      
-      const newBtn = document.createElement('button');
-      newBtn.id = 'showMoreBtn';
-      newBtn.type = 'button';
-      newBtn.className = 'show-more-btn-toggle';
-      newBtn.textContent = 'Show more';
-      
-      newWrapper.appendChild(newBtn);
-      // Вставляем после контейнера комментариев
-      container.parentElement?.insertBefore(newWrapper, container.nextSibling);
-      
-      // Обновляем ссылки и рекурсивно вызываем функцию
-      return initRootCommentsPagination(preserveState);
-    }
-    
-    // Показываем wrapper
-    wrapper.classList.remove('d-none');
-    
-    // Если кнопки нет, выходим
-    if (!btn) return;
-
-    // Если количество перешло через порог 10 — сразу схлопываем к первым 10
-    const forceCollapse = total > STEP && (!paginationState || paginationState.total <= STEP);
-
-    // Если нужно сохранить состояние и оно есть - используем его
-    // Иначе — STEP или server data-min-root-visible (уведомления / focus_comment)
-    let visibleCount = (preserveState && paginationState && !forceCollapse)
-      ? Math.min(paginationState.visibleCount, total)
-      : chunkStart;
-
-    // Если сохраненное состояние больше текущего total, корректируем
-    if (visibleCount > total) {
-      visibleCount = Math.max(STEP, total);
-    }
-    collapseMode = (preserveState && paginationState && !forceCollapse)
-      ? Boolean(paginationState.collapseMode)
-      : false;
-
-    function showRange(from, to, animate = false) {
-      for (let i = from; i < to; i++) {
-        const el = rootComments[i];
-        if (!el) continue;
-
-        el.style.display = '';
-        if (animate) {
-          el.classList.remove('listing-animate');
-          void el.offsetWidth;
-          el.classList.add('listing-animate');
-        }
-      }
-    }
-
-    function getVisibleCount() {
-      return rootComments.reduce((acc, el) => acc + (el.style.display === 'none' ? 0 : 1), 0);
-    }
-
-    function updateUI() {
-      if (!wrapper || !btn) return;
-      if (total <= STEP) {
-        wrapper.classList.add('d-none');
-        collapseMode = false;
-        return;
-      }
-      if (collapseMode && visibleCount <= STEP) {
-        collapseMode = false;
-      }
-      wrapper.classList.remove('d-none');
-      btn.textContent = collapseMode ? 'Show less' : 'Show more';
-    }
-
-    // Применяем видимость: показываем комментарии до visibleCount
-    rootComments.forEach((el, i) => {
-      el.style.display = i < visibleCount ? '' : 'none';
-    });
-
-    collapseMode = total > STEP && visibleCount >= total ? true : collapseMode;
-    updateUI();
-
-    btn.onclick = () => {
-      visibleCount = Math.max(getVisibleCount(), STEP);
-      if (!collapseMode) {
-        const next = Math.min(visibleCount + STEP, total);
-        showRange(visibleCount, next, true);
-        visibleCount = next;
-        if (visibleCount >= total) {
-          collapseMode = true;
-        }
-      } else {
-        const next = Math.max(STEP, visibleCount - STEP);
-        for (let i = next; i < visibleCount; i++) {
-          const el = rootComments[i];
-          if (!el) continue;
-          el.classList.remove('listing-animate');
-          el.style.display = 'none';
-        }
-        visibleCount = next;
-      }
-      paginationState = { visibleCount, total, collapseMode };
-      updateUI();
-    };
-
-    // Сохраняем текущее состояние
-    paginationState = { visibleCount, total, collapseMode };
-  }
-
-  // 🔥 ГЛОБАЛЬНЫЙ ХУК ДЛЯ AJAX - сохраняем состояние при обновлении
-  window.refreshRootCommentsPagination = function() {
-    initRootCommentsPagination(true); // preserveState = true
-  };
-
-  // Ensure a root comment is visible for hash navigation
-  function findRootComment(container, target) {
-    if (!container || !target) return null;
-    let current = target.closest?.('.comment-block') || target;
-    while (current && current.parentElement && current.parentElement !== container) {
-      current = current.parentElement.closest?.('.comment-block');
-    }
-    if (current && current.parentElement === container) return current;
-    return null;
-  }
-
-  window.ensureCommentVisible = function(commentId) {
-    const container = document.getElementById('commentsList');
-    if (!container) return false;
-    const target = document.getElementById(`comment-${commentId}`);
-    if (!target) return false;
-    window.expandCommentThreadAncestors?.(target);
-    const rootTarget = findRootComment(container, target);
-    if (!rootTarget) return false;
-    const rootComments = Array.from(
-      container.querySelectorAll(':scope > .comment-block')
-    );
-    const index = rootComments.indexOf(rootTarget);
-    if (index === -1) return false;
-
-    const total = rootComments.length;
-    const neededVisible = Math.max(index + 1, STEP);
-    paginationState = {
-      visibleCount: Math.min(neededVisible, total),
-      total,
-      collapseMode: neededVisible >= total
-    };
-    initRootCommentsPagination(true);
-    return true;
-  };
-  window.ensureRootCommentVisible = window.ensureCommentVisible;
-
-  document.addEventListener('DOMContentLoaded', () => {
-    initRootCommentsPagination(false);
-    if (window.highlightCommentFromHash) {
-      window.highlightCommentFromHash();
-    }
-  });
 })();
 
 

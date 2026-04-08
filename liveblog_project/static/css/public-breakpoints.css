@@ -110,6 +110,8 @@
     padding-top: var(--main-pad-y);
     padding-bottom: var(--main-pad-y);
     box-sizing: border-box;
+    /* Contain z-index from nested UI (e.g. comment menus) so they cannot stack above <footer> */
+    isolation: isolate;
 }
 
 /* Home / pages: inner <main class="site-main"> — space before footer (header gap via first section in pages/responsive.css) */

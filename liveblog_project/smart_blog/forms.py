@@ -79,7 +79,7 @@ class ItemCreateForm(forms.ModelForm):
     images = forms.FileField(
         required=False,
         widget=MultiFileInput(),
-        help_text="(You can upload 10 images)",
+        help_text="You can upload up to 10 images per post.",
         label=_('Upload images'),
     )
 
@@ -113,7 +113,13 @@ class ItemCreateForm(forms.ModelForm):
         fields = ["title", "text", "category", "tags", "new_tags"]
         labels = {"title": "Enter title", "text": "Item text"}
         widgets = {
-            "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "Enter title", "required": True, "spellcheck": "true"}),
+            "title": forms.TextInput(attrs={
+                "class": "form-control",
+                # single space: Bootstrap .form-floating shows the label only (no duplicate “Enter title” vs placeholder)
+                "placeholder": " ",
+                "required": True,
+                "spellcheck": "true",
+            }),
             "text": forms.Textarea(attrs={
                 "class": "form-control editor-container__editor ckeditor",
                 # "id": "editor",
@@ -122,6 +128,19 @@ class ItemCreateForm(forms.ModelForm):
                 "spellcheck": "true",
             }),
         }
+
+    def __init__(self, *args, item=None, tags_recent_limit=25, **kwargs):
+        super().__init__(*args, **kwargs)
+        if tags_recent_limit is None:
+            self.fields["tags"].queryset = Tag.objects.all().order_by("tag_name")
+            return
+        recent = Tag.objects.order_by("-pk")[: int(tags_recent_limit)]
+        ids = list(recent.values_list("pk", flat=True))
+        if item is not None:
+            for pk in item.tags.values_list("pk", flat=True):
+                if pk not in ids:
+                    ids.append(pk)
+        self.fields["tags"].queryset = Tag.objects.filter(pk__in=ids).order_by("-pk")
 
     def clean_title(self):
         title = self.cleaned_data.get("title", "")
@@ -247,8 +266,8 @@ class CommentForm(forms.ModelForm):
             "text": forms.Textarea(attrs={
                 "class": "form-control auto-grow",
                 "id": "id_comment_text",
-                "placeholder": " ",
-                "rows": 1,          # стартовая высота
+                "placeholder": _("Write a comment…"),
+                "rows": 1,
                 "required": True,
                 "spellcheck": "true",
             })

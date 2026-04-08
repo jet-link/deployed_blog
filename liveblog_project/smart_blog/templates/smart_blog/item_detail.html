@@ -2,54 +2,74 @@
 {% load static %}
 {% load user_status %}
 {% load counters %}
+{% load post_media %}
 {% block title %}
   {{ item.title }}
-{% endblock %} {% block content %}
+{% endblock %}
+{% block content %}
   <div class="container-main content_block">
+    <div id="commentsContext" class="d-none" data-item-slug="{{ item.slug }}"></div>
     {% include 'includes/breadcrumbs.html' %}
 
     <!-- ===== Title + images + likes + views + bookmarks ===== -->
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 item-detail-head">
-      <h2 class="text-muted m-0 item-detail-title">{{ item.title }}</h2>
-      <div class="d-flex gap-1 align-items-center flex-wrap item-detail-actions">
-        <button type="button" class="item_share_btn">Share</button>
-        {% if user != item.author and user.is_authenticated and not user.is_staff and not report_rate_limited and item.reports_count|default:0 < 10 %}
-          <button type="button" class="item_report_btn" data-item-id="{{ item.pk }}">Report</button>
-        {% endif %}
+    <div class="d-flex align-items-start gap-2 min-w-0 flex-nowrap item-detail-head">
+      <h2 class="text-muted m-0 item-detail-title min-w-0 flex-grow-1 flex-shrink-1">{{ item.title }}</h2>
+      <div class="comment-menu comment-menu--actions-bar item-detail-head-menu flex-shrink-0">
+        {% include 'includes/overflow_more_button.html' with aria_label='More post actions' %}
+        <div class="comment-actions" role="menu">
+          <button type="button" class="comment-menu-action" data-action="item-open-share">
+            <i class="fa fa-share" aria-hidden="true"></i><span>Share</span>
+          </button>
+          {% if user != item.author and user.is_authenticated and not user.is_staff and not report_rate_limited and item.reports_count|default:0 < 10 %}
+            <button type="button" class="comment-menu-action badge_danger" data-action="item-report" data-item-id="{{ item.pk }}">
+              <i class="fa fa-flag" aria-hidden="true"></i><span>Report</span>
+            </button>
+          {% endif %}
+        </div>
       </div>
     </div>
-    <div class="d-flex align-items-end justify-content-between flex-wrap gap-2 mt-5 item-detail-meta-row">
-      {% if item.category %}
-        <div class="d-inline-flex align-items-center gap-2">
-          <span class="item-category-badge" title="Category">{{ item.category.name }}</span>
-        </div>
-      {% else %}
-        <small class="primary_ fw-semibold">No category</small>
-      {% endif %}
-
-      <div class="d-flex align-items-center VLB">
-        <div class="item-stats text-muted d-inline-flex align-items-center">
-
-          <div class="stat">
-            <span id="viewsCount">{{ item.views_count|human }}</span>
-            <i class="fa fa-eye text-muted"></i>
+    <div class="item-detail-meta-row mt-5">
+      <div class="item-detail-meta-row__track">
+        <div class="item-detail-meta-row__cluster">
+          {% if item.category %}
+            <div class="item-detail-meta-row__badges d-inline-flex align-items-center gap-1 flex-nowrap flex-shrink-0">
+              <span class="item-category-badge" title="Category">{{ item.category.name }}</span>
+              {% if user.is_authenticated %}
+                {% if not item.author_id or user.id != item.author_id %}
+                  <span id="itemReadingBadge" class="item-reading-badge"{% if not user_bookmarked %} hidden{% endif %}>I'm reading</span>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% else %}
+            <div class="item-detail-meta-row__badges d-inline-flex align-items-center gap-1 flex-nowrap flex-shrink-0">
+              <small class="primary_ fw-semibold">No category</small>
+              {% if user.is_authenticated %}
+                {% if not item.author_id or user.id != item.author_id %}
+                  <span id="itemReadingBadge" class="item-reading-badge"{% if not user_bookmarked %} hidden{% endif %}>I'm reading</span>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% endif %}
+          <div class="d-flex align-items-center VLB flex-shrink-0">
+            <div class="item-stats item-stats--feed d-inline-flex align-items-center flex-nowrap">
+              <div class="stat stat--views">
+                <span id="viewsCount">{{ item.views_count|human }}</span>
+                <i class="fa fa-eye" aria-hidden="true"></i>
+              </div>
+              <div class="stat stat--likes">
+                <span id="likesCount">{{ item.likes_count|human }}</span>
+                <i class="fa fa-heart" aria-hidden="true"></i>
+              </div>
+              <!-- <div class="stat stat--comments">
+                <span id="commentsCount">{{ item.comments_count|human }}</span>
+                <i class="fa fa-comment" aria-hidden="true"></i>
+              </div> -->
+              <div class="stat stat--reposts">
+                <span id="repostCount">{{ item.reposts_count|human }}</span>
+                <i class="fa fa-retweet" aria-hidden="true"></i>
+              </div>
+            </div>
           </div>
-
-          <div class="stat">
-            <span id="likesCount">{{ item.likes_count|human }}</span>
-            <i class="fa fa-heart text-muted"></i>
-          </div>
-
-          <div class="stat">
-            <span id="bookmarkCount">{{ item.bookmarks_count|human }}</span>
-            <i class="fa fa-bookmark text-muted"></i>
-          </div>
-
-          <div class="stat">
-            <span id="repostCount">{{ item.reposts_count|human }}</span>
-            <i class="fa fa-retweet" aria-hidden="true"></i>
-          </div>
-
         </div>
       </div>
     </div>
@@ -62,7 +82,7 @@
           <span>{{ item.human_published }}</span>
           {% if item.is_edited %}
             <span>/</span>
-            <span class="success_ fw-semibold">Post was edited</span>
+            <span class="success_ fw-semibold">Was edited</span>
           {% endif %}
         </small>
       </div>
@@ -70,32 +90,52 @@
         {% if user == item.author %}
           <small class="primary_ fw-semibold">My post</small>
         {% else %}
-          <a href="{% url 'login_app:profile' item.author.username %}" class="d-flex align-items-center gap-1 text-decoration-none" title="{% user_status_title item.author %}">
-            <div class="little-avatar">
+          <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+            <span class="comment-author-name fw-semibold item-detail-author-name">
               {% if item.author.is_active %}
-                {% if item.author.profile.avatar_url or item.author.profile.avatar_file %}
-                  <img src="{{ item.author.profile.get_avatar }}" alt="{{ item.author }}" class="user-avatar clickable-avatar" data-full="{{ item.author.profile.get_avatar }}" data-username="{{ item.author.username }}" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
-                {% else %}
-                  <img src="{% static 'img/no_avatar.svg' %}" alt="{{ item.author }}" class="user-avatar no_avatar" data-username="{{ item.author.username }}" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
-                {% endif %}
+                {{ item.author }}
               {% else %}
-                <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display item.author %}" class="user-avatar" width="40" height="40" loading="eager" decoding="async" />
+                {% user_status_display item.author %}
               {% endif %}
-            </div>
-          </a>
+            </span>
+            <a href="{% url 'login_app:profile' item.author.username %}" class="d-flex align-items-center gap-1 text-decoration-none" title="{% user_status_title item.author %}">
+              <div class="little-avatar">
+                {% if item.author.is_active %}
+                  {% if item.author.profile.avatar_url or item.author.profile.avatar_file %}
+                    <img src="{{ item.author.profile.get_avatar }}" alt="{{ item.author }}" class="user-avatar clickable-avatar" data-full="{{ item.author.profile.get_avatar }}" data-username="{{ item.author.username }}" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
+                  {% else %}
+                    <img src="{% static 'img/no_avatar.svg' %}" alt="{{ item.author }}" class="user-avatar no_avatar" data-username="{{ item.author.username }}" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
+                  {% endif %}
+                {% else %}
+                  <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display item.author %}" class="user-avatar" width="40" height="40" loading="eager" decoding="async" />
+                {% endif %}
+              </div>
+            </a>
+          </div>
         {% endif %}
       {% else %}
-        <a href="{% url 'login_app:vanished' %}" class="d-flex align-items-center gap-2 text-decoration-none" title="{% user_status_title item.author %}">
-          <div class="little-avatar">
-            <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display item.author %}" class="user-avatar" width="40" height="40" loading="eager" decoding="async" />
-          </div>
-        </a>
+        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+          <span class="comment-author-name fw-semibold item-detail-author-name">{% user_status_display item.author %}</span>
+          <a href="{% url 'login_app:vanished' %}" class="d-flex align-items-center text-decoration-none" title="{% user_status_title item.author %}">
+            <div class="little-avatar">
+              <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display item.author %}" class="user-avatar" width="40" height="40" loading="eager" decoding="async" />
+            </div>
+          </a>
+        </div>
       {% endif %}
     </div>
     <!-- ===== Body text ===== -->
-    <div class="item-text ck-content my-5">{{ item.text|safe }}</div>
+    <div class="item-text ck-content my-5">
+      {% with body_editor=item.get_editor_body_html %}
+        {% if body_editor %}
+          {{ body_editor }}
+        {% else %}
+          {{ item.text|safe }}
+        {% endif %}
+      {% endwith %}
+    </div>
     {% if item.images.all %}
-      {% include 'includes/image_gallery.html' %}
+      {% post_media_gallery item %}
     {% endif %}
     <!-- === published row: liked users left, like/bookmark actions right === -->
     <div class="d-flex justify-content-between align-items-center mt-4">
@@ -128,7 +168,7 @@
         {% if user.is_authenticated %}
           {% if user != item.author %}
             <button class="like-btn fs-6 round" data-url="{% url 'smart_blog:toggle_like' item.slug %}" data-item-id="{{ item.pk }}" title="Like item"><i class="fa fa-{{ user_liked|yesno:'heart,heart-o' }}"></i></button>
-            <button class="bookmark-btn fs-6 round" data-url="{% url 'smart_blog:toggle_bookmark' item.slug %}" data-item-id="{{ item.pk }}" title="Bookmark item"><i class="fa fa-{{ user_bookmarked|yesno:'bookmark,bookmark-o' }}"></i></button>
+            <button class="bookmark-btn fs-6 round" data-url="{% url 'smart_blog:toggle_bookmark' item.slug %}" data-item-id="{{ item.pk }}" title="I'm reading"><i class="fa fa-{{ user_bookmarked|yesno:'bookmark,bookmark-o' }}"></i></button>
           {% endif %}
           {% if user == item.author and is_editable %}
             <a class="edit_btn manipulate"
@@ -149,19 +189,46 @@
     {% comment %} <div class="mb-4 tags_block"> {% endcomment %}
       <div class="tag-list w-100">
         {% if item.tags.all %}
-          {% comment %} <small class="text-muted fw-semibold"><i class="fa fa-tags me-2"></i>Tags</small> {% endcomment %}
-          <div class="item-detail-tag-row d-flex flex-nowrap gap-1 mt-2">
-            {% for tag in item.tags.all %}
-              <a class="badge text-bg-secondary text-decoration-none" href="{% url 'smart_blog:tag_list' tag.slug %}">{{ tag.tag_name }}</a>
-            {% endfor %}
+          <div class="item-detail-tags-row d-flex align-items-center gap-2 mt-2 min-w-0">
+            <span class="item-detail-tags-label flex-shrink-0 d-inline-flex align-items-center gap-1 text-muted fw-semibold small" aria-hidden="true">
+              <i class="fa fa-tags"></i>
+              Tags
+            </span>
+            <div class="item-detail-tag-scroll-outer min-w-0 flex-grow-1">
+              <div class="item-detail-tag-scroll">
+                <div class="item-detail-tag-row d-flex flex-nowrap gap-1">
+                  {% for tag in item.tags.all %}
+                    <a class="tag-vlb text-decoration-none" href="{% url 'smart_blog:tag_list' tag.slug %}">{{ tag.tag_name }}</a>
+                  {% endfor %}
+                </div>
+              </div>
+              <span class="item-detail-tag-fade item-detail-tag-fade--left" aria-hidden="true"></span>
+            </div>
           </div>
         {% else %}
-          <div class="d-inline-flex primary_ fw-semibold">
-            <small><i class="fa fa-tags me-2"></i>No tags</small>
-          </div>
+          <span class="item-detail-tags-empty text-muted fw-semibold small mt-2 mb-0">No tags</span>
         {% endif %}
       </div>
     </div>
+    {% if item.tags.all %}
+    <script>
+    (function () {
+      var sc = document.querySelector('.item-detail-tag-scroll');
+      var fade = document.querySelector('.item-detail-tag-fade--left');
+      if (!sc || !fade) return;
+      function sync() {
+        fade.classList.toggle('is-active', sc.scrollLeft > 2);
+      }
+      sc.addEventListener('scroll', sync, { passive: true });
+      window.addEventListener('resize', sync);
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', sync);
+      } else {
+        sync();
+      }
+    })();
+    </script>
+    {% endif %}
     {% comment %} <hr /> {% endcomment %}
     {% if user.is_authenticated and user.is_staff %}
       {% if item.reports_count|default:0 >= 10 or not item.author or item.author and not item.author.is_active %}
@@ -183,43 +250,53 @@
         class="hidden"></div>
     {% endif %}
 
-    <!-- ===== Comment form ===== -->
-    {% include 'includes/comment_form.html' %}
-    <div id="commentsHeader" class="pt-5 d-flex gap-3 align-items-center">
-      {% if comments %}
-        <h5 class="m-0 text-muted">Comments</h5>
-        <div class="d-inline-flex align-items-center gap-2 small">
-          <span id="commentsCount">{{ item.comments_count|human }}</span>
-          <i class="fa fa-comment stat-comment"></i>
-        </div>
-      {% else %}
-        <h5 class="m-0 text-muted">There are not comments yet</h5>
-      {% endif %}
-    </div>
-    <hr class="text-muted" />
-
-    <!-- ===== Comment list ===== -->
-    <div id="commentsList"{% if comments_min_visible %} data-min-root-visible="{{ comments_min_visible }}"{% endif %}>
-      {% for comment in comments %}
-        {% include 'includes/_comments.html' with comment=comment depth=0 %}
-      {% endfor %}
-    </div>
-
-    {% if comments|length > 50 %}
-      <div id="showMoreWrapper" class="d-flex justify-content-start align-items-center mt-2">
-        <button id="showMoreBtn" type="button" class="show-more-btn-toggle">Show more</button>
-      </div>
+    <!-- ===== Comments: form → heading + count → preview → Read more ===== -->
+    <div id="commentsList" class="detail-comments-stack pt-4 mt-2">
+    {% if user.is_authenticated %}
+      {% include 'includes/comment_form.html' with comments_page=False comment_form_expand=True %}
     {% endif %}
 
-    <button id="commentsBackToTop" type="button" aria-label="Back to comments top" title="Back to comments top"><span>↑</span></button>
-  </div>
+    <div id="detailCommentsSection" class="{% if user.is_authenticated %}mt-4{% endif %}"{% if not has_comments %} hidden{% endif %}>
+      <div id="detailCommentsHeading" class="d-flex gap-3 align-items-center flex-wrap mb-3">
+        <h4 class="m-0 text-muted">Comments</h4>
+        <div class="vr comments-header-divider align-self-stretch flex-shrink-0 my-1" role="presentation"></div>
+        <div class="item-stats item-stats--feed item-stats--solo d-inline-flex align-items-center">
+          <div class="stat stat--comments">
+            <span class="js-item-detail-comments-count">{{ item.comments_count|human }}</span>
+            <i class="fa fa-comment" aria-hidden="true"></i>
+          </div>
+        </div>
+      </div>
+      <div id="commentsListPreview" data-preview-limit="{{ detail_comment_preview_limit }}">
+        {% for comment in detail_comments_preview %}
+          {% include 'includes/_comments.html' with comment=comment depth=0 report_rate_limited=report_rate_limited %}
+        {% endfor %}
+      </div>
+      <div class="mt-3" id="detailCommentsReadMoreWrap"{% if item.comments_count <= detail_comment_preview_limit %} hidden{% endif %}>
+        <a href="{% url 'smart_blog:item_comments' item.slug %}" class="text-decoration-none fw-semibold d-inline-flex align-items-center gap-3 item-all-comments-link" id="detailCommentsMoreLink">
+          <span>More comments</span>
+          <i class="fa fa-angle-right reading-angle" aria-hidden="true"></i>
+        </a>
+      </div>
+    </div>
+    </div>
 
+    <div id="detailCommentsEmpty" class="pt-3"{% if has_comments %} hidden{% endif %}>
+      <p class="text-muted mb-0">There are not comments yet</p>
+    </div>
+  </div>
+{% endblock %}
+
+{% block floating_comments_nav %}
+  <button id="commentsBackToTop" type="button" aria-label="Back to comments top" title="Back to comments top"><span>↑</span></button>
+{% endblock %}
+
+{% block page_modals %}
   {% include 'includes/comment_modal.html' %}
   {% include 'includes/item_modal.html' %}
   {% include 'includes/share_modal.html' %}
   {% include 'includes/report_modal.html' %}
   {% include 'includes/liked_users_modal.html' %}
-  {% comment %} {% include 'includes/progress_bar.html' %} {% endcomment %}
 {% endblock %}
 
 {% block extra_js %}

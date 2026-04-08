@@ -7,15 +7,24 @@
 
 {% block content %}
   <div class="container-main content_block">
-    {% include 'includes/breadcrumbs.html' %}
-    <div id="threadViewMarker" class="d-none" data-parent-id="{{ comment.pk }}" data-back-url="{{ item.get_absolute_url }}"></div>
+    <div class="thread-page-back mb-3">
+      <button type="button" class="btn-back-link back-btn btn btn-sm thread-back-btn d-inline-flex align-items-center gap-1" data-return-key="comment_thread_return_url" data-fallback="{% url 'smart_blog:item_comments' comment.item.slug %}" title="Back to previous page"><i class="fa fa-angle-left me-2" aria-hidden="true"></i>Back</button>
+    </div>
+    <div id="threadViewMarker" class="d-none" data-parent-id="{{ comment.pk }}" data-item-slug="{{ comment.item.slug }}" data-back-url="{{ thread_back_url }}"></div>
 
-    <div class="mb-3">
+    <div id="commentsList" class="mb-3">
       {% include 'includes/_comments.html' with comment=comment depth=0 thread_view=true hide_reply=true no_mentions=true %}
     </div>
 
     <div id="threadEmpty" class="text-muted{% if comment.replies.all %} d-none{% endif %}">There are no replies yet!</div>
   </div>
+{% endblock %}
+
+{% block floating_comments_nav %}
+  <button id="commentsBackToTop" type="button" aria-label="Back to comments top" title="Back to comments top"><span>↑</span></button>
+{% endblock %}
+
+{% block page_modals %}
   {% include 'includes/comment_modal.html' %}
   {% include 'includes/report_modal.html' %}
 {% endblock %}

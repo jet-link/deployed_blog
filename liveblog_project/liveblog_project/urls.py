@@ -34,6 +34,9 @@ urlpatterns = [
     # Global search at /search/
     path('search/', smart_views.search_view, name='global_search'),
 
+    # Editor.js playground (staff only) — before smart_blog/pages includes shadow slugs
+    path('editor/', smart_views.editor_playground, name='editor_playground'),
+
     # Blog: hub pages at /for-you/, /trending/, /topics/; rest under /blog/ (see smart_blog.urls)
     path('', include('smart_blog.urls')),
 

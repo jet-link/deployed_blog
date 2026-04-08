@@ -1,0 +1,55 @@
+{% load static i18n %}
+{% if show %}
+<section
+  id="post-media-{{ item.pk }}"
+  class="post-media-gallery js-post-media-gallery js-gallery"
+  aria-label="{% trans 'Images for this post' %}"
+  data-post-media-count="{{ count }}"
+  data-json-script-id="{{ script_id }}"
+>
+  {{ slides|json_script:script_id }}
+  <div class="post-media-gallery__grid post-media-gallery__grid--{{ layout }} js-gallery-grid">
+    {% for slot in slots %}
+      {% with img=slot.img idx=slot.index more=slot.overlay_more %}
+        <figure class="post-media-card post-media-card--orient-{{ img.orientation_kind }}{% if more > 0 %} post-media-card--has-more{% endif %}">
+          <button
+            type="button"
+            class="post-media-card__open"
+            data-index="{{ idx }}"
+            aria-label="{% trans 'Open image' %} {{ idx|add:1 }} / {{ count }}"
+          >
+            <span class="post-media-card__frame">
+              <img
+                class="post-media-card__img gallery-img"
+                src="{{ img.get_thumbnail_url }}"
+                {% if img.get_srcset %}srcset="{{ img.get_srcset }}" sizes="(max-width: 576px) 100vw, (max-width: 992px) 50vw, min(680px, 55vw)"{% endif %}
+                alt="{% firstof img.alt_text item.title %}"
+                {% if img.width and img.height %}width="{{ img.width }}" height="{{ img.height }}"{% endif %}
+                decoding="async"
+                {% if forloop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy" fetchpriority="low"{% endif %}
+                data-full="{{ img.image.url }}"
+                data-index="{{ idx }}"
+                draggable="false"
+                onerror="var c=this.closest&&this.closest('.post-media-card');if(c)c.classList.add('post-media-card--broken');"
+              />
+            </span>
+            {% if more > 0 %}
+              <span class="post-media-card__more-badge">
+                +{{ more }}
+                {% if more == 1 %}
+                  {% trans 'photo' %}
+                {% else %}
+                  {% trans 'photos' %}
+                {% endif %}
+              </span>
+            {% endif %}
+          </button>
+          {% if img.caption %}
+            <figcaption class="post-media-card__caption text-muted small">{{ img.caption }}</figcaption>
+          {% endif %}
+        </figure>
+      {% endwith %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

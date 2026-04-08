@@ -11,7 +11,7 @@
         <span class="badge trending-badge trending-badge--hot flex-shrink-0">In trend</span>
       {% endif %}
     </div>
-    <p class="text-muted small mb-2">{{ topic.posts_count }} post{{ topic.posts_count|pluralize }}</p>
+    <span class="text-muted small mb-2">{{ topic.posts_count }} post{{ topic.posts_count|pluralize }}</span>
     {% if topic.latest_post_title %}
       <p class="small mb-0 mt-auto text-truncate topic-tile__latest" title="{{ topic.latest_post_title }}">
         <span class="text-muted">Latest:</span> <span class="text-muted fw-semibold">{{ topic.latest_post_title }}</span>

@@ -1,8 +1,8 @@
-"""Detail views: item_detail, comment_thread."""
+"""Detail views: item_detail, item_comments, comment_thread."""
 from datetime import timedelta
 
 from django.db.models import Count, Exists, OuterRef, Prefetch, Q
-from django.http import Http404
+from django.http import Http404, HttpResponsePermanentRedirect, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -10,81 +10,25 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from smart_blog.forms import CommentForm
 from smart_blog.models import (
-    Bookmark, Category, Comment, CommentLike, Item, ItemView, Like, Notification,
+    Bookmark,
+    Category,
+    Comment,
+    CommentLike,
+    Item,
+    ItemImage,
+    ItemView,
+    Like,
     ViewEvent,
 )
 from smart_blog.selectors import has_user_reported_item
 from smart_blog.services.report_limits import can_user_report
 from smart_blog.utils import breadcrumb, build_breadcrumbs
 
-COMMENT_ROOT_PAGINATION_STEP = 50
+DETAIL_COMMENT_PREVIEW_LIMIT = 5
 
 
-def _comments_min_visible_for_focus(item, focus_comment_id):
-    """How many root comments must be visible so focus_comment is shown (JS paginates roots)."""
-    if not focus_comment_id:
-        return None
-    try:
-        fid = int(focus_comment_id)
-    except (TypeError, ValueError):
-        return None
-    try:
-        focus = Comment.objects.get(pk=fid, item=item, is_draft=False)
-    except Comment.DoesNotExist:
-        return None
-    root = focus
-    while root.parent_id:
-        root = root.parent
-    root_ids = list(
-        Comment.objects.filter(item=item, parent__isnull=True, is_draft=False)
-        .order_by('-created')
-        .values_list('pk', flat=True)
-    )
-    try:
-        pos = root_ids.index(root.pk) + 1
-    except ValueError:
-        return None
-    steps = (pos + COMMENT_ROOT_PAGINATION_STEP - 1) // COMMENT_ROOT_PAGINATION_STEP
-    return steps * COMMENT_ROOT_PAGINATION_STEP
-
-
-def register_item_view(request, item):
-    ViewEvent.objects.create(item=item)
-
-    if request.user.is_authenticated:
-        ItemView.objects.get_or_create(
-            item=item,
-            user=request.user
-        )
-    else:
-        if not request.session.session_key:
-            request.session.create()
-
-        ItemView.objects.get_or_create(
-            item=item,
-            user=None,
-            session_key=request.session.session_key,
-            defaults={
-                "ip_address": request.META.get("REMOTE_ADDR")
-            }
-        )
-
-
-def item_detail(request, slug):
-    slug = (slug or '').strip()
-    item = get_object_or_404(Item.objects.filter(is_published=True), slug=slug)
-
-    register_item_view(request, item)
-
-    item = (
-        Item.objects
-        .with_counters()
-        .select_related("category", "author", "author__profile")
-        .annotate(reports_count=Count('reports', distinct=True))
-        .prefetch_related("images")
-        .get(pk=item.pk)
-    )
-
+def _comments_querysets_for_item(request, item):
+    """Root comments + prefetch reply trees (same shape as historical item_detail)."""
     if request.user.is_authenticated:
         likes_subq = CommentLike.objects.filter(
             comment=OuterRef('pk'),
@@ -120,6 +64,56 @@ def item_detail(request, slug):
         Prefetch('replies', queryset=replies_qs),
         Prefetch('replies__replies', queryset=replies_qs),
         Prefetch('replies__replies__replies', queryset=replies_qs),
+        Prefetch('replies__replies__replies__replies', queryset=replies_qs),
+    )
+    return comments
+
+
+def register_item_view(request, item):
+    ViewEvent.objects.create(item=item)
+
+    if request.user.is_authenticated:
+        ItemView.objects.get_or_create(
+            item=item,
+            user=request.user
+        )
+    else:
+        if not request.session.session_key:
+            request.session.create()
+
+        ItemView.objects.get_or_create(
+            item=item,
+            user=None,
+            session_key=request.session.session_key,
+            defaults={
+                "ip_address": request.META.get("REMOTE_ADDR")
+            }
+        )
+
+
+def item_detail(request, slug):
+    slug = (slug or '').strip()
+    item = get_object_or_404(Item.objects.filter(is_published=True), slug=slug)
+
+    if request.GET.get("focus_comment"):
+        params = request.GET.urlencode()
+        target = reverse("smart_blog:item_comments", kwargs={"slug": slug})
+        return HttpResponseRedirect(f"{target}?{params}" if params else target)
+
+    register_item_view(request, item)
+
+    item = (
+        Item.objects
+        .with_counters()
+        .select_related("category", "author", "author__profile")
+        .annotate(reports_count=Count('reports', distinct=True))
+        .prefetch_related(
+            Prefetch(
+                "images",
+                queryset=ItemImage.objects.all().order_by("sort_order", "pk"),
+            ),
+        )
+        .get(pk=item.pk)
     )
 
     user_liked = (
@@ -231,12 +225,19 @@ def item_detail(request, slug):
             breadcrumb(item.title, None),
         )
 
-    comments_min_visible = _comments_min_visible_for_focus(item, request.GET.get("focus_comment"))
+    has_comments = (
+        Comment.objects.filter(item=item, parent__isnull=True, is_draft=False).exists()
+    )
+
+    if has_comments:
+        comments_qs = _comments_querysets_for_item(request, item)
+        detail_comments_preview = list(comments_qs[:DETAIL_COMMENT_PREVIEW_LIMIT])
+    else:
+        detail_comments_preview = []
 
     return render(request, "smart_blog/item_detail.html", {
         "item": item,
         "form": CommentForm(),
-        "comments": comments,
         "user_liked": user_liked,
         "user_bookmarked": user_bookmarked,
         "user_reported_item": user_reported_item,
@@ -245,13 +246,66 @@ def item_detail(request, slug):
         "editable_until_iso": editable_until.isoformat(),
         "is_editable": is_editable,
         "breadcrumbs": breadcrumbs,
-        "comments_min_visible": comments_min_visible,
+        "has_comments": has_comments,
+        "detail_comments_preview": detail_comments_preview,
+        "detail_comment_preview_limit": DETAIL_COMMENT_PREVIEW_LIMIT,
     })
 
 
-def comment_thread(request, pk):
-    comment = get_object_or_404(Comment, pk=pk)
-    if comment.is_draft:
+def item_comments(request, slug):
+    slug = (slug or '').strip()
+    item = get_object_or_404(Item.objects.filter(is_published=True), slug=slug)
+
+    item = (
+        Item.objects
+        .with_counters()
+        .select_related("category", "author", "author__profile")
+        .annotate(reports_count=Count('reports', distinct=True))
+        .prefetch_related(
+            Prefetch(
+                "images",
+                queryset=ItemImage.objects.all().order_by("sort_order", "pk"),
+            ),
+        )
+        .get(pk=item.pk)
+    )
+
+    comments = _comments_querysets_for_item(request, item)
+    allowed, _ = can_user_report(request.user) if request.user.is_authenticated else (False, None)
+    report_rate_limited = not allowed
+
+    breadcrumbs = build_breadcrumbs(
+        breadcrumb("brainstorm.news", "/"),
+        breadcrumb(item.title, item.get_absolute_url()),
+        breadcrumb("Comments", None),
+    )
+
+    return render(request, "smart_blog/item_comments.html", {
+        "item": item,
+        "comments": comments,
+        "report_rate_limited": report_rate_limited,
+        "breadcrumbs": breadcrumbs,
+    })
+
+
+def comment_thread_blog_redirect(request, pk):
+    """Legacy /blog/comment/<pk>/thread/ → /item/<slug>/comment/<pk>/thread/."""
+    comment = get_object_or_404(
+        Comment.objects.filter(is_draft=False).select_related("item"),
+        pk=pk,
+    )
+    item = comment.item
+    if not item.is_published:
+        raise Http404
+    url = reverse("smart_blog:comment_thread", kwargs={"slug": item.slug, "pk": pk})
+    return HttpResponsePermanentRedirect(url)
+
+
+def comment_thread(request, slug, pk):
+    slug = (slug or "").strip()
+    comment = get_object_or_404(Comment.objects.filter(is_draft=False), pk=pk)
+    item = comment.item
+    if not item.is_published or (item.slug or "").strip() != slug:
         raise Http404
 
     if request.user.is_authenticated:
@@ -287,14 +341,17 @@ def comment_thread(request, pk):
     allowed, _ = can_user_report(request.user) if request.user.is_authenticated else (False, None)
     report_rate_limited = not allowed
 
-    breadcrumbs = build_breadcrumbs(
-        breadcrumb(comment.item.title, comment.item.get_absolute_url()),
-        breadcrumb("Replies", None),
-    )
+    if comment.parent_id:
+        thread_back_url = reverse(
+            "smart_blog:comment_thread",
+            kwargs={"slug": comment.item.slug, "pk": comment.parent_id},
+        )
+    else:
+        thread_back_url = comment.item.get_comments_absolute_url()
 
     return render(request, "smart_blog/comment_thread.html", {
         "comment": comment,
         "item": comment.item,
         "report_rate_limited": report_rate_limited,
-        "breadcrumbs": breadcrumbs,
+        "thread_back_url": thread_back_url,
     })

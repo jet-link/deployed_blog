@@ -45,13 +45,20 @@ blog_urlpatterns = [
     path("item/create/", views.create_item, name="create_item"),
     path("item/<slug:slug>/edit/", views.edit_item, name="edit_item"),
     path("item/image/<int:pk>/delete/", views.delete_item_image, name="delete_item_image"),
-    path("item/<slug:slug>/", views.item_detail, name="item_detail"),
+    path(
+        "item/<slug:slug>/comments/",
+        RedirectView.as_view(pattern_name="smart_blog:item_comments", permanent=True),
+    ),
+    path(
+        "item/<slug:slug>/",
+        RedirectView.as_view(pattern_name="smart_blog:item_detail", permanent=True),
+    ),
     path("item/<slug:slug>/delete/", views.delete_item, name="delete_item"),
     path("item/<slug:slug>/comment/", views.add_comment, name="add_comment"),
     path("comment/<int:pk>/edit/", views.edit_comment, name="edit_comment"),
     path("comment/<int:pk>/delete/", views.delete_comment, name="delete_comment"),
     path("comment/<int:pk>/like/", views.toggle_comment_like, name="toggle_comment_like"),
-    path("comment/<int:pk>/thread/", views.comment_thread, name="comment_thread"),
+    path("comment/<int:pk>/thread/", views.comment_thread_blog_redirect),
     path("item/<slug:slug>/like/", views.toggle_like, name="toggle_like"),
     path("item/<slug:slug>/bookmark/", views.toggle_bookmark, name="toggle_bookmark"),
     path("report/", views.submit_report, name="submit_report"),
@@ -62,6 +69,7 @@ blog_urlpatterns = [
     path("report/<int:pk>/delete/", views_reports.cancel_report, name="cancel_report"),
     path("api/item/<int:item_id>/counters/", views.item_counters, name="item_counters"),
     path("api/repost/", views.api_repost, name="api_repost"),
+    path("api/search-suggest/", views.api_search_suggest, name="api_search_suggest"),
     path("api/search-history/", views.api_search_history_list, name="api_search_history_list"),
     path(
         "api/search-history/<int:pk>/clicked/",
@@ -84,5 +92,12 @@ urlpatterns = [
     path("topics/<slug:slug>/", views_topics.topic_detail, name="topic_detail"),
     path("brainews/filter/", views.items_filtered, name="items_filtered"),
     path("brainews/", views.items_list, name="items_list"),
+    path("item/<slug:slug>/comments/", views.item_comments, name="item_comments"),
+    path(
+        "item/<slug:slug>/comment/<int:pk>/thread/",
+        views.comment_thread,
+        name="comment_thread",
+    ),
+    path("item/<slug:slug>/", views.item_detail, name="item_detail"),
     path("blog/", include(blog_urlpatterns)),
 ]

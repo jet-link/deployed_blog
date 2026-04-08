@@ -315,4 +315,9 @@
     const commentId = e?.detail?.commentId;
     if (commentId) openReportModal('comment', commentId);
   });
+
+  window.addEventListener('item-report', (e) => {
+    const itemId = e?.detail?.itemId;
+    if (itemId) openReportModal('item', String(itemId));
+  });
 })();

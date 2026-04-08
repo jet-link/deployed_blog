@@ -1,10 +1,36 @@
 /**
  * back_btn_nav.js
- * 1. Save current URL before navigating to tag page (for back-btn on tag_items_list)
+ * 1. Save current URL before navigating to tag / category / topic / comment-thread pages
  * 2. Handle back-btn click: navigate to saved URL or fallback
  */
+function getCommentThreadReturnUrl() {
+    try {
+        var url = sessionStorage.getItem('comment_thread_return_url');
+        if (url && typeof url === 'string' && url.charAt(0) === '/' && url.indexOf('//') < 0) {
+            return url;
+        }
+    } catch (err) { }
+    return '';
+}
+window.getCommentThreadReturnUrl = getCommentThreadReturnUrl;
+
+function isCommentThreadPath(pathname) {
+    try {
+        var p = pathname.replace(/\/+$/, '') || '/';
+        return /\/comment\/\d+\/thread$/.test(p);
+    } catch (err) {
+        return false;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     'use strict';
+
+    function showBrainPreloader() {
+        if (window.__brainPreloader && typeof window.__brainPreloader.show === 'function') {
+            window.__brainPreloader.show();
+        }
+    }
 
     // Save current page when user clicks a tag link (capture phase — before navigation)
     document.addEventListener('click', function (e) {
@@ -30,6 +56,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             } catch (err) { }
         }
+        var threadA = e.target.closest('a[href*="/thread/"]');
+        if (threadA && threadA.href) {
+            try {
+                var tp = new URL(threadA.href, window.location.origin).pathname || '';
+                if (isCommentThreadPath(tp)) {
+                    sessionStorage.setItem('comment_thread_return_url', location.pathname + location.search);
+                }
+            } catch (err) { }
+        }
     }, true);
 
     // Back-btn click handler
@@ -40,17 +75,21 @@ document.addEventListener('DOMContentLoaded', function () {
         var key = btn.getAttribute('data-return-key');
         var fallback = btn.getAttribute('data-fallback') || '/brainews/';
         if (!key) {
+            showBrainPreloader();
             window.location.href = fallback;
             return;
         }
         try {
             var url = sessionStorage.getItem(key);
             if (url && typeof url === 'string' && url.charAt(0) === '/' && url.indexOf('//') < 0) {
+                showBrainPreloader();
                 window.location.href = url;
             } else {
+                showBrainPreloader();
                 window.location.href = fallback;
             }
         } catch (err) {
+            showBrainPreloader();
             window.location.href = fallback;
         }
     });

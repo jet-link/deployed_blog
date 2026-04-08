@@ -1,11 +1,28 @@
 (function () {
   'use strict';
 
+  const apiEl = document.getElementById('notificationsPageApi');
+  const READ_URL = apiEl?.dataset?.notificationRead || '/profile/notifications/read/';
+  const READ_ALL_URL = apiEl?.dataset?.notificationReadAll || '/profile/notifications/read-all/';
+  const DELETE_URL = apiEl?.dataset?.notificationDelete || '/profile/notifications/delete/';
+
+  /** Match base.html meta + Django cookie (must match comment_operate / forms that work). */
   function getCSRF() {
-    return (document.cookie.split('; ').find(c => c.startsWith('csrftoken=')) || '').split('=')[1] || '';
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const fromMeta = meta && meta.getAttribute('content');
+    if (fromMeta) return fromMeta;
+    const m = document.cookie.match(/(^|;\s*)csrftoken=([^;]+)/);
+    if (!m) return '';
+    try {
+      return decodeURIComponent(m[2]);
+    } catch (e) {
+      return m[2];
+    }
   }
 
   function post(url, body) {
+    const params = new URLSearchParams(body || {});
+    params.set('csrfmiddlewaretoken', getCSRF());
     return fetch(url, {
       method: 'POST',
       headers: {
@@ -14,8 +31,41 @@
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: new URLSearchParams(body || {}).toString()
+      credentials: 'same-origin',
+      body: params.toString()
     });
+  }
+
+  function forceCloseModalAndBackdrop() {
+    const el = document.getElementById('notificationsDeleteModal');
+    try {
+      if (el && window.bootstrap && window.bootstrap.Modal) {
+        const inst = window.bootstrap.Modal.getInstance(el);
+        if (inst) {
+          inst.hide();
+        } else {
+          window.bootstrap.Modal.getOrCreateInstance(el).hide();
+        }
+      }
+    } catch (err) {
+      /* ignore */
+    }
+    document.querySelectorAll('.modal-backdrop').forEach((b) => b.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+  }
+
+  async function notificationDeleteSucceeded(resp) {
+    if (!resp || !resp.ok) return false;
+    const raw = (await resp.text()).trim();
+    if (!raw) return false;
+    try {
+      const data = JSON.parse(raw);
+      return !!(data && data.success === true);
+    } catch (e) {
+      return false;
+    }
   }
 
   function sendReadToServer(id) {
@@ -26,10 +76,14 @@
     }).toString();
     if (navigator.sendBeacon) {
       const blob = new Blob([body], { type: 'application/x-www-form-urlencoded' });
-      navigator.sendBeacon('/profile/notifications/read/', blob);
+      try {
+        navigator.sendBeacon(READ_URL, blob);
+      } catch (err) {
+        /* ignore */
+      }
       return;
     }
-    fetch('/profile/notifications/read/', {
+    fetch(READ_URL, {
       method: 'POST',
       headers: {
         'X-CSRFToken': getCSRF(),
@@ -37,6 +91,7 @@
         'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
       },
+      credentials: 'same-origin',
       body,
       keepalive: true
     }).catch(() => {});
@@ -45,8 +100,6 @@
   const list = document.querySelector('.notifications-list');
   const readAllBtn = document.getElementById('notificationsReadAll');
   const deleteBtn = document.getElementById('notificationsDelete');
-  const deleteAllBtn = document.getElementById('notificationsDeleteAll');
-  const deleteLast5Btn = document.getElementById('notificationsDeleteLast5');
   const deleteModalEl = document.getElementById('notificationsDeleteModal');
   const stateEl = document.getElementById('notificationsState');
   const actions = document.getElementById('notificationsActions');
@@ -123,7 +176,7 @@
     if (remaining === 0) {
       actions.classList.add('d-none');
       if (emptyState) emptyState.classList.remove('d-none');
-      const wrapper = document.getElementById('showMoreWrapper');
+      const wrapper = document.getElementById('notificationsShowMoreWrapper');
       if (wrapper) wrapper.classList.add('d-none');
       if (legend) legend.classList.add('d-none');
       if (legendToggleBtn) legendToggleBtn.classList.add('d-none');
@@ -198,7 +251,7 @@
   }
 
   function updateShowMore() {
-    const btn = document.getElementById('showMoreBtn');
+    const btn = document.getElementById('notificationsShowMoreBtn');
     const rows = Array.from(document.querySelectorAll('.notification-row'));
     if (!btn || !rows.length) return;
     const STEP = 50;
@@ -238,7 +291,7 @@
   readAllBtn?.addEventListener('click', async () => {
     readAllBtn.disabled = true;
     try {
-      const resp = await post('/profile/notifications/read-all/');
+      const resp = await post(READ_ALL_URL);
       if (!resp.ok) return;
       document.querySelectorAll('.notification-row').forEach(el => {
         el.dataset.isRead = '1';
@@ -261,44 +314,50 @@
     modal.show();
   });
 
-  deleteAllBtn?.addEventListener('click', async () => {
-    deleteAllBtn.disabled = true;
-    try {
-      const resp = await post('/profile/notifications/delete/', { mode: 'all' });
-      if (!resp.ok) return;
-      document.querySelectorAll('.notification-row').forEach(el => el.remove());
-      bootstrap.Modal.getOrCreateInstance(deleteModalEl).hide();
-      unreadCount = 0;
-      updateHeaderCount(unreadCount);
-      try {
-        localStorage.setItem('notification_unread_count', '0');
-        localStorage.setItem('notification_count_updated_at', String(Date.now()));
-        if (typeof window.updateBellCountFromStorage === 'function') {
-          window.updateBellCountFromStorage();
-        }
-      } catch (err) {}
-      hideActionsIfEmpty();
-    } finally {
-      deleteAllBtn.disabled = false;
-    }
-  });
+  deleteModalEl?.addEventListener('click', async (e) => {
+    const clearAllBtn = e.target.closest('#notificationsDeleteAll');
+    const clear5Btn = e.target.closest('#notificationsDeleteLast5');
+    if (!clearAllBtn && !clear5Btn) return;
+    e.preventDefault();
+    e.stopPropagation();
 
-  deleteLast5Btn?.addEventListener('click', async () => {
-    deleteLast5Btn.disabled = true;
+    const isAll = !!clearAllBtn;
+    const triggerBtn = isAll ? clearAllBtn : clear5Btn;
+    triggerBtn.disabled = true;
     try {
-      const resp = await post('/profile/notifications/delete/', { mode: 'last5' });
-      if (!resp.ok) return;
-      const rows = document.querySelectorAll('.notification-row');
-      rows.forEach((el, idx) => {
-        if (idx < 5) {
-          el.remove();
+      let resp;
+      try {
+        resp = await post(DELETE_URL, { mode: isAll ? 'all' : 'last5' });
+      } catch (err) {
+        return;
+      }
+      const ok = await notificationDeleteSucceeded(resp);
+      if (!ok) return;
+
+      if (isAll) {
+        document.querySelectorAll('.notification-row').forEach((el) => el.remove());
+        unreadCount = 0;
+        updateHeaderCount(unreadCount);
+        try {
+          localStorage.setItem('notification_unread_count', '0');
+          localStorage.setItem('notification_count_updated_at', String(Date.now()));
+          if (typeof window.updateBellCountFromStorage === 'function') {
+            window.updateBellCountFromStorage();
+          }
+        } catch (err) {
+          /* ignore */
         }
-      });
-      syncUnreadCount();
-      bootstrap.Modal.getOrCreateInstance(deleteModalEl).hide();
+      } else {
+        const rows = document.querySelectorAll('.notification-row');
+        rows.forEach((el, idx) => {
+          if (idx < 5) el.remove();
+        });
+        syncUnreadCount();
+      }
+      forceCloseModalAndBackdrop();
       hideActionsIfEmpty();
     } finally {
-      deleteLast5Btn.disabled = false;
+      triggerBtn.disabled = false;
     }
   });
 

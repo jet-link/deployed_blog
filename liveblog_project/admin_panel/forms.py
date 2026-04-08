@@ -15,7 +15,7 @@ class ItemAdminCreateForm(BaseItemCreateForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, tags_recent_limit=None, **kwargs)
         self.label_suffix = ''
         self.fields['title'].label = 'Post title'
         self.fields['text'].label = 'Post body'

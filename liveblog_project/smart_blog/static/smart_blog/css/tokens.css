@@ -21,7 +21,8 @@
     --bg-default: #ffffff;
     --bg-muted: #f6f8fa;
     --bg-subtle: #f1f2f3;
-    --bg-overlay: rgba(0, 0, 0, 0.6);
+    /* Dim scrim: keep page visible through the overlay (blur added per-component) */
+    --bg-overlay: rgba(0, 0, 0, 0.38);
     --overlay-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
 
     /* Light theme — text */
@@ -76,7 +77,7 @@
 /* GitHub-style dark theme */
 html[data-theme="dark"] {
     color-scheme: dark;
-    --bg-overlay: rgba(0, 0, 0, 0.8);
+    --bg-overlay: rgba(0, 0, 0, 0.55);
     --overlay-shadow: 0 12px 28px rgba(0, 0, 0, 0.7);
     --bg-default: #0d1117;
     --bg-muted: #161b22;

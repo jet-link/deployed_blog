@@ -86,6 +86,7 @@ RATELIMIT_LOGIN_RATE = os.environ.get('RATELIMIT_LOGIN_RATE', '5/15m')
 # security_middleware reads DJANGO_SECURITY_CSP / DJANGO_SECURITY_CSP_REPORT_ONLY.
 RATELIMIT_REGISTER_RATE = os.environ.get('RATELIMIT_REGISTER_RATE', '5/h')
 RATELIMIT_SEARCH_RATE = os.environ.get('RATELIMIT_SEARCH_RATE', '60/m')
+RATELIMIT_SEARCH_SUGGEST_RATE = os.environ.get('RATELIMIT_SEARCH_SUGGEST_RATE', '60/m')
 RATELIMIT_TRENDING_RATE = os.environ.get('RATELIMIT_TRENDING_RATE', '120/m')
 RATELIMIT_ITEM_COUNTERS_RATE = os.environ.get('RATELIMIT_ITEM_COUNTERS_RATE', '90/m')
 RATELIMIT_SEARCH_HISTORY_RATE = os.environ.get('RATELIMIT_SEARCH_HISTORY_RATE', '120/m')
@@ -287,9 +288,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# admin_panel assets live in admin_panel/static/ — collected via AppDirectoriesFinder only.
+# Listing the same path here duplicates every file and triggers collectstatic warnings.
 STATICFILES_DIRS = [
     BASE_DIR / "static",
-    BASE_DIR / "admin_panel" / "static",
 ]
 
 STATIC_ROOT = BASE_DIR / "staticfiles"

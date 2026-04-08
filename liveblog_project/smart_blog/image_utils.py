@@ -10,6 +10,7 @@
 import io
 import os
 import logging
+from typing import Optional
 import hashlib
 import time
 import secrets
@@ -36,6 +37,29 @@ IMAGE_PROCESS_MAX_WORKERS = 4
 SIZE_THUMBNAIL = 300
 SIZE_MEDIUM = 800
 SIZE_LARGE = 1600
+
+# Display / layout hints for post galleries (derived from pixel dimensions).
+ORIENTATION_LANDSCAPE = "landscape"
+ORIENTATION_PORTRAIT = "portrait"
+ORIENTATION_WIDE = "wide"
+ORIENTATION_SQUARE = "square"
+
+
+def compute_orientation_kind(width: Optional[int], height: Optional[int]) -> str:
+    """Classify aspect ratio for editorial layout (not the same as EXIF orientation)."""
+    if not width or not height:
+        return ORIENTATION_LANDSCAPE
+    w, h = int(width), int(height)
+    if h <= 0:
+        return ORIENTATION_LANDSCAPE
+    ratio = w / h
+    if ratio >= 2.0:
+        return ORIENTATION_WIDE
+    if ratio <= 0.82:
+        return ORIENTATION_PORTRAIT
+    if 0.88 <= ratio <= 1.12:
+        return ORIENTATION_SQUARE
+    return ORIENTATION_LANDSCAPE
 
 
 def _get_content_type(ufile):

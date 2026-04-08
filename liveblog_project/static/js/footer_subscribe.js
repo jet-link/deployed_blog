@@ -4,7 +4,17 @@
 (function () {
     'use strict';
 
+    function initFooterBackToTop() {
+        var btn = document.getElementById('footerBackToTop');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
     function init() {
+        initFooterBackToTop();
+
         var wrap = document.querySelector('.footer-subscribe-wrap');
         if (!wrap) return;
 

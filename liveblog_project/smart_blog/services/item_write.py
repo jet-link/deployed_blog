@@ -9,6 +9,7 @@ import re
 from typing import List, Sequence
 
 from django.core.files.base import ContentFile
+from django.db.models import Max
 from django.forms import BaseForm
 
 from smart_blog.image_utils import (
@@ -51,7 +52,10 @@ def validate_uploaded_image_files(files: Sequence[Any], form: BaseForm) -> bool:
     Returns True if files pass (or list is empty), False if errors were added.
     """
     if len(files) > MAX_ITEM_IMAGES:
-        form.add_error(None, f"Maximum {MAX_ITEM_IMAGES} images allowed.")
+        form.add_error(
+            None,
+            f"You can upload up to {MAX_ITEM_IMAGES} images per post.",
+        )
         return False
     bad = [
         f.name
@@ -75,16 +79,6 @@ def validate_uploaded_image_files(files: Sequence[Any], form: BaseForm) -> bool:
     return True
 
 
-def validate_create_image_rules(files: Sequence[Any], form: BaseForm) -> bool:
-    if files and len(files) == 1:
-        form.add_error(
-            None,
-            "Either submit no images, or at least 2 images (minimum 2, maximum 10).",
-        )
-        return False
-    return True
-
-
 def _parse_image_delete_ids(raw_ids: Sequence[Any]) -> List[int]:
     out: List[int] = []
     for x in raw_ids or []:
@@ -105,12 +99,6 @@ def validate_edit_image_totals(item: Item, files: Sequence[Any], delete_raw: Seq
         form.add_error(
             None,
             f"Total images after updates cannot exceed {MAX_ITEM_IMAGES}.",
-        )
-        return False
-    if total_after == 1:
-        form.add_error(
-            None,
-            "Resulting number of images would be 1 — either keep 0 images or at least 2 images.",
         )
         return False
     return True
@@ -143,8 +131,11 @@ def attach_item_images_from_uploads(item: Item, files: Sequence[Any]) -> None:
     file_list = list(files)[:MAX_ITEM_IMAGES]
     if not file_list:
         return
+    agg = ItemImage.objects.filter(item=item).aggregate(mx=Max("sort_order"))
+    next_order = (agg["mx"] if agg["mx"] is not None else -1) + 1
     processed_list = process_uploaded_files_parallel(file_list, item.pk)
-    for f, processed in zip(file_list, processed_list):
+    for i, (f, processed) in enumerate(zip(file_list, processed_list)):
+        order = next_order + i
         if processed:
             ItemImage.objects.create(
                 item=item,
@@ -153,6 +144,7 @@ def attach_item_images_from_uploads(item: Item, files: Sequence[Any]) -> None:
                 image_medium=processed["image_medium"],
                 width=processed.get("width"),
                 height=processed.get("height"),
+                sort_order=order,
             )
         else:
             f.seek(0)
@@ -162,4 +154,5 @@ def attach_item_images_from_uploads(item: Item, files: Sequence[Any]) -> None:
                     f.read(),
                     name=getattr(f, "name", None) or "upload.bin",
                 ),
+                sort_order=order,
             )

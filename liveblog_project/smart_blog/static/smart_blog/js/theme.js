@@ -13,6 +13,12 @@
     return getTheme() === 'dark';
   }
 
+  function syncThemeColorMeta() {
+    var m = document.getElementById('meta-theme-color');
+    if (!m) return;
+    m.setAttribute('content', isDark() ? '#0d1117' : '#ffffff');
+  }
+
   function setTheme(dark) {
     var theme = dark ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', theme);
@@ -20,6 +26,7 @@
       localStorage.setItem(STORAGE_KEY, dark ? ACTIVE_VAL : 'moon');
     } catch (e) {}
     syncIcons();
+    syncThemeColorMeta();
   }
 
   function syncIcons() {
@@ -40,6 +47,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     syncIcons();
+    syncThemeColorMeta();
     var btns = document.querySelectorAll('#themeToggle, .theme-toggle-btn');
     for (var i = 0; i < btns.length; i++) {
       btns[i].addEventListener('click', handleToggle);

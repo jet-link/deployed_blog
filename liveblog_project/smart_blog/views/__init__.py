@@ -11,7 +11,9 @@ from smart_blog.views.listing_views import (  # noqa: F401
 
 from smart_blog.views.detail_views import (  # noqa: F401
     item_detail,
+    item_comments,
     comment_thread,
+    comment_thread_blog_redirect,
     register_item_view,
 )
 
@@ -30,6 +32,8 @@ from smart_blog.views.item_crud_views import (  # noqa: F401
     find_existing_media_path,
 )
 
+from smart_blog.views.editor_playground_views import editor_playground  # noqa: F401
+
 from smart_blog.views.interaction_views import (  # noqa: F401
     toggle_like,
     toggle_bookmark,
@@ -39,6 +43,7 @@ from smart_blog.views.interaction_views import (  # noqa: F401
 
 from smart_blog.views.search_views import (  # noqa: F401
     search_view,
+    api_search_suggest,
     api_search_history_list,
     api_search_history_clicked,
     api_search_history_clear,

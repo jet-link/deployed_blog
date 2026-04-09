@@ -1,4 +1,4 @@
-"""Reusable post image gallery context for detail pages and future Editor.js blocks."""
+"""Reusable post image gallery context for detail pages."""
 from __future__ import annotations
 
 from typing import Any, Dict, List
@@ -67,7 +67,3 @@ def post_media_gallery(item):
         "count": n,
         "script_id": f"post-media-json-{item.pk}",
     }
-
-# Future Editor.js gallery block: reuse the same template by building `slides` with
-# _slides_payload-shaped dicts and the same slot layout logic (or call this tag
-# after persisting ItemImage rows).

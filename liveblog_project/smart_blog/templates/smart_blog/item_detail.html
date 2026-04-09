@@ -3,6 +3,7 @@
 {% load user_status %}
 {% load counters %}
 {% load post_media %}
+{% block body_class %}page-item-detail{% endblock %}
 {% block title %}
   {{ item.title }}
 {% endblock %}
@@ -28,7 +29,7 @@
         </div>
       </div>
     </div>
-    <div class="item-detail-meta-row mt-5">
+    <div class="item-detail-meta-row mt-3">
       <div class="item-detail-meta-row__track">
         <div class="item-detail-meta-row__cluster">
           {% if item.category %}
@@ -126,13 +127,7 @@
     </div>
     <!-- ===== Body text ===== -->
     <div class="item-text ck-content my-5">
-      {% with body_editor=item.get_editor_body_html %}
-        {% if body_editor %}
-          {{ body_editor }}
-        {% else %}
-          {{ item.text|safe }}
-        {% endif %}
-      {% endwith %}
+      {{ item.text|safe }}
     </div>
     {% if item.images.all %}
       {% post_media_gallery item %}

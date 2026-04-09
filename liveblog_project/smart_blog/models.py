@@ -158,6 +158,7 @@ class Item(models.Model):
     )
     title = models.CharField(max_length=255)
     text = models.TextField()
+    # Legacy Editor.js document; unused (posts use CKEditor HTML in `text`). Kept for DB compatibility.
     content_json = models.JSONField(default=dict, blank=True)
     category = models.ForeignKey(
         Category,
@@ -200,19 +201,6 @@ class Item(models.Model):
 
     def __str__(self):
         return self.title
-    
-    def get_editor_body_html(self):
-        """Safe HTML from Editor.js `content_json` if it contains renderable blocks; else None."""
-        cj = self.content_json
-        if not cj or not isinstance(cj, dict):
-            return None
-        blocks = cj.get("blocks")
-        if not blocks:
-            return None
-        from smart_blog.editor.render import render_editorjs_to_html
-
-        out = render_editorjs_to_html(cj)
-        return out if out else None
 
     @staticmethod
     def plain_excerpt_from_html(html_text, length=600):

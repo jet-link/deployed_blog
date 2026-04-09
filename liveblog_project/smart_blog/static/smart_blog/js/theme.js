@@ -1,9 +1,11 @@
 (function () {
   'use strict';
 
+  if (window.__themeToggleInitialized) return;
+  window.__themeToggleInitialized = true;
+
   var STORAGE_KEY = 'themeToggle';
   var ACTIVE_VAL = 'sun';
-  /* Иконка показывает действие при клике: light→луна (включить dark), dark→солнце (включить light) */
 
   function getTheme() {
     return document.documentElement.getAttribute('data-theme') || 'light';
@@ -25,32 +27,20 @@
     try {
       localStorage.setItem(STORAGE_KEY, dark ? ACTIVE_VAL : 'moon');
     } catch (e) {}
-    syncIcons();
     syncThemeColorMeta();
-  }
-
-  function syncIcons() {
-    var dark = isDark();
-    var icons = document.querySelectorAll('.theme-toggle-icon');
-    for (var i = 0; i < icons.length; i++) {
-      var icon = icons[i];
-      icon.classList.remove('fa-moon-o', 'fa-sun-o');
-      icon.classList.add(dark ? 'fa-sun-o' : 'fa-moon-o');
-      icon.setAttribute('aria-hidden', 'true');
-    }
   }
 
   function handleToggle() {
-    var dark = isDark();
-    setTheme(!dark);
+    setTheme(!isDark());
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    syncIcons();
-    syncThemeColorMeta();
-    var btns = document.querySelectorAll('#themeToggle, .theme-toggle-btn');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].addEventListener('click', handleToggle);
-    }
-  });
+  document.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('#themeToggle, .theme-toggle-btn') : null;
+    if (!t) return;
+    e.preventDefault();
+    handleToggle();
+  }, true);
+
+  syncThemeColorMeta();
+  document.documentElement.addEventListener('turbo:load', syncThemeColorMeta);
 })();

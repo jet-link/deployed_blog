@@ -25,7 +25,6 @@ def _annotate_page_items(user, page_obj):
         Item.objects.filter(pk__in=pks)
         .with_counters()
         .select_related("category", "author", "author__profile")
-        .prefetch_related("tags")
     )
     qs = annotate_user_liked(qs, user)
     qs = annotate_user_bookmarked(qs, user)

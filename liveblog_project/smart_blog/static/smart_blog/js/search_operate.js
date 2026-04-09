@@ -530,6 +530,12 @@ document.addEventListener('DOMContentLoaded', function () {
         __searchOverlayOpen = false;
         clearTimeout(suggestTimer);
         if (suggestAbort) suggestAbort.abort();
+
+        try {
+            var ae = document.activeElement;
+            if (ae && overlayRoot.contains(ae)) ae.blur();
+        } catch (e) { /* ignore */ }
+
         overlayRoot.setAttribute('inert', '');
         overlayInput.value = '';
         var clr = document.getElementById('overlaySearchClear');
@@ -710,4 +716,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (focusable) focusable.focus();
         }
     }, true);
+
+    document.documentElement.addEventListener('turbo:before-visit', function () {
+        if (__searchOverlayOpen) closeOverlay();
+    });
 });

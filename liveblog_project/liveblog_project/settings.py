@@ -150,11 +150,15 @@ else:
 ROOT_URLCONF = 'liveblog_project.urls'
 
 # Templates
+_TEMPLATE_LOADERS = [
+    'django.template.loaders.filesystem.Loader',
+    'django.template.loaders.app_directories.Loader',
+]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [BASE_DIR / "admin_panel" / "templates", BASE_DIR / "templates"],
-        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -169,6 +173,9 @@ TEMPLATES = [
                 'smart_blog.context_processors.nav_categories_context',
                 'admin_panel.context_processors.admin_online_count',
             ],
+            'loaders': [
+                ('django.template.loaders.cached.Loader', _TEMPLATE_LOADERS),
+            ] if not DEBUG else _TEMPLATE_LOADERS,
         },
     },
 ]

@@ -1,7 +1,23 @@
 window.LB = window.LB || {};
 
-const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
-const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+/* Safe if global_utils runs twice; re-runnable on turbo:load for new DOM. */
+function lbInitBootstrapDataToggleTooltips() {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
+    var nodes = document.querySelectorAll('[data-bs-toggle="tooltip"], [data-bs-title]');
+    if (!nodes.length) return;
+    Array.prototype.forEach.call(nodes, function (el) {
+        if (el.__lbBsTooltipBound) return;
+        el.__lbBsTooltipBound = true;
+        try {
+            new bootstrap.Tooltip(el);
+        } catch (e) { /* ignore */ }
+    });
+}
+LB.initDataToggleTooltips = lbInitBootstrapDataToggleTooltips;
+lbInitBootstrapDataToggleTooltips();
+(document.documentElement || document).addEventListener('turbo:load', function () {
+    lbInitBootstrapDataToggleTooltips();
+});
 
 /* ── iOS-safe scroll lock ──
    Uses position:fixed on body so Safari doesn't scroll through overlays.
@@ -87,14 +103,6 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
-document.addEventListener("DOMContentLoaded", function () {
-    const tooltipTriggerList = [].slice.call(
-        document.querySelectorAll('[data-bs-title]')
-    );
-    tooltipTriggerList.forEach(el => {
-        new bootstrap.Tooltip(el);
-    });
-});
 
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.ck-content table').forEach(function (t) {

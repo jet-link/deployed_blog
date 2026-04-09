@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load trending_live %}
 {% load counters %}
 {% block title %}Trending Now{% endblock %}
 {% block content %}
@@ -17,7 +16,6 @@
     <div class="row g-3">
       {% for t in hot_rows %}
         {% with item=t.item %}
-        {% trending_live_metrics item as m %}
         <div class="col-12 {% if forloop.first %}col-lg-12{% else %}col-md-6{% endif %}">
           <article class="trending-card trending-card--hot card border-0 overflow-hidden h-100 {% if forloop.first %}trending-card--hero{% endif %}" data-trending-slug="{{ item.slug }}">
             <div class="row g-0 h-100 flex-wrap flex-md-nowrap">
@@ -53,9 +51,9 @@
                   <div class="trending-metrics d-flex flex-wrap gap-4 small" data-trending-slug="{{ item.slug }}">
                     <span data-metric="total_views_h" class="trending-metric" title="Total views"><i class="fa fa-eye me-1"></i><strong class="trending-val">{{ item.views_count|human }}</strong></span>
                     <span data-metric="total_likes_h" class="trending-metric" title="Total likes"><i class="fa fa-heart me-1"></i><strong class="trending-val">{{ item.likes_count|human }}</strong></span>
-                    <span data-metric="comments_24h" class="trending-metric" title="Comments in 24h"><i class="fa fa-comment me-1"></i><strong class="trending-val">{{ m.comments_24h|human }}</strong></span>
+                    <span data-metric="comments_24h" class="trending-metric" title="Comments in 24h"><i class="fa fa-comment me-1"></i><strong class="trending-val">{{ t.comments_24h|human }}</strong></span>
                     <span data-metric="total_bookmarks_h" class="trending-metric" title="Total bookmarks"><i class="fa fa-bookmark me-1"></i><strong class="trending-val">{{ item.bookmarks_count|human }}</strong></span>
-                    <span data-metric="views_24h" class="trending-metric trending-metric--window" title="Views of this post in the last 24 hours"><i class="fa fa-clock-o me-1" aria-hidden="true"></i><strong class="trending-val">{{ m.views_24h|human }}</strong> <span class="text-muted ms-1">views in 24h</span></span>
+                    <span data-metric="views_24h" class="trending-metric trending-metric--window" title="Views of this post in the last 24 hours"><i class="fa fa-clock-o me-1" aria-hidden="true"></i><strong class="trending-val">{{ t.views_24h|human }}</strong> <span class="text-muted ms-1">views in 24h</span></span>
                   </div>
                 </div>
               </div>
@@ -76,7 +74,6 @@
     <div class="row g-3">
       {% for t in rising_rows %}
         {% with item=t.item %}
-        {% trending_live_metrics item as m %}
         <div class="col-md-6 col-lg-4">
           <article class="trending-card trending-card--rising card border-0 overflow-hidden h-100" data-trending-slug="{{ item.slug }}">
             <div class="trending-card__img-wrap trending-card__img-wrap--sm">
@@ -98,7 +95,7 @@
               <div class="trending-metrics d-flex flex-wrap gap-3 small" data-trending-slug="{{ item.slug }}">
                 <span data-metric="total_views_h" class="trending-metric" title="Total views"><i class="fa fa-eye me-1"></i><strong class="trending-val">{{ item.views_count|human }}</strong></span>
                 <span data-metric="total_likes_h" class="trending-metric" title="Total likes"><i class="fa fa-heart me-1"></i><strong class="trending-val">{{ item.likes_count|human }}</strong></span>
-                <span data-metric="views_last_hour" class="trending-metric trending-metric--window" title="Views of this post in the last hour"><i class="fa fa-clock-o me-1" aria-hidden="true"></i><strong class="trending-val">{{ m.views_last_hour|human }}</strong> <span class="text-muted ms-1">views in 1h</span></span>
+                <span data-metric="views_last_hour" class="trending-metric trending-metric--window" title="Views of this post in the last hour"><i class="fa fa-clock-o me-1" aria-hidden="true"></i><strong class="trending-val">{{ t.views_last_hour|human }}</strong> <span class="text-muted ms-1">views in 1h</span></span>
               </div>
             </div>
           </article>
@@ -115,7 +112,6 @@
     <div class="row g-3" id="trendingFeedCards">
       {% for t in feed_page %}
         {% with item=t.item %}
-        {% trending_live_metrics item as m %}
         <div class="col-lg-6 col-md-6 col-12">
           <article class="trending-card trending-card--feed card border-0 overflow-hidden h-100" data-trending-slug="{{ item.slug }}">
             <div class="row g-0 h-100">
@@ -146,7 +142,7 @@
                   <div class="trending-metrics d-flex flex-wrap gap-3 small" data-trending-slug="{{ item.slug }}">
                     <span data-metric="total_views_h" class="trending-metric" title="Total views"><i class="fa fa-eye me-1"></i><strong class="trending-val">{{ item.views_count|human }}</strong></span>
                     <span data-metric="total_likes_h" class="trending-metric" title="Total likes"><i class="fa fa-heart me-1"></i><strong class="trending-val">{{ item.likes_count|human }}</strong></span>
-                    <span data-metric="comments_24h" class="trending-metric" title="Comments in 24h"><i class="fa fa-comment me-1"></i><strong class="trending-val">{{ m.comments_24h|human }}</strong></span>
+                    <span data-metric="comments_24h" class="trending-metric" title="Comments in 24h"><i class="fa fa-comment me-1"></i><strong class="trending-val">{{ t.comments_24h|human }}</strong></span>
                     <span data-metric="total_bookmarks_h" class="trending-metric" title="Total bookmarks"><i class="fa fa-bookmark me-1"></i><strong class="trending-val">{{ item.bookmarks_count|human }}</strong></span>
                   </div>
                 </div>

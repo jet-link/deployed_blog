@@ -1,23 +1,5 @@
 {
   "private": true,
-  "scripts": {
-    "build:editor-playground": "esbuild smart_blog/static/smart_blog/js/post_studio/editor_playground.entry.js --bundle --format=iife --platform=browser --outfile=smart_blog/static/smart_blog/js/post_studio/editor_playground.bundle.js --legal-comments=none"
-  },
-  "dependencies": {
-    "@editorjs/delimiter": "^1.4.2",
-    "@editorjs/editorjs": "^2.31.5",
-    "@editorjs/header": "^2.8.8",
-    "@editorjs/image": "^2.10.3",
-    "@editorjs/inline-code": "^1.5.2",
-    "@editorjs/link": "^2.6.2",
-    "@editorjs/list": "^2.0.9",
-    "@editorjs/marker": "^1.4.0",
-    "@editorjs/quote": "^2.7.6",
-    "@editorjs/warning": "^1.4.1",
-    "editorjs-inline-tool": "^0.4.0",
-    "editorjs-undo": "^2.0.28"
-  },
-  "devDependencies": {
-    "esbuild": "^0.25.0"
-  }
+  "dependencies": {},
+  "devDependencies": {}
 }

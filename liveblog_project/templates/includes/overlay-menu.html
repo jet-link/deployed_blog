@@ -7,7 +7,7 @@
       <a href="/" class="brand-minimal" aria-label="brainstorm.news"><span class="brand-full">brainstorm.news</span><span class="brand-short">bstrm.news</span></a>
     </div>
     <div class="d-flex align-items-center gap-2 flex-shrink-0 bottom-menu-header-actions" aria-label="Menu actions">
-      <button type="button" class="theme-toggle-btn theme-toggle-overlay p-0" aria-label="Toggle theme" title="Light/Dark theme"><i class="fa fa-moon-o theme-toggle-icon" aria-hidden="true"></i></button>
+      <button type="button" class="theme-toggle-btn theme-toggle-overlay p-0" aria-label="Toggle theme" title="Light/Dark theme"><i class="fa fa-moon-o theme-toggle-icon theme-toggle-icon--moon" aria-hidden="true"></i><i class="fa fa-sun-o theme-toggle-icon theme-toggle-icon--sun" aria-hidden="true"></i></button>
       <button id="bottomMenuClose" type="button" class="bottom-menu-close-btn text-muted p-0" aria-label="Close menu">×</button>
     </div>
   </div>
@@ -15,10 +15,10 @@
   <div class="bottom-menu-scroll">
   <nav class="bottom-menu-nav" aria-label="Primary">
     {% with nav_name=request.resolver_match.url_name|default:'' %}
-    <a href="{% url 'smart_blog:items_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'items_list' %} active{% endif %}">BraiNews</a>
-    <a href="{% url 'smart_blog:for_you_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'for_you_list' %} active{% endif %}">For you</a>
-    <a href="{% url 'smart_blog:trending_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'trending_list' %} active{% endif %}">In trend</a>
-    <a href="{% url 'smart_blog:topics_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'topics_list' or nav_name == 'topic_detail' %} active{% endif %}">Topics</a>
+    <a href="{% url 'smart_blog:items_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'items_list' %} active{% endif %}"><i class="fa fa-newspaper-o header-menu-item__icon" aria-hidden="true"></i><span class="header-menu-item__label">BraiNews</span></a>
+    <a href="{% url 'smart_blog:for_you_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'for_you_list' %} active{% endif %}"><i class="fa fa-compass header-menu-item__icon" aria-hidden="true"></i><span class="header-menu-item__label">For you</span></a>
+    <a href="{% url 'smart_blog:trending_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'trending_list' %} active{% endif %}"><i class="fa fa-fire header-menu-item__icon" aria-hidden="true"></i><span class="header-menu-item__label">In trend</span></a>
+    <a href="{% url 'smart_blog:topics_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'topics_list' or nav_name == 'topic_detail' %} active{% endif %}"><i class="fa fa-folder-o header-menu-item__icon" aria-hidden="true"></i><span class="header-menu-item__label">Topics</span></a>
     {% comment %} <a href="#" class="header-menu-item text-decoration-none text-muted categories-modal-trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="categoriesModalDialog">Categories</a> {% endcomment %}
     {% endwith %}
   </nav>

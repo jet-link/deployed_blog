@@ -201,7 +201,6 @@ def for_you_items_for_authenticated_user(user: AbstractUser) -> ForYouResult:
         for it in feed_list_optimizations(
             Item.objects.filter(pk__in=ordered_ids, is_published=True)
             .select_related("category", "author", "author__profile")
-            .prefetch_related("tags")
         )
     }
     ordered = [items_by_pk[pk] for pk in ordered_ids if pk in items_by_pk]
@@ -219,7 +218,7 @@ def for_you_items_guest() -> ForYouResult:
                 queryset=feed_list_optimizations(
                     Item.objects.select_related(
                         "category", "author", "author__profile"
-                    ).prefetch_related("tags")
+                    )
                 ),
             )
         )
@@ -250,7 +249,6 @@ def for_you_items_guest() -> ForYouResult:
             .exclude(author__profile__trust_banned=True)
         )
         .select_related("category", "author", "author__profile")
-        .prefetch_related("tags")
     )
     for it in pop_qs[:200]:
         if it.pk not in seen:

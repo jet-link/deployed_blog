@@ -565,21 +565,29 @@ html[data-theme="dark"] .brain-preloader__svg {
     filter: drop-shadow(0 2px 14px rgba(0, 0, 0, 0.55));
 }
 
+/* Entire contour pulses — no stroke-dash gaps while loading */
 .brain-preloader__trace {
-    animation: brain-trace-dash 1.85s linear infinite;
+    stroke-width: 3.2;
+    animation: brain-trace-glow 1.35s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
     .brain-preloader__trace {
         animation: none;
-        stroke-dasharray: none !important;
-        opacity: 0.85;
+        opacity: 0.88;
     }
 }
 
-@keyframes brain-trace-dash {
-    to {
-        stroke-dashoffset: -100;
+@keyframes brain-trace-glow {
+    0%,
+    100% {
+        opacity: 0.45;
+        stroke-width: 2.85;
+    }
+
+    50% {
+        opacity: 1;
+        stroke-width: 4.35;
     }
 }
 
@@ -985,7 +993,7 @@ html[data-theme="dark"] .paginator-page.paginator-current {
     width: 100%;
     /* background: #f1f2f6; */
     background: var(--bg-default);
-    padding: 20px 0;
+    padding: 20px 10px;
     transform: none;
     transition: none;
     will-change: auto;
@@ -1052,6 +1060,22 @@ html[data-theme="dark"] .header {
     border-radius: 5px;
 }
 
+.header-menu-item__icon {
+    font-size: 0.8125rem;
+    line-height: 1;
+    opacity: 0.92;
+    flex-shrink: 0;
+}
+
+.header-menu-item.active .header-menu-item__icon,
+.header-menu-item:hover .header-menu-item__icon {
+    opacity: 1;
+}
+
+.header-menu-item__label {
+    line-height: 1.2;
+}
+
 .header-menu-icon.brainews-icon {
     font-style: normal;
     display: inline-block;
@@ -1070,6 +1094,9 @@ html[data-theme="dark"] .header {
 /* Как .page-static__link — только на больших экранах (меню видно с min-width: 992px) */
 @media (min-width: 992px) {
     .header-menu .header-menu-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
         color: var(--text-muted) !important;
         text-decoration: none;
         font-weight: 500;
@@ -1142,6 +1169,23 @@ html[data-theme="dark"] .header {
 html[data-theme="dark"] .search-btn,
 html[data-theme="dark"] .theme-toggle-btn {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
+/* Moon/sun from data-theme (set in <head> before paint) — avoids icon swap on DOMContentLoaded */
+.theme-toggle-btn .theme-toggle-icon--moon {
+    display: inline-block;
+}
+
+.theme-toggle-btn .theme-toggle-icon--sun {
+    display: none;
+}
+
+html[data-theme="dark"] .theme-toggle-btn .theme-toggle-icon--moon {
+    display: none;
+}
+
+html[data-theme="dark"] .theme-toggle-btn .theme-toggle-icon--sun {
+    display: inline-block;
 }
 
 /* Search dropdown — шторка под header, не влияет на высоту контента */
@@ -1221,23 +1265,6 @@ html[data-theme="dark"] .theme-toggle-btn {
     }
 
     .header-menu {
-        display: none !important;
-    }
-
-    .bottom-burger {
-        display: flex !important;
-        gap: 4px;
-    }
-
-    .bottom-burger span {
-        width: 18px;
-    }
-
-    .search-btn {
-        font-size: 1rem;
-    }
-
-    .header-actions .theme-toggle-btn:not(.theme-toggle-overlay) {
         display: none !important;
     }
 
@@ -2980,6 +3007,423 @@ input::-webkit-search-decoration {
 }
 
 /* =========================
+   MOBILE BOTTOM NAV (pill bar)
+========================= */
+.mobile-bottom-nav {
+    display: none;
+}
+
+@media (max-width: 991px) {
+    body {
+        padding-bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body.page-item-detail {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .mobile-bottom-nav {
+        display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1580;
+        padding: 0 max(6px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-right, 0px));
+        pointer-events: none;
+    }
+
+    .mobile-bottom-nav.mobile-bottom-nav--hidden-on-detail {
+        display: none !important;
+    }
+
+    .mobile-bottom-nav__inner {
+        pointer-events: auto;
+        display: flex;
+        align-items: stretch;
+        min-height: 84px;
+        overflow: hidden;
+        max-width: min(520px, 100%);
+        width: 100%;
+        margin: 0 auto;
+        padding: 0 clamp(12px, 3vw, 22px);
+        background: var(--card-bg, #fff);
+        border: 1px solid var(--border-default, #e6e6e6);
+        border-radius: 999px;
+        box-shadow:
+            0 10px 28px rgba(0, 0, 0, 0.1),
+            0 2px 8px rgba(0, 0, 0, 0.06),
+            0 0 0 1px color-mix(in srgb, var(--text-link) 8%, transparent),
+            0 0 28px color-mix(in srgb, var(--text-link) 10%, transparent);
+    }
+
+    .mobile-bottom-nav__scroll {
+        --mbnav-gap: clamp(4px, 1vw, 8px);
+        display: flex;
+        flex: 1 1 0;
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .mobile-bottom-nav__scroll::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    .mobile-bottom-nav__track {
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: row;
+        align-items: stretch;
+        gap: var(--mbnav-gap);
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .mobile-bottom-nav__tail-group {
+        display: contents;
+    }
+
+    .mobile-bottom-nav__nav-cell {
+        flex: 1 1 0;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .mobile-bottom-nav__account.mobile-bottom-nav__nav-cell,
+    .mobile-bottom-nav__discover.mobile-bottom-nav__nav-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        -webkit-tap-highlight-color: transparent;
+        transform: translateZ(0);
+    }
+
+    .mobile-bottom-nav__discover .mobile-bottom-nav__discover-btn,
+    .mobile-bottom-nav__account .mobile-bottom-nav__more-btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    html[data-theme="dark"] .mobile-bottom-nav__inner {
+        box-shadow:
+            0 12px 32px rgba(0, 0, 0, 0.4),
+            0 2px 10px rgba(0, 0, 0, 0.25),
+            0 0 0 1px color-mix(in srgb, var(--text-link) 22%, transparent),
+            0 0 36px color-mix(in srgb, var(--text-link) 14%, transparent);
+    }
+
+    .mobile-bottom-nav__link,
+    .mobile-bottom-nav__more-btn,
+    .mobile-bottom-nav__discover-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding: 4px 0;
+        text-decoration: none;
+        color: var(--text-muted);
+        font-size: 0.775rem;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        text-align: center;
+        border: none;
+        outline: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        transform: translateZ(0);
+        transition: color 0.15s ease;
+    }
+
+    .mobile-bottom-nav__more-btn,
+    .mobile-bottom-nav__discover-btn {
+        font-family: inherit;
+    }
+
+    .mobile-bottom-nav__label {
+        display: block;
+        max-width: 100%;
+        padding: 0 clamp(0px, 0.5vw, 3px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-bottom-nav__link--active .mobile-bottom-nav__label {
+        color: inherit;
+    }
+
+    .mobile-bottom-nav__icon-wrap {
+        position: relative;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        height: auto;
+        min-height: 1.25rem;
+        border-radius: 0;
+        flex-shrink: 0;
+        border: none;
+        background: transparent;
+        color: inherit;
+        transition: color 0.15s ease;
+    }
+
+    .mobile-bottom-nav__icon {
+        font-size: 1.35rem;
+        line-height: 1;
+        opacity: 0.94;
+    }
+
+    .mobile-bottom-nav__link--active .mobile-bottom-nav__icon-wrap {
+        background: transparent;
+        color: var(--btn-primary-bg);
+    }
+
+    .mobile-bottom-nav__link--active {
+        color: var(--btn-primary-bg);
+        position: relative;
+    }
+
+    .mobile-bottom-nav__link--active::after {
+        content: '';
+        position: absolute;
+        bottom: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: clamp(18px, 60%, 40px);
+        height: 2.5px;
+        border-radius: 2px;
+        background: var(--btn-primary-bg);
+    }
+
+    .mobile-bottom-nav__link--active .mobile-bottom-nav__icon {
+        opacity: 1;
+        color: inherit;
+    }
+
+    html[data-theme="dark"] .mobile-bottom-nav__link,
+    html[data-theme="dark"] .mobile-bottom-nav__more-btn,
+    html[data-theme="dark"] .mobile-bottom-nav__discover-btn {
+        color: var(--text-link);
+    }
+
+    html[data-theme="dark"] .mobile-bottom-nav__link--active {
+        color: var(--text-link-hover);
+    }
+
+    html[data-theme="dark"] .mobile-bottom-nav__link--active::after {
+        background: var(--text-link-hover);
+    }
+
+    html[data-theme="dark"] .mobile-bottom-nav__link--active .mobile-bottom-nav__icon-wrap {
+        background: transparent;
+        color: var(--text-link-hover);
+    }
+
+    .mobile-nav-ellipsis {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .mobile-nav-ellipsis span {
+        display: block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.95;
+    }
+
+    .mobile-bottom-nav__account .mobile-bottom-nav__more-btn,
+    .mobile-bottom-nav__discover .mobile-bottom-nav__discover-btn {
+        width: 100%;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Fixed layer: avoids clipping by .mobile-bottom-nav__scroll overflow; position set in mobile_bottom_nav.js */
+    .mobile-nav-account-popover {
+        --popover-caret-x: 50%;
+        position: fixed;
+        left: 0;
+        top: 0;
+        right: auto;
+        bottom: auto;
+        min-width: 230px;
+        max-width: min(280px, calc(100vw - 20px));
+        padding: 6px 0;
+        margin: 0;
+        background: var(--card-bg, #fff);
+        border: 1px solid var(--border-subtle, #e8e8ec);
+        border-radius: 14px;
+        box-shadow:
+            0 14px 40px rgba(0, 0, 0, 0.14),
+            0 4px 12px rgba(0, 0, 0, 0.06);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition:
+            opacity 0.18s ease,
+            visibility 0.18s ease;
+        z-index: 1710;
+    }
+
+    .mobile-nav-account-popover.is-open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    /* Arrow points down toward More; horizontal position follows anchor via --popover-caret-x (px from popover left) */
+    .mobile-nav-account-popover.is-open::after {
+        content: '';
+        position: absolute;
+        left: var(--popover-caret-x);
+        top: 100%;
+        margin-top: -1px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 9px solid transparent;
+        border-right: 9px solid transparent;
+        border-top: 9px solid var(--card-bg);
+        filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.08));
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    html[data-theme="dark"] .mobile-nav-account-popover.is-open::after {
+        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+    }
+
+    .mobile-nav-account-popover__row {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 13px 16px;
+        text-decoration: none;
+        color: var(--text-primary, #111);
+        font-size: 0.9375rem;
+        font-weight: 500;
+        transition: background-color 0.12s ease, color 0.12s ease;
+    }
+
+    .mobile-nav-account-popover__row:hover {
+        background: var(--bg-subtle, #f1f2f6);
+        color: var(--text-link);
+    }
+
+    .mobile-nav-account-popover__row--active {
+        background: color-mix(in srgb, var(--btn-primary-bg) 14%, var(--card-bg));
+        color: var(--btn-primary-bg);
+        font-weight: 600;
+    }
+
+    html[data-theme="dark"] .mobile-nav-account-popover__row--active {
+        background: color-mix(in srgb, #5b9bf5 18%, var(--card-bg));
+        color: #7ab8ff;
+    }
+
+    .mobile-nav-account-popover__ico {
+        flex-shrink: 0;
+        width: 1.4rem;
+        font-size: 1.05rem;
+        text-align: center;
+        opacity: 0.9;
+    }
+
+    .mobile-nav-account-popover__text {
+        min-width: 0;
+        line-height: 1.35;
+        font-size: inherit;
+        font-weight: inherit;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-nav-account-popover__title {
+        font-weight: 600;
+    }
+
+    .mobile-nav-account-popover__sub {
+        font-size: inherit;
+        font-weight: inherit;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-nav-account-popover__row--danger {
+        color: #e74c3c;
+    }
+
+    .mobile-nav-account-popover__row--danger:hover {
+        color: #c0392b;
+        background: rgba(231, 76, 60, 0.08);
+    }
+
+    .mobile-nav-account-popover .notification-btn.has-unread .mobile-nav-account-popover__ico {
+        color: #e74c3c;
+    }
+
+    .mobile-bottom-nav__link:focus:not(:focus-visible),
+    .mobile-bottom-nav__more-btn:focus:not(:focus-visible),
+    .mobile-bottom-nav__discover-btn:focus:not(:focus-visible) {
+        outline: none;
+    }
+
+    .mobile-bottom-nav__link:focus-visible,
+    .mobile-bottom-nav__more-btn:focus-visible,
+    .mobile-bottom-nav__discover-btn:focus-visible {
+        outline: 2px solid var(--btn-primary-bg);
+        outline-offset: 2px;
+    }
+
+    .mobile-nav-account-popover__row:focus:not(:focus-visible) {
+        outline: none;
+    }
+
+    .mobile-nav-account-popover__row:focus-visible {
+        outline: 2px solid var(--btn-primary-bg);
+        outline-offset: -2px;
+    }
+
+    /* Discover submenu: no blue side outline on focus (touch + Turbo refocus). */
+    #mobileNavDiscoverPopover .mobile-nav-account-popover__row:focus,
+    #mobileNavDiscoverPopover .mobile-nav-account-popover__row:focus-visible {
+        outline: none;
+    }
+
+    #mobileNavDiscoverPopover .mobile-nav-account-popover__row:focus-visible {
+        background: var(--bg-subtle, #f1f2f6);
+    }
+
+    html[data-theme="dark"] #mobileNavDiscoverPopover .mobile-nav-account-popover__row:focus-visible {
+        background: rgba(255, 255, 255, 0.06);
+    }
+}
+
+@media (min-width: 992px) {
+    body {
+        padding-bottom: 0;
+    }
+}
+
+/* =========================
    OVERLAY
 ========================= */
 .bottom-menu-overlay {
@@ -3148,7 +3592,9 @@ input::-webkit-search-decoration {
 }
 
 .bottom-menu-nav a {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
     padding: 13px 20px;
     text-decoration: none;
     color: var(--text-muted);

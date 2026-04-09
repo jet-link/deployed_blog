@@ -1,4 +1,5 @@
 """Listing views: items_list, items_filtered, tag_list, category_list."""
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db.models import Exists, OuterRef, Subquery
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponsePermanentRedirect
@@ -14,23 +15,32 @@ from smart_blog.feed_queryset import feed_list_optimizations
 from smart_blog.views._helpers import annotate_user_bookmarked, annotate_user_liked
 
 FILTER_AJAX_PAGE_SIZE = 20
+_ANON_BRAINEWS_CACHE_KEY = "anon_brainews_p{page}"
+_ANON_BRAINEWS_CACHE_TTL = 60
 
 
 def items_list(request):
+    page_number = request.GET.get('page')
+    is_anon = not request.user.is_authenticated
+    page_key = page_number or "1"
+
+    if is_anon:
+        cached = cache.get(_ANON_BRAINEWS_CACHE_KEY.format(page=page_key))
+        if cached is not None:
+            return cached
+
     qs = feed_list_optimizations(
         Item.objects
         .filter(is_published=True)
         .with_counters()
         .select_related("category", "author", "author__profile")
         .order_by('-published_date')
-        .prefetch_related("tags")
     )
     qs = annotate_user_liked(qs, request.user)
     qs = annotate_user_bookmarked(qs, request.user)
     qs = qs.order_by('-published_date', '-pk')
 
     paginator = Paginator(qs, 40)
-    page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     page_range = paginator.get_elided_page_range(
@@ -43,12 +53,21 @@ def items_list(request):
         breadcrumb("BraiNews", None),
     )
 
-    return render(request, "smart_blog/items_list.html", {
+    response = render(request, "smart_blog/items_list.html", {
         "page_obj": page_obj,
         "page_range": page_range,
         "items": page_obj.object_list,
         "breadcrumbs": breadcrumbs,
     })
+
+    if is_anon:
+        cache.set(
+            _ANON_BRAINEWS_CACHE_KEY.format(page=page_key),
+            response,
+            _ANON_BRAINEWS_CACHE_TTL,
+        )
+
+    return response
 
 
 def items_filtered(request):
@@ -94,7 +113,7 @@ def items_filtered(request):
         ).order_by('-user_bookmark_date', '-pk')
         empty_msg = 'Nothing was bookmarked'
     qs = feed_list_optimizations(
-        qs.select_related("category", "author", "author__profile").prefetch_related("tags")
+        qs.select_related("category", "author", "author__profile")
     )
     paginator = Paginator(qs, FILTER_AJAX_PAGE_SIZE)
     page_obj = paginator.get_page(request.GET.get("page"))
@@ -152,7 +171,6 @@ def tag_list(request, slug):
         .with_counters()
         .select_related("category", "author", "author__profile")
         .order_by('-published_date')
-        .prefetch_related("tags")
     )
     qs = annotate_user_liked(qs, request.user)
     qs = annotate_user_bookmarked(qs, request.user)

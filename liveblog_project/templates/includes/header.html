@@ -8,10 +8,10 @@
         </div>
         <div class="header-menu d-flex align-items-center small">
           {% with nav_name=request.resolver_match.url_name|default:'' %}
-          <a href="{% url 'smart_blog:items_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'items_list' %} active{% endif %}">BraiNews</a>
-          <a href="{% url 'smart_blog:for_you_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'for_you_list' %} active{% endif %}">For you</a>
-          <a href="{% url 'smart_blog:trending_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'trending_list' %} active{% endif %}">In trend</a>
-          <a href="{% url 'smart_blog:topics_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'topics_list' or nav_name == 'topic_detail' %} active{% endif %}">Topics</a>
+          <a href="{% url 'smart_blog:items_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'items_list' %} active{% endif %}"><span class="header-menu-item__label">BraiNews</span></a>
+          <a href="{% url 'smart_blog:for_you_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'for_you_list' %} active{% endif %}"><span class="header-menu-item__label">For you</span></a>
+          <a href="{% url 'smart_blog:trending_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'trending_list' %} active{% endif %}"><span class="header-menu-item__label">In trend</span></a>
+          <a href="{% url 'smart_blog:topics_list' %}" class="header-menu-item text-decoration-none text-muted{% if nav_name == 'topics_list' or nav_name == 'topic_detail' %} active{% endif %}"><span class="header-menu-item__label">Topics</span></a>
           {% comment %} <a href="#" class="header-menu-item text-decoration-none text-muted categories-modal-trigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="categoriesModalDialog">
             Categories
             <i class="fa fa-angle-down ms-1" aria-hidden="true"></i>
@@ -21,8 +21,8 @@
         </div>
         <div class="d-flex align-items-center gap-2 header-actions">
           <button type="button" class="search-btn" aria-label="Search"><i class="fa fa-search" aria-hidden="true"></i></button>
+          <button type="button" id="themeToggle" class="theme-toggle-btn" aria-label="Toggle theme" title="Light/Dark theme"><i class="fa fa-moon-o theme-toggle-icon theme-toggle-icon--moon" aria-hidden="true"></i><i class="fa fa-sun-o theme-toggle-icon theme-toggle-icon--sun" aria-hidden="true"></i></button>
           <div class="header-actions-desktop d-flex align-items-center gap-2">
-            <button type="button" id="themeToggle" class="theme-toggle-btn" aria-label="Toggle theme" title="Light/Dark theme"><i class="fa fa-moon-o theme-toggle-icon" aria-hidden="true"></i></button>
             {% if user.is_authenticated %}
               <div class="user-menu" id="userMenu">
                 <a href="{% url 'login_app:profile' user.username %}" class="text-decoration-none user-avatar-btn">{% include 'includes/thumb_avatar.html' with user=user %}</a>
@@ -42,14 +42,10 @@
               <a href="{% url 'login_app:login' %}" class="cstm-btn-sm custom-secondary-btn">Sign in</a>
             {% endif %}
           </div>
-          <button id="bottomBurgerBtn" type="button" class="bottom-burger" aria-label="Open menu" aria-expanded="false" aria-controls="bottomSideMenu">
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
         </div>
       </nav>
     </div>
   </header>
 </div>
-{% include 'includes/overlay-menu.html' %}
+{% comment %}Overlay slide menu — replaced by mobile bottom nav for now.{% endcomment %}
+{% comment %}{% include 'includes/overlay-menu.html' %}{% endcomment %}

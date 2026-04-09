@@ -101,7 +101,7 @@
     const readWrap = document.getElementById('detailCommentsReadMoreWrap');
     const preview = document.getElementById('commentsListPreview');
     if (readWrap && preview) {
-      const th = parseInt(preview.dataset.previewLimit || '5', 10) || 5;
+      const th = parseInt(preview.dataset.previewLimit || '10', 10) || 10;
       if (n > th) readWrap.removeAttribute('hidden');
       else readWrap.setAttribute('hidden', '');
     }
@@ -110,7 +110,7 @@
   /** Detail preview: roots are newest-first (same idea as liked-users queue). Cap at max roots; drop the oldest visible (end of list). */
   function trimDetailCommentsPreview(preview) {
     if (!preview) return;
-    const max = parseInt(preview.dataset.previewLimit || '5', 10) || 5;
+    const max = parseInt(preview.dataset.previewLimit || '10', 10) || 10;
     const roots = preview.querySelectorAll(':scope > .comment-block');
     if (roots.length <= max) return;
     for (let i = max; i < roots.length; i++) {

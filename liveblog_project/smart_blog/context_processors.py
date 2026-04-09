@@ -53,11 +53,16 @@ def spellcheck_context(request):
     return {"spellcheck_lang": getattr(settings, "SPELLCHECK_LANG", "en")}
 
 
-def nav_categories_context(request):
-    """
-    Header modal: categories ordered by popularity; first 12 chips + show more in same grid;
-    up to 6 cards — one popular post per top category (same as before).
-    """
+NAV_CATEGORIES_CACHE_KEY = "nav_categories_ctx"
+NAV_CATEGORIES_CACHE_TTL = 300  # 5 minutes
+
+
+def invalidate_nav_categories_cache():
+    """Call after category/item create/delete to refresh navigation data."""
+    cache.delete(NAV_CATEGORIES_CACHE_KEY)
+
+
+def _build_nav_categories_data():
     ranked = (
         Category.objects.annotate(
             posts_count=Count("items", filter=Q(items__is_published=True)),
@@ -88,7 +93,6 @@ def nav_categories_context(request):
             )
             .with_counters()
             .select_related("category", "author", "author__profile")
-            .prefetch_related("tags")
         )
         popular_item = apply_popular_filter(scoped).first()
         if not popular_item:
@@ -97,7 +101,6 @@ def nav_categories_context(request):
                     Item.objects.filter(category=cat, is_published=True)
                     .with_counters()
                     .select_related("category", "author", "author__profile")
-                    .prefetch_related("tags")
                 )
                 .order_by("-published_date", "-pk")
                 .first()
@@ -117,3 +120,16 @@ def nav_categories_context(request):
         "nav_categories_rest": nav_categories_rest,
         "categories_modal_popular_cards": categories_modal_popular_cards,
     }
+
+
+def nav_categories_context(request):
+    """
+    Header modal: categories ordered by popularity; first 12 chips + show more in same grid;
+    up to 6 cards — one popular post per top category.
+    Cached for NAV_CATEGORIES_CACHE_TTL seconds to avoid ~8-14 DB queries per request.
+    """
+    data = cache.get(NAV_CATEGORIES_CACHE_KEY)
+    if data is None:
+        data = _build_nav_categories_data()
+        cache.set(NAV_CATEGORIES_CACHE_KEY, data, NAV_CATEGORIES_CACHE_TTL)
+    return data

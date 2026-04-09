@@ -1,22 +1,32 @@
-// categories_modal.js — Categories dropdown-modal (header + overlay triggers)
+// categories_modal.js — Categories dropdown-modal (delegation + fresh DOM on each open/close for Turbo)
 (function () {
     'use strict';
 
-    const root = document.getElementById('categoriesModalRoot');
-    const backdrop = document.getElementById('categoriesModalBackdrop');
-    const closeBtn = document.getElementById('categoriesModalClose');
-    const dialogEl = document.getElementById('categoriesModalDialog');
-
-    if (!root || !backdrop || !closeBtn || !dialogEl) return;
+    if (window.__categoriesModalInit) return;
+    window.__categoriesModalInit = true;
 
     const TRIG_SEL = '.categories-modal-trigger';
     let isOpen = false;
     let lastTrigger = null;
 
-    const prevOverflow = { html: '', body: '' };
-
-    const chipsBtn = document.getElementById('categoriesModalChipsMoreBtn');
-    const chipsExtrasWrap = document.getElementById('categoriesModalChipsExtrasWrap');
+    function root() {
+        return document.getElementById('categoriesModalRoot');
+    }
+    function backdrop() {
+        return document.getElementById('categoriesModalBackdrop');
+    }
+    function closeBtn() {
+        return document.getElementById('categoriesModalClose');
+    }
+    function dialogEl() {
+        return document.getElementById('categoriesModalDialog');
+    }
+    function chipsBtn() {
+        return document.getElementById('categoriesModalChipsMoreBtn');
+    }
+    function chipsExtrasWrap() {
+        return document.getElementById('categoriesModalChipsExtrasWrap');
+    }
 
     function setExpandIcon(btn, up) {
         if (!btn) return;
@@ -26,34 +36,31 @@
     }
 
     function closeChipsExpand() {
-        if (!chipsBtn || !chipsExtrasWrap) return;
-        chipsExtrasWrap.classList.remove('is-expanded');
-        chipsExtrasWrap.setAttribute('inert', '');
-        chipsExtrasWrap.setAttribute('aria-hidden', 'true');
-        chipsBtn.setAttribute('aria-expanded', 'false');
-        setExpandIcon(chipsBtn, false);
+        const cb = chipsBtn();
+        const wrap = chipsExtrasWrap();
+        if (!cb || !wrap) return;
+        wrap.classList.remove('is-expanded');
+        wrap.setAttribute('inert', '');
+        wrap.setAttribute('aria-hidden', 'true');
+        cb.setAttribute('aria-expanded', 'false');
+        setExpandIcon(cb, false);
     }
 
     function toggleChipsExpand() {
-        if (!chipsBtn || !chipsExtrasWrap) return;
-        const willOpen = !chipsExtrasWrap.classList.contains('is-expanded');
-        chipsExtrasWrap.classList.toggle('is-expanded', willOpen);
+        const cb = chipsBtn();
+        const wrap = chipsExtrasWrap();
+        if (!cb || !wrap) return;
+        const willOpen = !wrap.classList.contains('is-expanded');
+        wrap.classList.toggle('is-expanded', willOpen);
         if (willOpen) {
-            chipsExtrasWrap.removeAttribute('inert');
-            chipsExtrasWrap.setAttribute('aria-hidden', 'false');
+            wrap.removeAttribute('inert');
+            wrap.setAttribute('aria-hidden', 'false');
         } else {
-            chipsExtrasWrap.setAttribute('inert', '');
-            chipsExtrasWrap.setAttribute('aria-hidden', 'true');
+            wrap.setAttribute('inert', '');
+            wrap.setAttribute('aria-hidden', 'true');
         }
-        chipsBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-        setExpandIcon(chipsBtn, willOpen);
-    }
-
-    if (chipsBtn) {
-        chipsBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            toggleChipsExpand();
-        });
+        cb.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        setExpandIcon(cb, willOpen);
     }
 
     function setTriggersExpanded(open) {
@@ -70,29 +77,38 @@
     }
 
     function openModal(triggerEl) {
-        if (isOpen) return;
+        const r = root();
+        if (!r || !backdrop() || !closeBtn() || !dialogEl() || isOpen) return;
         isOpen = true;
         lastTrigger = triggerEl && triggerEl.matches(TRIG_SEL) ? triggerEl : null;
 
-        lockScroll();
+        if (typeof lockScroll === 'function') {
+            lockScroll();
+        }
 
-        root.classList.remove('hidden');
-        root.setAttribute('aria-hidden', 'false');
+        r.classList.remove('hidden');
+        r.setAttribute('aria-hidden', 'false');
         setTriggersExpanded(true);
 
         closeChipsExpand();
 
-        closeBtn.focus();
+        const cb = closeBtn();
+        if (cb) cb.focus();
     }
 
     function closeModal() {
         if (!isOpen) return;
+        const r = root();
         isOpen = false;
 
-        unlockScroll();
+        if (typeof unlockScroll === 'function') {
+            unlockScroll();
+        }
 
-        root.classList.add('hidden');
-        root.setAttribute('aria-hidden', 'true');
+        if (r) {
+            r.classList.add('hidden');
+            r.setAttribute('aria-hidden', 'true');
+        }
         setTriggersExpanded(false);
 
         const t = lastTrigger;
@@ -101,13 +117,37 @@
             try {
                 t.focus({ preventScroll: true });
             } catch (e) {
-                try { t.focus(); } catch (e2) { /* ignore */ }
+                try {
+                    t.focus();
+                } catch (e2) {
+                    /* ignore */
+                }
             }
         }
     }
 
     document.addEventListener('click', function (e) {
-        const trigger = e.target.closest(TRIG_SEL);
+        const chips = e.target && e.target.closest ? e.target.closest('#categoriesModalChipsMoreBtn') : null;
+        if (chips) {
+            e.preventDefault();
+            toggleChipsExpand();
+            return;
+        }
+
+        const closeEl = e.target && e.target.closest ? e.target.closest('#categoriesModalClose') : null;
+        if (closeEl) {
+            e.preventDefault();
+            closeModal();
+            return;
+        }
+
+        const bd = e.target && e.target.closest ? e.target.closest('#categoriesModalBackdrop') : null;
+        if (bd) {
+            closeModal();
+            return;
+        }
+
+        const trigger = e.target && e.target.closest ? e.target.closest(TRIG_SEL) : null;
         if (!trigger) return;
 
         e.preventDefault();
@@ -119,19 +159,19 @@
         openModal(trigger);
     });
 
-    closeBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        closeModal();
-    });
-
-    backdrop.addEventListener('click', function () {
-        closeModal();
-    });
-
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && isOpen) {
             e.preventDefault();
             closeModal();
         }
     });
+
+    var turboRoot = typeof document !== 'undefined' ? document.documentElement : null;
+    if (turboRoot) {
+        turboRoot.addEventListener('turbo:before-visit', function () {
+            if (isOpen) {
+                closeModal();
+            }
+        });
+    }
 })();

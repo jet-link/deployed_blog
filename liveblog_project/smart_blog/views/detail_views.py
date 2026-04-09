@@ -24,7 +24,7 @@ from smart_blog.selectors import has_user_reported_item
 from smart_blog.services.report_limits import can_user_report
 from smart_blog.utils import breadcrumb, build_breadcrumbs
 
-DETAIL_COMMENT_PREVIEW_LIMIT = 5
+DETAIL_COMMENT_PREVIEW_LIMIT = 10
 
 
 def _comments_querysets_for_item(request, item):

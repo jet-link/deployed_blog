@@ -36,8 +36,6 @@ from smart_blog.views.item_crud_views import (  # noqa: F401
     find_existing_media_path,
 )
 
-from smart_blog.views.editor_playground_views import editor_playground  # noqa: F401
-
 from smart_blog.views.interaction_views import (  # noqa: F401
     toggle_like,
     toggle_bookmark,

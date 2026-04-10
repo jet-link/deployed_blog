@@ -218,6 +218,20 @@ html[data-theme="dark"] .password-toggle.password-toggle--inside:focus-visible {
     margin-bottom: 1.1rem !important;
 }
 
+.auth-form-layout .auth-form-submit-row {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.auth-form-layout .auth-form-submit-row .auth-form-submit-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
 /* iOS / Android: inputs must stay ≥16px so the browser does not zoom on focus */
 @media (max-width: 767.98px) {
     .auth-form-layout {
@@ -290,19 +304,7 @@ html[data-theme="dark"] .password-toggle.password-toggle--inside:focus-visible {
         bottom: 0.68rem;
     }
 
-    /* Login / Register: equal-width primary actions */
-    .auth-form-layout .auth-form-submit-row {
-        width: 100%;
-        display: flex;
-        flex-direction: row;
-        align-items: stretch;
-        gap: 0.5rem;
-    }
-
     .auth-form-layout .auth-form-submit-row .auth-form-submit-btn {
-        flex: 1 1 0;
-        min-width: 0;
-        box-sizing: border-box;
         padding-top: 0.95rem;
         padding-bottom: 0.95rem;
         padding-left: 0.5rem;

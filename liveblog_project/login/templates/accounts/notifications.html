@@ -58,11 +58,11 @@
             <!-- Header row -->
             <div class="notification-header small">
               <div class="d-flex justify-content-between align-items-center">
-                <div class="text-muted small d-flex align-items-center gap-2">
+                <div class="text-muted d-flex align-items-center gap-2">
                   {% if n.actor_name %}
-                    <a href="{% url 'login_app:profile' n.actor_name %}" class="custom_badge badge_primary">{{ n.actor_name }}</a>
+                    <a href="{% url 'login_app:profile' n.actor_name %}" class="actor-author-name fw-semibold text-decoration-none">{{ n.actor_name }}</a>
                   {% else %}
-                    <a href="{% url 'login_app:vanished' %}" class="fw-semibold text-muted text-decoration-none">Deleted user</a>
+                    <a href="{% url 'login_app:vanished' %}" class="actor-author-name fw-semibold text-decoration-none">Deleted user</a>
                   {% endif %}
                   <span>{{ n.header_text }}</span>
                   {% if n.notif_type == 'item_like' %}

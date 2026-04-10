@@ -21,6 +21,14 @@
           <button type="button" class="comment-menu-action" data-action="item-open-share">
             <i class="fa fa-share" aria-hidden="true"></i><span>Share</span>
           </button>
+          {% if user.is_authenticated and user == item.author and is_editable %}
+            <a href="{% url 'smart_blog:edit_item' item.slug %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="comment-menu-action text-decoration-none">
+              <i class="fa fa-pencil" aria-hidden="true"></i><span>Edit</span>
+            </a>
+            <button type="button" class="comment-menu-action badge_danger" data-bs-toggle="modal" data-bs-target="#confirmItemDeleteModal-{{ item.pk }}" data-editable-until="{{ editable_until_iso }}">
+              <i class="fa fa-trash" aria-hidden="true"></i><span>Remove</span>
+            </button>
+          {% endif %}
           {% if user != item.author and user.is_authenticated and not user.is_staff and not report_rate_limited and item.reports_count|default:0 < 10 %}
             <button type="button" class="comment-menu-action badge_danger" data-action="item-report" data-item-id="{{ item.pk }}">
               <i class="fa fa-flag" aria-hidden="true"></i><span>Report</span>
@@ -61,10 +69,6 @@
                 <span id="likesCount">{{ item.likes_count|human }}</span>
                 <i class="fa fa-heart" aria-hidden="true"></i>
               </div>
-              <!-- <div class="stat stat--comments">
-                <span id="commentsCount">{{ item.comments_count|human }}</span>
-                <i class="fa fa-comment" aria-hidden="true"></i>
-              </div> -->
               <div class="stat stat--reposts">
                 <span id="repostCount">{{ item.reposts_count|human }}</span>
                 <i class="fa fa-retweet" aria-hidden="true"></i>
@@ -133,7 +137,7 @@
       {% post_media_gallery item %}
     {% endif %}
     <!-- === published row: liked users left, like/bookmark actions right === -->
-    <div class="d-flex justify-content-between align-items-center mt-4">
+    <div class="d-flex justify-content-between align-items-center">
     {% comment %} <div class="d-flex justify-content-between align-items-center published_block my-4"> {% endcomment %}
       <div class="liked-users-block d-flex align-items-center">
         <span id="noLikesYet" class="small text-muted" {% if item.likes_count|add:0 >= 1 %}style="display:none"{% endif %}>No likes yet</span>
@@ -164,16 +168,6 @@
           {% if user != item.author %}
             <button class="like-btn fs-6 round" data-url="{% url 'smart_blog:toggle_like' item.slug %}" data-item-id="{{ item.pk }}" title="Like item"><i class="fa fa-{{ user_liked|yesno:'heart,heart-o' }}"></i></button>
             <button class="bookmark-btn fs-6 round" data-url="{% url 'smart_blog:toggle_bookmark' item.slug %}" data-item-id="{{ item.pk }}" title="I'm reading"><i class="fa fa-{{ user_bookmarked|yesno:'bookmark,bookmark-o' }}"></i></button>
-          {% endif %}
-          {% if user == item.author and is_editable %}
-            <a class="edit_btn manipulate"
-              href="{% url 'smart_blog:edit_item' item.slug %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
-              <i class="fa fa-pencil"></i>
-            </a>
-             <button type="button" class="delete_btn manipulate" data-bs-toggle="modal" data-bs-target="#confirmItemDeleteModal-{{ item.pk }}" data-editable-until="{{ editable_until_iso }}"><i class="fa fa-trash"></i></button>
-          {% elif user == item.author and not is_editable %}
-            <span class="text-muted manipulate expired_edit_delete" aria-label="Edit item" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Edit expired"><i class="fa fa-pencil"></i></span>
-            <span class="text-muted manipulate expired_edit_delete" aria-label="Delete item" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Remove expired"><i class="fa fa-trash-o"></i></span>
           {% endif %}
         {% endif %}
       </div>

@@ -37,7 +37,7 @@
           {% if user.is_authenticated %}
             <div class="mobile-bottom-nav__account mobile-bottom-nav__nav-cell">
               <button type="button"
-                class="mobile-bottom-nav__link mobile-bottom-nav__more-btn{% if slug_user == user.username and un == 'profile' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'profile-section' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'notifications' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'profile-edit' %} mobile-bottom-nav__link--active{% endif %}"
+                class="mobile-bottom-nav__link mobile-bottom-nav__more-btn{% if slug_user == user.username and un == 'profile' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'profile-section' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'notifications' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'profile-edit' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'create_item' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'edit_item' %} mobile-bottom-nav__link--active{% endif %}"
                 id="mobileNavMoreBtn"
                 aria-label="Account menu"
                 aria-expanded="false"
@@ -83,6 +83,10 @@
     <a href="{% url 'login_app:notifications' user.username %}" class="mobile-nav-account-popover__row notification-btn{% if notifications_count %} has-unread{% endif %}{% if slug_user == user.username and un == 'notifications' %} mobile-nav-account-popover__row--active{% endif %}"{% if notifications_count %} data-notifications-count="{{ notifications_count }}"{% endif %}>
       <i class="fa fa-bell mobile-nav-account-popover__ico" aria-hidden="true"></i>
       <span class="mobile-nav-account-popover__text">Notifications</span>
+    </a>
+    <a href="{% url 'smart_blog:create_item' %}" class="mobile-nav-account-popover__row{% if ns == 'smart_blog' and un == 'create_item' %} mobile-nav-account-popover__row--active{% endif %}">
+      <i class="fa fa-plus mobile-nav-account-popover__ico" aria-hidden="true"></i>
+      <span class="mobile-nav-account-popover__text">Create post</span>
     </a>
     <a href="{% url 'login_app:profile-edit' user.username %}" class="mobile-nav-account-popover__row{% if slug_user == user.username and un == 'profile-edit' %} mobile-nav-account-popover__row--active{% endif %}">
       <i class="fa fa-cog mobile-nav-account-popover__ico" aria-hidden="true"></i>

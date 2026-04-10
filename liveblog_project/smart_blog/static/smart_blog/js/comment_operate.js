@@ -1859,6 +1859,10 @@
         closeAllCommentMenus();
         return;
       }
+      if (actionBtn.tagName === 'A' && actionBtn.href) {
+        closeAllCommentMenus();
+        return;
+      }
       e.preventDefault();
       const action = actionBtn.dataset.action;
       const commentId = actionBtn.dataset.commentId;
@@ -2249,7 +2253,7 @@ function buildShortHTML(fullHTML, maxLen = 400) {
 
       const btn = document.createElement('button');
       btn.className = 'comment-toggle-btn';
-      btn.textContent = 'Read more';
+      btn.textContent = 'Show more';
 
       let expanded = false;
 
@@ -2258,7 +2262,7 @@ function buildShortHTML(fullHTML, maxLen = 400) {
           ? textEl.dataset.fullHtml
           : buildShortHTML(textEl.dataset.fullHtml, 350);
 
-        btn.textContent = expanded ? 'Read less' : 'Read more';
+        btn.textContent = expanded ? 'Show less' : 'Show more';
         textEl.classList.toggle('comment-text--truncated', !expanded);
       }
 

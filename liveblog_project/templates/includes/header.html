@@ -30,11 +30,12 @@
                   <a href="{% url 'login_app:profile' user.username %}" class="user-tooltip-profile-row text-muted">
                     <i class="fa fa-user-circle me-3" aria-hidden="true"></i><span class="user-tooltip-profile-name fw-semibold" title="{{ user.username }}">{% if user.username|length > 15 %}{{ user.username|slice:":12" }}…{% else %}{{ user.username }}{% endif %}</span>
                   </a>
-                  <a href="{% url 'login_app:profile-edit' request.user.username %}" class="text-muted"><i class="fa fa-cog me-3" aria-hidden="true"></i>Edit profile</a>
                   <a href="{% url 'login_app:notifications' user.username %}" class="text-muted notification-btn{% if notifications_count %} has-unread{% endif %}" data-notifications-count="{{ notifications_count }}">
                     <i class="fa fa-bell me-2" aria-hidden="true"></i>
                     Notifications
                   </a>
+                  <a href="{% url 'smart_blog:create_item' %}" class="text-muted"><i class="fa fa-plus me-3" aria-hidden="true"></i>Create post</a>
+                  <a href="{% url 'login_app:profile-edit' request.user.username %}" class="text-muted"><i class="fa fa-cog me-3" aria-hidden="true"></i>Edit profile</a>
                   <a href="#" class="danger signout-trigger"><i class="fa fa-sign-out me-3" aria-hidden="true"></i>Sign out</a>
                 </div>
               </div>

@@ -54,28 +54,7 @@
         </div>
         <hr class="text-muted" />
         <p class="card-text flex-grow-1 text-muted excerpt-html mb-3">{{ item.list_excerpt }}</p>
-        <div class="d-flex justify-content-between align-items-center pt-2">
-          {% if listing_source == 'profile' and listing_user and listing_section %}
-            <a href="{{ item.get_absolute_url }}?from=profile&amp;user={{ listing_user|urlencode }}&amp;section={{ listing_section }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read more<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
-          {% elif listing_source == 'profile' and listing_user %}
-            <a href="{{ item.get_absolute_url }}?from=profile&amp;user={{ listing_user|urlencode }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read more<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
-          {% elif listing_source == 'items_list' and listing_source_url %}
-            <a href="{{ item.get_absolute_url }}?from=items_list&amp;source_url={{ listing_source_url|urlencode }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read more<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
-          {% elif listing_source == 'for_you' and listing_source_url %}
-            <a href="{{ item.get_absolute_url }}?from=for_you&amp;source_url={{ listing_source_url|urlencode }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read more<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
-          {% elif listing_source == 'popular' and listing_source_url %}
-            <a href="{{ item.get_absolute_url }}?from=for_you&amp;source_url={{ listing_source_url|urlencode }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read more<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
-          {% elif listing_source == 'search' and listing_source_url and listing_query %}
-            <a href="{{ item.get_absolute_url }}?from=search&amp;source_url={{ listing_source_url|urlencode }}&amp;query={{ listing_query|urlencode }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read more<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
-          {% elif listing_source == 'tag' and listing_source_url and listing_tag %}
-            <a href="{{ item.get_absolute_url }}?from=tag&amp;source_url={{ listing_source_url|urlencode }}&amp;tag={{ listing_tag|urlencode }}&amp;tag_slug={{ listing_tag_slug|urlencode }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read more<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
-          {% elif listing_source == 'topic' and listing_source_url and listing_category %}
-            <a href="{{ item.get_absolute_url }}?from=topic&amp;source_url={{ listing_source_url|urlencode }}&amp;category={{ listing_category|urlencode }}&amp;category_slug={{ listing_category_slug|urlencode }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read more<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
-          {% elif listing_source == 'category' and listing_source_url and listing_category %}
-            <a href="{{ item.get_absolute_url }}?from=topic&amp;source_url={{ listing_source_url|urlencode }}&amp;category={{ listing_category|urlencode }}&amp;category_slug={{ listing_category_slug|urlencode }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read more<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
-          {% else %}
-            <a href="{{ item.get_absolute_url }}" class="stretched-link text-decoration-none item-link small" data-item-id="{{ item.pk }}">Read more<i class="fa fa-angle-right reading-angle ms-2" aria-hidden="true"></i></a>
-          {% endif %}
+        <div class="d-flex align-items-center pt-2">
           <div class="d-flex align-items-center VLB">
             <div class="item-stats item-stats--feed d-inline-flex align-items-center flex-wrap">
               <div class="stat stat--views">
@@ -86,6 +65,10 @@
                 <span id="likes-count-{{ item.pk }}">{{ item.likes_count|human }}</span>
                 <i class="fa fa-heart" aria-hidden="true"></i>
               </div>
+              <div class="stat stat--reposts">
+                <span id="reposts-count-{{ item.pk }}">{{ item.reposts_count|human }}</span>
+                <i class="fa fa-retweet" aria-hidden="true"></i>
+              </div>
               <div class="stat stat--comments">
                 <span id="comments-count-{{ item.pk }}">{{ item.comments_count|human }}</span>
                 <i class="fa fa-comment" aria-hidden="true"></i>
@@ -93,6 +76,27 @@
             </div>
           </div>
         </div>
+        {% if listing_source == 'profile' and listing_user and listing_section %}
+          <a href="{{ item.get_absolute_url }}?from=profile&amp;user={{ listing_user|urlencode }}&amp;section={{ listing_section }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+        {% elif listing_source == 'profile' and listing_user %}
+          <a href="{{ item.get_absolute_url }}?from=profile&amp;user={{ listing_user|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+        {% elif listing_source == 'items_list' and listing_source_url %}
+          <a href="{{ item.get_absolute_url }}?from=items_list&amp;source_url={{ listing_source_url|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+        {% elif listing_source == 'for_you' and listing_source_url %}
+          <a href="{{ item.get_absolute_url }}?from=for_you&amp;source_url={{ listing_source_url|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+        {% elif listing_source == 'popular' and listing_source_url %}
+          <a href="{{ item.get_absolute_url }}?from=for_you&amp;source_url={{ listing_source_url|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+        {% elif listing_source == 'search' and listing_source_url and listing_query %}
+          <a href="{{ item.get_absolute_url }}?from=search&amp;source_url={{ listing_source_url|urlencode }}&amp;query={{ listing_query|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+        {% elif listing_source == 'tag' and listing_source_url and listing_tag %}
+          <a href="{{ item.get_absolute_url }}?from=tag&amp;source_url={{ listing_source_url|urlencode }}&amp;tag={{ listing_tag|urlencode }}&amp;tag_slug={{ listing_tag_slug|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+        {% elif listing_source == 'topic' and listing_source_url and listing_category %}
+          <a href="{{ item.get_absolute_url }}?from=topic&amp;source_url={{ listing_source_url|urlencode }}&amp;category={{ listing_category|urlencode }}&amp;category_slug={{ listing_category_slug|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+        {% elif listing_source == 'category' and listing_source_url and listing_category %}
+          <a href="{{ item.get_absolute_url }}?from=topic&amp;source_url={{ listing_source_url|urlencode }}&amp;category={{ listing_category|urlencode }}&amp;category_slug={{ listing_category_slug|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+        {% else %}
+          <a href="{{ item.get_absolute_url }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+        {% endif %}
       </div>
     </div>
   </div>

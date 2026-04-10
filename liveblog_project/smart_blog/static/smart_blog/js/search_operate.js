@@ -216,13 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function syncOverlayBodyScrollability() {
-        if (!overlaySearchBody || !__searchOverlayOpen) return;
-        var slack = 2;
-        var scrollable = overlaySearchBody.scrollHeight > overlaySearchBody.clientHeight + slack;
-        overlaySearchBody.classList.toggle('overlay-search-body--scrollable', scrollable);
-        if (!scrollable) {
-            overlaySearchBody.scrollTop = 0;
-        }
+        /* Scroll is now always enabled via CSS (overflow-y: auto) — no class toggling needed. */
     }
 
     function attachOverlayBodyScrollWatch() {
@@ -261,7 +255,6 @@ document.addEventListener('DOMContentLoaded', function () {
             window.removeEventListener('orientationchange', __overlayBodyScrollVv);
             __overlayBodyScrollVv = null;
         }
-        overlaySearchBody.classList.remove('overlay-search-body--scrollable');
         overlaySearchBody.scrollTop = 0;
     }
 

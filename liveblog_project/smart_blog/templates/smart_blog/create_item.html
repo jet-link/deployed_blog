@@ -116,6 +116,20 @@
       const form = document.getElementById('itemForm');
       if (form) {
         form.addEventListener('submit', clearListing);
+        form.addEventListener('ajax:start', function () {
+          var pre = document.getElementById('brainPreloader');
+          if (!pre) return;
+          var lbl = pre.querySelector('.brain-preloader__label');
+          if (lbl) lbl.textContent = 'Posting...';
+          pre.classList.remove('hidden');
+          pre.setAttribute('aria-busy', 'true');
+          document.documentElement.classList.add('brain-preloader-active');
+        });
+        form.addEventListener('ajax:error', function () {
+          var pre = document.getElementById('brainPreloader');
+          if (pre) { pre.classList.add('hidden'); pre.removeAttribute('aria-busy'); }
+          document.documentElement.classList.remove('brain-preloader-active');
+        });
       }
 
       const trustStatusUrl = "{% url 'login_app:api_trust_status' %}";

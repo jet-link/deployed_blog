@@ -584,8 +584,27 @@
 
 /* Video gallery overlay responsive */
 @media (max-width: 767px) {
-    .video-gallery-overlay-inner {
-        width: 95vw;
+    .video-gallery-overlay-inner.vg-landscape {
+        width: 98vw;
+    }
+
+    .video-gallery-overlay-inner.vg-portrait {
+        height: 75vh;
+        max-width: 98vw;
+    }
+
+    .vg-portrait .video-gallery-player {
+        height: 75vh;
+        max-width: 98vw;
+    }
+
+    .vg-portrait .plyr {
+        height: 75vh;
+        max-width: 98vw;
+    }
+
+    .vg-portrait .plyr__video-wrapper {
+        height: calc(75vh - 46px);
     }
 
     .vgzone {

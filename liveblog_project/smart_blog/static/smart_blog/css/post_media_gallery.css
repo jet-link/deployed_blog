@@ -315,6 +315,27 @@
 }
 
 /* —— Lightbox additions (used by image_gallery.js) —— */
+/* Section label above content (same typography as counter) */
+.gallery-overlay .gallery-overlay-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: max(0.85rem, env(safe-area-inset-top));
+  z-index: 5;
+  display: block;
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  box-sizing: border-box;
+  width: 100%;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.92);
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}
+
 /* Counter docked to bottom of overlay (fixed layer); does not move with image/caption stack */
 .gallery-overlay .gcount {
   position: absolute;

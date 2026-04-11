@@ -776,8 +776,8 @@ textarea.form-control.auto-grow {
 }
 
 .form-check-input:checked {
-    background-color: var(--btn-primary-bg);
-    border-color: var(--btn-primary-bg);
+    background-color: var(--text-link, #273c75);
+    border-color: var(--text-link, #273c75);
 }
 
 .form-check-input:focus {
@@ -3316,7 +3316,23 @@ input::-webkit-search-decoration {
 
     html[data-theme="dark"] .mobile-nav-account-popover.is-open::after {
         border-top-color: var(--border-strong, #484f58);
-        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+        filter: none;
+    }
+
+    html[data-theme="dark"] .mobile-nav-account-popover.is-open::before {
+        content: '';
+        position: absolute;
+        left: var(--popover-caret-x);
+        top: 100%;
+        margin-top: -1px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid var(--card-bg, #1c2128);
+        pointer-events: none;
+        z-index: 2;
     }
 
     .mobile-nav-account-popover__row {
@@ -4204,7 +4220,22 @@ html[data-theme="dark"] .comment-menu--actions-bar .comment-actions {
 
 html[data-theme="dark"] .comment-menu--actions-bar .comment-actions::before {
     border-bottom-color: var(--border-strong, #484f58);
-    filter: drop-shadow(0 -1px 2px rgba(0, 0, 0, 0.35));
+    filter: none;
+}
+
+html[data-theme="dark"] .comment-menu--actions-bar .comment-actions::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    right: 7px;
+    margin-bottom: -1px;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 7px solid var(--card-bg, #1c2128);
+    pointer-events: none;
+    z-index: 2;
 }
 
 .comment-menu--actions-bar.open .comment-actions {
@@ -6908,10 +6939,12 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
 /* ========== Pinned Media Links (detail page) ========== */
 .post-media-pinned {
     margin: 1.5rem 0 2rem;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .post-media-pinned__links {
-    display: flex;
+    display: inline-flex;
     flex-wrap: wrap;
     gap: 0.75rem;
 }
@@ -6921,21 +6954,19 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.6rem 1rem;
-    font-size: 0.875rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.84rem;
     font-weight: 600;
-    color: var(--text-default);
-    background: var(--bg-muted);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md, 8px);
+    color: var(--text-link, #273c75);
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    border-bottom: 1px dashed currentColor;
+    transition: color 0.15s ease, border-color 0.15s ease;
+    box-sizing: border-box;
 }
 
 .post-media-pinned__link:hover {
-    background: var(--bg-subtle);
-    border-color: var(--border-strong);
-    color: var(--text-link);
+    color: var(--text-link-hover, #1e3060);
+    border-bottom-style: solid;
 }
 
 .post-media-pinned__link .fa {
@@ -6952,12 +6983,27 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
     font-size: 0.75rem;
     font-weight: 700;
     line-height: 1;
-    background: var(--btn-primary-bg);
-    color: var(--btn-primary-fg);
+    background: var(--text-link, #273c75);
+    color: #fff;
     border-radius: var(--radius-full, 9999px);
 }
 
 /* ========== Video Gallery Overlay ========== */
+.video-gallery-title {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: max(0.85rem, env(safe-area-inset-top));
+    z-index: 5;
+    text-align: center;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+    pointer-events: none;
+}
+
 .video-gallery-overlay {
     position: fixed;
     inset: 0;
@@ -6965,7 +7011,7 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-overlay, rgba(0, 0, 0, 0.85));
+    background: rgba(0, 0, 0, 0.92);
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s ease, visibility 0.2s ease;
@@ -6981,46 +7027,87 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: min(90vw, 900px);
-    max-height: 80vh;
     pointer-events: auto;
     touch-action: pan-y pinch-zoom;
+    transition: opacity 0.15s ease;
+    will-change: opacity;
+}
+
+/* Landscape (horizontal) — fill width */
+.video-gallery-overlay-inner.vg-landscape {
+    width: min(92vw, 1100px);
+    max-height: 90vh;
+}
+
+/* Portrait (vertical) — fill height with room for close btn & counter */
+.video-gallery-overlay-inner.vg-portrait {
+    height: 78vh;
+    width: auto;
+    max-width: 92vw;
 }
 
 .video-gallery-player {
-    width: 100%;
-    max-height: 70vh;
     border-radius: 8px;
     background: #000;
+    display: block;
+}
+
+.vg-landscape .video-gallery-player {
+    width: 100%;
+    height: auto;
+    max-height: 85vh;
+}
+
+.vg-portrait .video-gallery-player {
+    height: 78vh;
+    width: auto;
+    max-width: 92vw;
 }
 
 .video-gallery-overlay .plyr {
-    width: 100%;
     border-radius: 8px;
     --plyr-color-main: var(--btn-primary-bg, #273c75);
 }
 
+.vg-landscape .plyr {
+    width: 100%;
+}
+
+.vg-portrait .plyr {
+    height: 78vh;
+    width: auto;
+    max-width: 92vw;
+}
+
+.vg-portrait .plyr__video-wrapper {
+    height: calc(78vh - 46px);
+}
+
 .video-gallery-close {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    z-index: 10;
-    all: unset;
+    position: fixed;
+    top: max(.5rem, env(safe-area-inset-top, 0px));
+    right: max(.5rem, env(safe-area-inset-right, 0px));
+    z-index: 10001;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    font-size: 1.25rem;
-    color: rgba(255, 255, 255, 0.9);
+    width: 45px;
+    height: 45px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.75);
     cursor: pointer;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.4);
-    transition: background-color 0.15s ease;
+    transition: color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.video-gallery-close:hover {
-    background: rgba(0, 0, 0, 0.65);
+.video-gallery-close:hover,
+.video-gallery-close:focus-visible {
+    color: #fff;
+    background: none;
 }
 
 .vgzone {
@@ -7074,34 +7161,21 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
 .feed-card-pin {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    margin-left: auto;
+    gap: 0.5rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-link, #273c75);
     white-space: nowrap;
 }
 
 .feed-card-pin .fa-thumb-tack {
     font-size: 0.82rem;
-    opacity: 0.7;
+    opacity: 0.85;
 }
 
 .feed-card-pin__labels {
     font-size: 0.72rem;
     font-weight: 500;
-}
-
-@media (max-width: 767px) {
-    .feed-card-bottom-row {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .feed-card-pin {
-        margin-left: 0;
-        margin-top: 4px;
-    }
 }
 
 /* ========== Media Upload Row (create/edit) ========== */
@@ -7128,9 +7202,10 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
     padding: 0.5rem;
 }
 
-.item-media-upload-row .item-images-upload--native {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
+.item-media-upload-row .item-images-upload--native,
+.item-media-upload-row .item-images-upload--native .item-images-file-input {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
 }
 
 /* ========== Video Preview Thumbs ========== */
@@ -7188,10 +7263,10 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
     padding: 0.85rem;
     border: 1px solid var(--border-default);
     border-radius: var(--btn-radius, 8px);
+    resize: none;
     background: var(--bg-default);
     color: var(--text-default);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    resize: vertical;
 }
 
 #commentForm textarea.form-control:focus,

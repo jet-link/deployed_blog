@@ -431,8 +431,12 @@
                         } catch (e) { /* ignore */ }
                     });
                     form.dataset.ajaxSubmitting = '1';
+                    form.dispatchEvent(new CustomEvent('ajax:start', { bubbles: true }));
                     try {
-                        await submitFormAjax(form);
+                        const result = await submitFormAjax(form);
+                        if (!result || !result.ok) {
+                            form.dispatchEvent(new CustomEvent('ajax:error', { bubbles: true }));
+                        }
                     } finally {
                         form.dataset.ajaxSubmitting = '0';
                         submitBtns.forEach(b => { try { b.disabled = false; } catch (e) { } });

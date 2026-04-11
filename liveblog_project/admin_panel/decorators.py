@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 
-_ADMIN_LOGIN_URL = getattr(settings, "LOGIN_URL", "/profile/login/")
+_ADMIN_LOGIN_URL = getattr(settings, "LOGIN_URL", "/login/")
 
 
 def is_admin(user):

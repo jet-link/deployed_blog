@@ -42,7 +42,7 @@
             {% endif %}
             {% if user.is_authenticated %}
               {% if not item.author_id or user.id != item.author_id %}
-                <span id="reading-badge-{{ item.pk }}" class="item-reading-badge"{% if not item.user_bookmarked %} hidden{% endif %}>I'm reading</span>
+                <span id="reading-badge-{{ item.pk }}" class="item-reading-badge"{% if not item.user_bookmarked %} hidden{% endif %}>I'll read it</span>
               {% endif %}
             {% endif %}
           </div>

@@ -45,7 +45,7 @@
               <span class="item-category-badge" title="Category">{{ item.category.name }}</span>
               {% if user.is_authenticated %}
                 {% if not item.author_id or user.id != item.author_id %}
-                  <span id="itemReadingBadge" class="item-reading-badge"{% if not user_bookmarked %} hidden{% endif %}>I'm reading</span>
+                  <span id="itemReadingBadge" class="item-reading-badge"{% if not user_bookmarked %} hidden{% endif %}>I'll read it</span>
                 {% endif %}
               {% endif %}
             </div>

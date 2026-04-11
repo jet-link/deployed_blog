@@ -13,6 +13,8 @@ def robots_txt(request):
         "User-agent: *\n"
         "Disallow: /admin/\n"
         "Disallow: /profile/\n"
+        "Disallow: /login/\n"
+        "Disallow: /register/\n"
         "\n"
         f"Sitemap: {request.build_absolute_uri('/sitemap.xml')}\n"
     )
@@ -37,9 +39,11 @@ urlpatterns = [
     # Blog: hub pages at /for-you/, /trending/, /topics/; rest under /blog/ (see smart_blog.urls)
     path('', include('smart_blog.urls')),
 
+    # Auth at /login/, /register/; profile at /profile/<username>/
+    path('', include('login.urls')),
+
     # Pages last so slug patterns do not shadow other routes
     path('', include('pages.urls', namespace='pages')),
-    path('profile/', include('login.urls')),
 ]
 
 if settings.DEBUG:

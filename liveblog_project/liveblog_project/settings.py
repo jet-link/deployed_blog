@@ -234,14 +234,14 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-# django-allauth (social login uses /accounts/…; password login stays at /profile/login/)
+# django-allauth (social login uses /accounts/…; password login stays at /login/)
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_LOGIN_METHODS = {'username', 'email'}
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_ADAPTER = 'login.adapters.AccountAdapter'
 SOCIALACCOUNT_ADAPTER = 'login.adapters.CustomSocialAccountAdapter'
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
-ACCOUNT_LOGOUT_REDIRECT_URL = '/profile/login/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/login/'
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http' if DEBUG else 'https'
 
 _goog_cid = os.environ.get('GOOGLE_OAUTH_CLIENT_ID', '').strip()
@@ -390,7 +390,7 @@ except ImportError:
 TRENDING_API_CACHE_SECONDS = int(os.environ.get("TRENDING_API_CACHE_SECONDS", "420"))
 
 # Admin panel login redirect
-LOGIN_URL = '/profile/login/'
+LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 
 # Spellcheck language (ru/en) - used by spellcheck.js via data-spellcheck-lang

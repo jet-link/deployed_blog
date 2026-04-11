@@ -250,7 +250,7 @@ html[data-theme="dark"] .custom-select-category:focus {
     color: #3d454d;
     border: 1px solid color-mix(in srgb, #6c757d 40%, var(--border-default));
     background: color-mix(in srgb, #6c757d 11%, var(--card-bg));
-    border-radius: 8px;
+    border-radius: 6px;
     box-sizing: border-box;
     flex-shrink: 0;
     transition:
@@ -3129,13 +3129,13 @@ input::-webkit-search-decoration {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 3px;
+        gap: 5px;
         padding: 4px 0;
         text-decoration: none;
         color: var(--text-muted);
         font-size: 0.775rem;
         font-weight: 600;
-        line-height: 1;
+        /* line-height: 1; */
         letter-spacing: 0.01em;
         text-align: center;
         border: none;
@@ -3272,7 +3272,7 @@ input::-webkit-search-decoration {
         margin: 0;
         background: var(--card-bg, #fff);
         border: 1px solid var(--border-subtle, #e8e8ec);
-        border-radius: 14px;
+        border-radius: 6px;
         box-shadow:
             0 14px 40px rgba(0, 0, 0, 0.14),
             0 4px 12px rgba(0, 0, 0, 0.06);
@@ -4160,7 +4160,7 @@ html[data-theme="dark"] .overflow-more-btn__dot {
     max-width: min(220px, calc(100vw - 32px));
     background: var(--card-bg);
     border: 1px solid var(--border-default);
-    border-radius: 7px;
+    border-radius: 6px;
     box-shadow: 3px 12px 25px rgba(0, 0, 0, 0.14);
     position: absolute;
     right: 0;
@@ -4302,8 +4302,8 @@ html[data-theme="dark"] .comment-menu--actions-bar .comment-actions .comment-men
     flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem;
-    margin-top: 0.5rem;
-    padding-top: 0.15rem;
+    margin-top: 0.4rem;
+    /* padding-top: 0.15rem; */
 }
 
 .comment-actions-bar .small {
@@ -4462,7 +4462,7 @@ a.comment-replies-thread-link {
     padding: 0.28rem 0.7rem 0.28rem 0.85rem;
     border-radius: 999px;
     line-height: 1.2;
-    margin-top: 0.35rem;
+    margin: .7rem 0;
     box-sizing: border-box;
 }
 
@@ -4663,7 +4663,7 @@ a.comment-replies-thread-link:focus-visible {
     cursor: pointer;
     text-decoration: none;
     font-weight: 600;
-    margin-top: 20px;
+    margin-top: 15px;
     padding: 0;
 }
 
@@ -5904,7 +5904,7 @@ html[data-theme="dark"] .comment_likes_badge {
 .custom_badge,
 .replied-badge {
     padding: 3px 12px;
-    border-radius: 20px;
+    border-radius: 6px;
     text-decoration: none;
     font-size: .7rem;
     border: 1px solid transparent;
@@ -6226,7 +6226,7 @@ html[data-theme="dark"] .comment_likes_badge {
 
 .item-stats--feed .stat {
     padding: 0.32rem 0.55rem;
-    border-radius: var(--radius-md);
+    border-radius: 6px;
     border: 1px solid transparent;
     gap: 0.35rem;
     font-size: 0.75rem;
@@ -6780,6 +6780,24 @@ html[data-theme="dark"] .trending-card--topic {
 
 html[data-theme="dark"] .trending-card--topic:hover {
     box-shadow: 0 0.4rem 1.25rem rgba(0, 0, 0, 0.45);
+}
+
+.topic-tile--in-trend {
+    box-shadow: 0 2px 12px rgba(238, 90, 90, 0.15);
+    border-color: rgba(238, 90, 90, 0.18);
+}
+
+.topic-tile--in-trend:hover {
+    box-shadow: 0 4px 18px rgba(238, 90, 90, 0.22);
+}
+
+html[data-theme="dark"] .topic-tile--in-trend {
+    box-shadow: 0 2px 12px rgba(255, 107, 107, 0.12);
+    border-color: rgba(255, 107, 107, 0.15);
+}
+
+html[data-theme="dark"] .topic-tile--in-trend:hover {
+    box-shadow: 0 4px 18px rgba(255, 107, 107, 0.2);
 }
 
 /* Profile created tiles: title row + meta spans; gap replaces margins (badges: global .trending-badge only) */

@@ -133,9 +133,7 @@
     <div class="item-text ck-content my-5">
       {{ item.text|safe }}
     </div>
-    {% if item.images.all %}
-      {% post_media_gallery item %}
-    {% endif %}
+    {% post_media_gallery item %}
     <!-- === published row: liked users left, like/bookmark actions right === -->
     <div class="d-flex justify-content-between align-items-center">
     {% comment %} <div class="d-flex justify-content-between align-items-center published_block my-4"> {% endcomment %}
@@ -262,7 +260,7 @@
         {% endfor %}
       </div>
       <div class="mt-3" id="detailCommentsReadMoreWrap"{% if item.comments_count <= detail_comment_preview_limit %} hidden{% endif %}>
-        <a href="{% url 'smart_blog:item_comments' item.slug %}" class="text-decoration-none fw-semibold d-inline-flex align-items-center gap-3 item-all-comments-link" id="detailCommentsMoreLink">
+        <a href="{% url 'smart_blog:item_comments' item.slug %}#scroll-to-11" class="text-decoration-none fw-semibold d-inline-flex align-items-center gap-3 item-all-comments-link" id="detailCommentsMoreLink">
           <span>More comments</span>
           <i class="fa fa-angle-right reading-angle" aria-hidden="true"></i>
         </a>

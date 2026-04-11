@@ -20,7 +20,7 @@
       {% comment %} <p class="text-muted small mb-0">{{ page_obj.paginator.count }} post{{ page_obj.paginator.count|pluralize }}</p> {% endcomment %}
     </div>
 
-    <div id="topicSortBar" class="topic-sort-bar filter-select d-flex flex-wrap gap-1 mb-4" role="tablist" aria-label="Sort posts">
+    <div id="topicSortBar" class="topic-sort-bar filter-select d-flex flex-nowrap gap-1 mb-4 filter-scroll-x" role="tablist" aria-label="Sort posts">
       {% url 'smart_blog:topic_detail' slug=category.slug as topic_base %}
       <button
         type="button"

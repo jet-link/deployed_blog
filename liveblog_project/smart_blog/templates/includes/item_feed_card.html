@@ -54,7 +54,7 @@
         </div>
         <hr class="text-muted" />
         <p class="card-text flex-grow-1 text-muted excerpt-html mb-3">{{ item.list_excerpt }}</p>
-        <div class="d-flex align-items-center pt-2">
+        <div class="d-flex align-items-center pt-2 feed-card-bottom-row">
           <div class="d-flex align-items-center VLB">
             <div class="item-stats item-stats--feed d-inline-flex align-items-center flex-wrap">
               <div class="stat stat--views">
@@ -75,6 +75,14 @@
               </div>
             </div>
           </div>
+          {% if item.has_photos or item.has_videos %}
+            <div class="feed-card-pin">
+              <i class="fa fa-thumb-tack" aria-hidden="true"></i>
+              <span class="feed-card-pin__labels">
+                {% if item.has_photos %}photos{% endif %}{% if item.has_photos and item.has_videos %}, {% endif %}{% if item.has_videos %}videos{% endif %}
+              </span>
+            </div>
+          {% endif %}
         </div>
         {% if listing_source == 'profile' and listing_user and listing_section %}
           <a href="{{ item.get_absolute_url }}?from=profile&amp;user={{ listing_user|urlencode }}&amp;section={{ listing_section }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>

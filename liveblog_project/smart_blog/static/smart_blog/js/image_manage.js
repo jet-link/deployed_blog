@@ -333,6 +333,112 @@
 
     });
 
+    // Video upload handling
+    document.addEventListener('DOMContentLoaded', function () {
+        var videoInput = document.getElementById('id_videos');
+        var addVideoBtn = document.getElementById('btnAddVideo');
+        var videoPreview = document.getElementById('videoPreview');
+        var MAX_VIDEOS = 3;
+        var ALLOWED_VIDEO = ['video/mp4', 'video/webm', 'video/quicktime'];
+
+        if (addVideoBtn && videoInput) {
+            addVideoBtn.addEventListener('click', function () {
+                videoInput.click();
+            });
+        }
+
+        if (videoInput) {
+            videoInput.addEventListener('change', function () {
+                var files = Array.from(videoInput.files || []);
+                if (files.length > MAX_VIDEOS) {
+                    files = files.slice(0, MAX_VIDEOS);
+                    var dt = new DataTransfer();
+                    files.forEach(function (f) { dt.items.add(f); });
+                    videoInput.files = dt.files;
+                }
+                renderVideoPreview();
+            });
+        }
+
+        function renderVideoPreview() {
+            if (!videoPreview || !videoInput) return;
+            videoPreview.innerHTML = '';
+            var files = Array.from(videoInput.files || []);
+            files.forEach(function (f, i) {
+                var wrap = document.createElement('div');
+                wrap.className = 'video-preview-item existing-video position-relative text-center';
+                wrap.style.width = '150px';
+
+                var thumb = document.createElement('div');
+                thumb.className = 'existing-video__thumb';
+                thumb.innerHTML = '<i class="fa fa-video-camera"></i><small class="d-block text-muted mt-1">' + f.name.substring(0, 20) + '</small><small class="text-muted d-block">' + (f.size / (1024 * 1024)).toFixed(1) + ' MB</small>';
+                wrap.appendChild(thumb);
+
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm btn-danger btn-delete-video position-absolute';
+                btn.style.right = '5px';
+                btn.style.top = '5px';
+                btn.style.fontSize = '.7rem';
+                btn.innerHTML = '<i class="fa fa-times"></i>';
+                btn.addEventListener('click', function () {
+                    var cur = Array.from(videoInput.files || []);
+                    var dt = new DataTransfer();
+                    cur.forEach(function (vf, vi) { if (vi !== i) dt.items.add(vf); });
+                    videoInput.files = dt.files;
+                    renderVideoPreview();
+                });
+                wrap.appendChild(btn);
+                videoPreview.appendChild(wrap);
+            });
+        }
+    });
+
+    // Video mark-for-delete on edit page
+    document.addEventListener('DOMContentLoaded', function () {
+        var existingVideos = document.getElementById('existingVideos');
+        if (!existingVideos) return;
+
+        var deleteVideoContainer = document.getElementById('deleteVideoInputs') || (function () {
+            var d = document.createElement('div');
+            d.id = 'deleteVideoInputs';
+            existingVideos.insertAdjacentElement('afterend', d);
+            return d;
+        })();
+
+        existingVideos.addEventListener('click', function (ev) {
+            var btn = ev.target.closest && ev.target.closest('button.btn-mark-delete-video');
+            if (!btn) return;
+            ev.preventDefault();
+            var videoId = btn.dataset.videoId;
+            if (!videoId) return;
+            var wrapper = btn.closest('.existing-video');
+            if (!wrapper) return;
+            var isMarked = btn.getAttribute('aria-pressed') === 'true';
+            if (!isMarked) {
+                wrapper.classList.add('marked-for-delete');
+                wrapper.style.opacity = '0.5';
+                btn.innerHTML = '<i class="fa fa-undo" aria-hidden="true"></i>';
+                btn.setAttribute('aria-pressed', 'true');
+                btn.title = 'Unmark deletion';
+                var hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'delete_videos';
+                hidden.value = videoId;
+                hidden.id = 'delete-video-input-' + videoId;
+                deleteVideoContainer.appendChild(hidden);
+            } else {
+                wrapper.classList.remove('marked-for-delete');
+                wrapper.style.opacity = '';
+                btn.innerHTML = '<i class="fa fa-times"></i>';
+                btn.setAttribute('aria-pressed', 'false');
+                btn.title = 'Mark for deletion';
+                var hid = document.getElementById('delete-video-input-' + videoId);
+                if (hid) hid.remove();
+            }
+        });
+    });
+
     // second DOMContentLoaded block remains, for existingContainer mark/unmark logic
     document.addEventListener('DOMContentLoaded', function () {
         const existingContainer = document.getElementById('existingImages');

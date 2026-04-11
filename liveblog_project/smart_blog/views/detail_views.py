@@ -16,6 +16,7 @@ from smart_blog.models import (
     CommentLike,
     Item,
     ItemImage,
+    ItemVideo,
     ItemView,
     Like,
     ViewEvent,
@@ -111,6 +112,10 @@ def item_detail(request, slug):
             Prefetch(
                 "images",
                 queryset=ItemImage.objects.all().order_by("sort_order", "pk"),
+            ),
+            Prefetch(
+                "videos",
+                queryset=ItemVideo.objects.all().order_by("sort_order", "pk"),
             ),
         )
         .get(pk=item.pk)
@@ -265,6 +270,10 @@ def item_comments(request, slug):
             Prefetch(
                 "images",
                 queryset=ItemImage.objects.all().order_by("sort_order", "pk"),
+            ),
+            Prefetch(
+                "videos",
+                queryset=ItemVideo.objects.all().order_by("sort_order", "pk"),
             ),
         )
         .get(pk=item.pk)

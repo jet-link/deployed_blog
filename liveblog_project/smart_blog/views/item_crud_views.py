@@ -13,13 +13,19 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from smart_blog.forms import ItemCreateForm
-from smart_blog.models import Item, ItemImage
+from smart_blog.models import Item, ItemImage, ItemVideo
 from smart_blog.services.item_write import (
     attach_item_images_from_uploads,
     delete_item_images_by_ids,
     merge_item_tags,
     validate_edit_image_totals,
     validate_uploaded_image_files,
+)
+from smart_blog.video_utils import (
+    attach_item_videos_from_uploads,
+    delete_item_videos_by_ids,
+    validate_edit_video_totals,
+    validate_uploaded_video_files,
 )
 
 logger = logging.getLogger(__name__)
@@ -108,7 +114,18 @@ def create_item(request):
         )
 
     files = request.FILES.getlist("images")
+    video_files = request.FILES.getlist("videos")
     if not _image_validation_ok_create(form, files):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({"success": False, "errors": _json_form_errors(form)}, status=400)
+        selected_tag_ids = [int(x) for x in request.POST.getlist("tags") if x.isdigit()]
+        return render(
+            request,
+            "smart_blog/create_item.html",
+            {"form": form, "selected_tag_ids": selected_tag_ids},
+        )
+
+    if video_files and not validate_uploaded_video_files(video_files, form):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({"success": False, "errors": _json_form_errors(form)}, status=400)
         selected_tag_ids = [int(x) for x in request.POST.getlist("tags") if x.isdigit()]
@@ -125,6 +142,7 @@ def create_item(request):
             item.save()
             item.tags.set(merge_item_tags(form.cleaned_data))
             attach_item_images_from_uploads(item, files)
+            attach_item_videos_from_uploads(item, video_files)
     except Exception:
         logger.exception("create_item failed for user %s", request.user.pk)
         form.add_error(None, "Could not save the post. Please try again.")
@@ -170,11 +188,13 @@ def edit_item(request, slug):
             "form": form,
             "item": item,
             "existing_images": item.images.all(),
+            "existing_videos": item.videos.all(),
             "selected_tag_ids": selected_tag_ids,
         })
 
     form = ItemCreateForm(request.POST, item=item)
     delete_ids = request.POST.getlist("delete_images")
+    delete_video_ids = request.POST.getlist("delete_videos")
 
     if not form.is_valid():
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -184,10 +204,12 @@ def edit_item(request, slug):
             "form": form,
             "item": item,
             "existing_images": item.images.all(),
+            "existing_videos": item.videos.all(),
             "selected_tag_ids": selected_tag_ids,
         })
 
     files = request.FILES.getlist("images")
+    video_files = request.FILES.getlist("videos")
     if not _image_validation_ok_edit(form, item, files, delete_ids):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({"success": False, "errors": _json_form_errors(form)}, status=400)
@@ -196,6 +218,31 @@ def edit_item(request, slug):
             "form": form,
             "item": item,
             "existing_images": item.images.all(),
+            "existing_videos": item.videos.all(),
+            "selected_tag_ids": selected_tag_ids,
+        })
+
+    if video_files and not validate_uploaded_video_files(video_files, form):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({"success": False, "errors": _json_form_errors(form)}, status=400)
+        selected_tag_ids = [int(x) for x in request.POST.getlist("tags") if x.isdigit()]
+        return render(request, "smart_blog/edit_item.html", {
+            "form": form,
+            "item": item,
+            "existing_images": item.images.all(),
+            "existing_videos": item.videos.all(),
+            "selected_tag_ids": selected_tag_ids,
+        })
+
+    if video_files and not validate_edit_video_totals(item, video_files, delete_video_ids, form):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({"success": False, "errors": _json_form_errors(form)}, status=400)
+        selected_tag_ids = [int(x) for x in request.POST.getlist("tags") if x.isdigit()]
+        return render(request, "smart_blog/edit_item.html", {
+            "form": form,
+            "item": item,
+            "existing_images": item.images.all(),
+            "existing_videos": item.videos.all(),
             "selected_tag_ids": selected_tag_ids,
         })
 
@@ -218,13 +265,15 @@ def edit_item(request, slug):
             if old_tag_ids != new_tag_ids:
                 item.edited = True
 
-            if delete_ids or files:
+            if delete_ids or files or delete_video_ids or video_files:
                 item.edited = True
 
             item.save()
             item.tags.set(merged_tags)
             delete_item_images_by_ids(item, delete_ids)
             attach_item_images_from_uploads(item, files)
+            delete_item_videos_by_ids(item, delete_video_ids)
+            attach_item_videos_from_uploads(item, video_files)
     except Exception:
         logger.exception("edit_item failed for item %s user %s", item.pk, request.user.pk)
         form.add_error(None, "Could not save changes. Please try again.")
@@ -235,6 +284,7 @@ def edit_item(request, slug):
             "form": form,
             "item": item,
             "existing_images": item.images.all(),
+            "existing_videos": item.videos.all(),
             "selected_tag_ids": selected_tag_ids,
         })
 

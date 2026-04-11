@@ -1,4 +1,4 @@
-"""Reusable post image gallery context for detail pages."""
+"""Reusable post media context: photo/video pinned links + JSON payloads."""
 from __future__ import annotations
 
 from typing import Any, Dict, List
@@ -27,43 +27,40 @@ def _slides_payload(images) -> List[Dict[str, Any]]:
     return out
 
 
+def _video_payload(videos) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for v in videos:
+        out.append(
+            {
+                "src": v.video.url,
+                "caption": (v.caption or "").strip(),
+            }
+        )
+    return out
+
+
 @register.inclusion_tag("smart_blog/includes/post_media_gallery.html")
 def post_media_gallery(item):
-    """Editorial grid + JSON payload for the shared lightbox script."""
+    """Pinned photos/videos links + JSON payloads for lightbox/video viewer."""
     images = list(item.images.all())
-    n = len(images)
-    if n == 0:
+    videos = list(item.videos.all()) if hasattr(item, 'videos') else []
+
+    n_images = len(images)
+    n_videos = len(videos)
+
+    if n_images == 0 and n_videos == 0:
         return {"show": False}
 
-    slides = _slides_payload(images)
-
-    if n == 1:
-        layout = "single"
-        slots = [{"index": 0, "img": images[0], "overlay_more": 0}]
-    elif n == 2:
-        layout = "double"
-        slots = [{"index": i, "img": images[i], "overlay_more": 0} for i in range(2)]
-    elif n == 3:
-        layout = "triple"
-        slots = [{"index": i, "img": images[i], "overlay_more": 0} for i in range(3)]
-    elif n == 4:
-        layout = "quad"
-        slots = [{"index": i, "img": images[i], "overlay_more": 0} for i in range(4)]
-    elif n == 5:
-        layout = "five"
-        slots = [{"index": i, "img": images[i], "overlay_more": 0} for i in range(5)]
-    else:
-        layout = "preview"
-        overlay = n - 5
-        slots = [{"index": i, "img": images[i], "overlay_more": 0} for i in range(4)]
-        slots.append({"index": 4, "img": images[4], "overlay_more": overlay})
+    slides = _slides_payload(images) if n_images else []
+    video_slides = _video_payload(videos) if n_videos else []
 
     return {
         "show": True,
         "item": item,
-        "layout": layout,
-        "slots": slots,
         "slides": slides,
-        "count": n,
+        "video_slides": video_slides,
+        "image_count": n_images,
+        "video_count": n_videos,
         "script_id": f"post-media-json-{item.pk}",
+        "video_script_id": f"post-video-json-{item.pk}",
     }

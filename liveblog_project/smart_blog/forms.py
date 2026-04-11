@@ -83,6 +83,13 @@ class ItemCreateForm(forms.ModelForm):
         label=_('Upload images'),
     )
 
+    videos = forms.FileField(
+        required=False,
+        widget=MultiFileInput(),
+        help_text="You can upload up to 3 videos per post.",
+        label=_('Upload videos'),
+    )
+
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all().order_by("tag_name"),
         required=False,

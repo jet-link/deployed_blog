@@ -569,3 +569,39 @@
         box-sizing: border-box;
     }
 }
+
+/* Pinned media links responsive */
+@media (max-width: 575px) {
+    .post-media-pinned__links {
+        flex-direction: column;
+    }
+
+    .post-media-pinned__link {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Video gallery overlay responsive */
+@media (max-width: 767px) {
+    .video-gallery-overlay-inner {
+        width: 95vw;
+    }
+
+    .vgzone {
+        width: 44px;
+    }
+
+    .vgzone__arrow {
+        font-size: 1.5rem;
+    }
+}
+
+/* Media upload row responsive */
+@media (max-width: 575px) {
+    .item-media-upload-row__video-btn {
+        width: 50px;
+        min-width: 50px;
+        font-size: 0.95rem;
+    }
+}

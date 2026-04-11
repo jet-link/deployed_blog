@@ -34,4 +34,22 @@
   <script defer src="{% static 'smart_blog/js/comment_restore_ui.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/comment_operate.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/report_modal.js' %}"></script>
+  <script>
+  (function () {
+    if (window.location.hash !== '#scroll-to-11') return;
+    function scrollTo11() {
+      var cards = document.querySelectorAll('#commentsList > .comment-block, #commentsList > .comment-card');
+      if (cards.length >= 11) {
+        var target = cards[10];
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { setTimeout(scrollTo11, 100); });
+    } else {
+      setTimeout(scrollTo11, 100);
+    }
+  })();
+  </script>
 {% endblock %}

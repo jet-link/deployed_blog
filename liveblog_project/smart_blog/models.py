@@ -380,6 +380,24 @@ class ItemImage(models.Model):
         return ", ".join(parts) if parts else ""
 
 
+class ItemVideo(models.Model):
+    """Video attachment for a post. Max 3 per post."""
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="videos")
+    video = models.FileField(upload_to="items/videos/%Y/%m/%d/")
+    thumbnail = models.ImageField(upload_to="items/videos/thumbs/", blank=True, null=True)
+    sort_order = models.PositiveSmallIntegerField(default=0, db_index=True)
+    caption = models.CharField(max_length=500, blank=True)
+    duration = models.FloatField(null=True, blank=True, help_text="Duration in seconds")
+    file_size = models.PositiveIntegerField(default=0, help_text="File size in bytes")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("sort_order", "pk")
+
+    def __str__(self):
+        return f"Video for {self.item_id}"
+
+
 class Comment(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="comments")
     author = models.ForeignKey(

@@ -4,7 +4,7 @@
   data-topic-name="{{ topic.name|escape }}"
   data-search-text="{{ topic.name|lower }} {{ topic.slug|lower }}"
 >
-  <div class="card-body d-flex flex-column py-3">
+  <div class="card-body d-flex flex-column py-4">
     <div class="d-flex justify-content-between align-items-start gap-2 mb-2 flex-wrap">
       <span class="trending-card__category text-truncate">{{ topic.name }}</span>
       {% if topic.pk in trending_category_ids %}

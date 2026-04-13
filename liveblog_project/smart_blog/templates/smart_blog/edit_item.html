@@ -88,7 +88,7 @@
           <div id="existingVideos" class="d-flex gap-2 flex-wrap mb-3">
             {% for vid in existing_videos %}
               <div id="video-{{ vid.pk }}" class="existing-video position-relative">
-                <div class="existing-video__thumb">
+                <div class="existing-video__thumb existing-video__thumb--poster" data-video-src="{{ vid.video.url }}">
                   <i class="fa fa-video-camera"></i>
                   <small class="d-block text-muted mt-1">Video {{ forloop.counter }}</small>
                 </div>
@@ -111,10 +111,11 @@
             </button>
             <input id="id_videos" name="videos" type="file" accept="video/mp4,video/webm,video/quicktime" multiple class="d-none" title="Choose videos" />
           </div>
-          <div id="imagesHelp" class="form-text">{% trans "JPEG/PNG/WebP · up to 10 images. MP4/WebM · up to 3 videos (50 MB each)." %}</div>
+          <div id="imagesHelp" class="form-text">{% trans "JPEG/PNG/WebP · up to 10 images. MP4/WebM/MOV · up to 1 video (200 MB)." %}</div>
           <div id="preview" class="mt-3 d-flex flex-wrap gap-2"></div>
           <div id="videoPreview" class="mt-2 d-flex flex-wrap gap-2"></div>
         </div>
+        <div id="postSizeWarning" class="post-size-warning" hidden></div>
         <div class="item-form-actions d-flex gap-1 align-items-center mt-2">
           <button class="cstm-btn custom-primary-btn" type="submit">Edit</button>
           <a href="{{ item.get_absolute_url }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="cstm-btn custom-secondary-btn">Cancel</a>

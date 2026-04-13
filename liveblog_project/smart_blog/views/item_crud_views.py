@@ -1,15 +1,20 @@
-"""Item CRUD views: create_item, edit_item, delete_item, delete_item_image."""
+"""Item CRUD views: create_item, edit_item, delete_item, delete_item_image, video_chunk_upload."""
+import hashlib
 import logging
 import os
+import tempfile
+import uuid
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 
 from smart_blog.forms import ItemCreateForm
@@ -22,6 +27,9 @@ from smart_blog.services.item_write import (
     validate_uploaded_image_files,
 )
 from smart_blog.video_utils import (
+    ALLOWED_VIDEO_MIME_TYPES,
+    MAX_VIDEO_FILE_SIZE_BYTES,
+    attach_chunked_videos,
     attach_item_videos_from_uploads,
     delete_item_videos_by_ids,
     validate_edit_video_totals,
@@ -29,6 +37,8 @@ from smart_blog.video_utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+CHUNK_UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "video_chunks")
 
 
 def find_existing_media_path(filename, subdir=None):
@@ -135,6 +145,8 @@ def create_item(request):
             {"form": form, "selected_tag_ids": selected_tag_ids},
         )
 
+    chunked_video_ids = request.POST.getlist("chunked_video_ids")
+
     try:
         with transaction.atomic():
             item = form.save(commit=False)
@@ -143,6 +155,8 @@ def create_item(request):
             item.tags.set(merge_item_tags(form.cleaned_data))
             attach_item_images_from_uploads(item, files)
             attach_item_videos_from_uploads(item, video_files)
+            if chunked_video_ids:
+                attach_chunked_videos(item, chunked_video_ids, request.session)
     except Exception:
         logger.exception("create_item failed for user %s", request.user.pk)
         form.add_error(None, "Could not save the post. Please try again.")
@@ -246,6 +260,8 @@ def edit_item(request, slug):
             "selected_tag_ids": selected_tag_ids,
         })
 
+    chunked_video_ids = request.POST.getlist("chunked_video_ids")
+
     try:
         with transaction.atomic():
             merged_tags = merge_item_tags(form.cleaned_data)
@@ -265,7 +281,7 @@ def edit_item(request, slug):
             if old_tag_ids != new_tag_ids:
                 item.edited = True
 
-            if delete_ids or files or delete_video_ids or video_files:
+            if delete_ids or files or delete_video_ids or video_files or chunked_video_ids:
                 item.edited = True
 
             item.save()
@@ -274,6 +290,8 @@ def edit_item(request, slug):
             attach_item_images_from_uploads(item, files)
             delete_item_videos_by_ids(item, delete_video_ids)
             attach_item_videos_from_uploads(item, video_files)
+            if chunked_video_ids:
+                attach_chunked_videos(item, chunked_video_ids, request.session)
     except Exception:
         logger.exception("edit_item failed for item %s user %s", item.pk, request.user.pk)
         form.add_error(None, "Could not save changes. Please try again.")
@@ -349,3 +367,112 @@ def delete_item(request, slug):
         return redirect(redirect_to)
 
     return redirect("smart_blog:items_list")
+
+
+# ---------------------------------------------------------------------------
+# Chunked video upload API
+# ---------------------------------------------------------------------------
+
+def _chunk_dir_for(upload_id):
+    safe_id = upload_id.replace("/", "").replace("..", "")
+    return os.path.join(CHUNK_UPLOAD_DIR, safe_id)
+
+
+@require_POST
+@login_required
+@csrf_protect
+def video_chunk_upload(request):
+    """Accept a single chunk of a video file.
+
+    Frontend sends each chunk as form-data with:
+      - ``chunk``      : the binary blob
+      - ``upload_id``  : client-generated UUID for this upload session
+      - ``chunk_index``: 0-based index
+      - ``total_chunks``: total expected
+      - ``filename``   : original file name
+    """
+    chunk = request.FILES.get("chunk")
+    upload_id = request.POST.get("upload_id", "").strip()
+    chunk_index = request.POST.get("chunk_index")
+    total_chunks = request.POST.get("total_chunks")
+    filename = request.POST.get("filename", "video.mp4").strip()
+
+    if not chunk or not upload_id or chunk_index is None or total_chunks is None:
+        return JsonResponse({"error": "Missing required fields."}, status=400)
+
+    chunk_index = int(chunk_index)
+    total_chunks = int(total_chunks)
+
+    dest_dir = _chunk_dir_for(upload_id)
+    os.makedirs(dest_dir, exist_ok=True)
+
+    chunk_path = os.path.join(dest_dir, f"{chunk_index:05d}")
+    with open(chunk_path, "wb") as fp:
+        for part in chunk.chunks():
+            fp.write(part)
+
+    received = len([f for f in os.listdir(dest_dir) if f not in (".", "..", "_assembled") and not f.startswith("_")])
+
+    if received < total_chunks:
+        return JsonResponse({"status": "ok", "received": received, "total": total_chunks})
+
+    # All chunks received — reassemble
+    assembled_path = os.path.join(dest_dir, "_assembled")
+    try:
+        with open(assembled_path, "wb") as out:
+            for i in range(total_chunks):
+                cp = os.path.join(dest_dir, f"{i:05d}")
+                with open(cp, "rb") as inp:
+                    while True:
+                        buf = inp.read(1024 * 1024)
+                        if not buf:
+                            break
+                        out.write(buf)
+
+        actual_size = os.path.getsize(assembled_path)
+        if actual_size > MAX_VIDEO_FILE_SIZE_BYTES:
+            _cleanup_chunks(dest_dir)
+            return JsonResponse(
+                {"error": f"Assembled file too large ({actual_size // (1024*1024)} MB)."},
+                status=400,
+            )
+
+        # Store assembled file path in a session-scoped dict so the
+        # create/edit view can pick it up later.
+        pending = request.session.get("pending_video_uploads", {})
+        pending[upload_id] = {
+            "path": assembled_path,
+            "filename": filename,
+            "size": actual_size,
+        }
+        request.session["pending_video_uploads"] = pending
+        request.session.modified = True
+
+        # Cleanup individual chunks (keep assembled)
+        for i in range(total_chunks):
+            cp = os.path.join(dest_dir, f"{i:05d}")
+            try:
+                os.remove(cp)
+            except OSError:
+                pass
+
+    except Exception:
+        logger.exception("Failed to assemble chunked upload %s", upload_id)
+        _cleanup_chunks(dest_dir)
+        return JsonResponse({"error": "Assembly failed."}, status=500)
+
+    return JsonResponse({
+        "status": "complete",
+        "upload_id": upload_id,
+        "filename": filename,
+        "size": actual_size,
+    })
+
+
+def _cleanup_chunks(dest_dir):
+    """Remove chunk directory and all its contents."""
+    try:
+        import shutil
+        shutil.rmtree(dest_dir, ignore_errors=True)
+    except Exception:
+        pass

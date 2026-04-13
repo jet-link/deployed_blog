@@ -212,6 +212,21 @@
   }
   window.buildThreadLink = buildThreadLink;
 
+  /** Match `replied_comments.html`: thread link lives inside `.comment-main`, after `#reply-form-*` (or after actions bar). */
+  function insertThreadLinkIntoParentMain(parentComment, parentId, linkEl) {
+    const main = parentComment?.querySelector?.('.comment-main');
+    if (!main || !linkEl) return;
+    const replyForm = main.querySelector(`#reply-form-${parentId}`);
+    if (replyForm) {
+      replyForm.after(linkEl);
+    } else {
+      const bar = main.querySelector('.comment-actions-bar');
+      if (bar) bar.after(linkEl);
+      else main.appendChild(linkEl);
+    }
+  }
+  window.insertThreadLinkIntoParentMain = insertThreadLinkIntoParentMain;
+
   function getThreadContext() {
     const marker = document.getElementById('threadViewMarker');
     if (!marker) return null;
@@ -930,10 +945,11 @@
                       const threadUrl =
                         parentComment?.dataset?.threadUrl || defaultThreadUrl(pid);
                       const replyCount = replies ? countDirectReplyBlocks(replies) : 1;
-                      const wrap = document.createElement('div');
-                      wrap.className = 'mt-4';
-                      wrap.appendChild(buildThreadLink(pid, threadUrl, replyCount));
-                      parentComment.appendChild(wrap);
+                      insertThreadLinkIntoParentMain(
+                        parentComment,
+                        pid,
+                        buildThreadLink(pid, threadUrl, replyCount)
+                      );
                     } else {
                       window.adjustThreadLinkCount?.(pid, -1);
                     }
@@ -1019,10 +1035,11 @@
               if (!link) {
                 const threadUrl =
                   parentComment?.dataset?.threadUrl || defaultThreadUrl(parentId);
-                const wrap = document.createElement('div');
-                wrap.className = 'mt-4';
-                wrap.appendChild(buildThreadLink(parentId, threadUrl, count));
-                parentComment.appendChild(wrap);
+                insertThreadLinkIntoParentMain(
+                  parentComment,
+                  parentId,
+                  buildThreadLink(parentId, threadUrl, count)
+                );
               } else {
                 setThreadLinkCount(parentId, count);
               }
@@ -2024,10 +2041,11 @@
           // For deep replies, keep only the thread link on item page
           let link = document.getElementById('replies-thread-link-' + parentId);
           if (!link) {
-            const wrap = document.createElement('div');
-            wrap.className = 'mt-4';
-            wrap.appendChild(buildThreadLink(parentId, threadUrl, 1));
-            parentComment.appendChild(wrap);
+            insertThreadLinkIntoParentMain(
+              parentComment,
+              parentId,
+              buildThreadLink(parentId, threadUrl, 1)
+            );
           } else {
             window.adjustThreadLinkCount?.(parentId, 1);
           }

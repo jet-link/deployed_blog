@@ -1,12 +1,13 @@
 # smart_blog/video_utils.py
 """Video upload validation and processing helpers."""
 import logging
+import os
 from typing import Sequence
 
 logger = logging.getLogger(__name__)
 
-MAX_VIDEO_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
-MAX_ITEM_VIDEOS = 3
+MAX_VIDEO_FILE_SIZE_BYTES = 200 * 1024 * 1024  # 200 MB
+MAX_ITEM_VIDEOS = 2
 ALLOWED_VIDEO_MIME_TYPES = frozenset({
     "video/mp4", "video/webm", "video/quicktime",
 })
@@ -91,3 +92,53 @@ def delete_item_videos_by_ids(item, raw_id_list):
         vid.delete()
         n += 1
     return n
+
+
+def attach_chunked_videos(item, upload_ids, session):
+    """Attach videos that were uploaded via the chunked upload API.
+
+    Reads the assembled file paths from the session and creates
+    ItemVideo objects for each.
+    """
+    from django.core.files.base import File
+    from smart_blog.models import ItemVideo
+    from django.db.models import Max
+
+    pending = session.get("pending_video_uploads", {})
+    if not pending or not upload_ids:
+        return
+
+    agg = ItemVideo.objects.filter(item=item).aggregate(mx=Max("sort_order"))
+    next_order = (agg["mx"] if agg["mx"] is not None else -1) + 1
+
+    for uid in upload_ids:
+        info = pending.pop(uid, None)
+        if not info:
+            continue
+        assembled_path = info.get("path", "")
+        if not assembled_path or not os.path.isfile(assembled_path):
+            continue
+
+        filename = info.get("filename", "video.mp4")
+        file_size = info.get("size", 0)
+
+        with open(assembled_path, "rb") as fp:
+            video_file = File(fp, name=filename)
+            ItemVideo.objects.create(
+                item=item,
+                video=video_file,
+                sort_order=next_order,
+                file_size=file_size,
+            )
+        next_order += 1
+
+        try:
+            os.remove(assembled_path)
+            parent = os.path.dirname(assembled_path)
+            if os.path.isdir(parent) and not os.listdir(parent):
+                os.rmdir(parent)
+        except OSError:
+            pass
+
+    session["pending_video_uploads"] = pending
+    session.modified = True

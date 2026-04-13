@@ -1,4 +1,4 @@
-// Post media: editorial grid + shared fullscreen viewer (no carousel autoplay).
+// Post media: editorial grid + shared fullscreen viewer with swipe navigation.
 (function () {
     'use strict';
     function qs(sel, ctx) { return (ctx || document).querySelector(sel); }
@@ -71,16 +71,15 @@
         const overlay = document.createElement('div');
         overlay.className = 'gallery-overlay';
         overlay.innerHTML = `
-      <button type="button" class="gzone gzone--prev" aria-label="Previous">
-        <span class="gzone__arrow" aria-hidden="true"><i class="fa fa-angle-left"></i></span>
+      <button type="button" class="gallery-close-btn" aria-label="Close">
+        <span class="gallery-close-btn__line"></span>
+        <span class="gallery-close-btn__line"></span>
       </button>
       <div class="gallery-overlay-inner" role="dialog" aria-modal="true" aria-label="Image viewer">
-        <img src="" alt="" class="gallery-overlay-img gallery-overlay-img--contain" tabindex="-1" loading="lazy" decoding="async" />
+        <img src="" alt="" class="gallery-overlay-img gallery-overlay-img--contain" loading="lazy" decoding="async" />
         <p class="gcaption"></p>
       </div>
-      <button type="button" class="gzone gzone--next" aria-label="Next">
-        <span class="gzone__arrow" aria-hidden="true"><i class="fa fa-angle-right"></i></span>
-      </button>
+      <span class="gallery-overlay-title" aria-hidden="true">Photos</span>
       <span class="gcount" aria-live="polite"></span>
     `;
         document.body.appendChild(overlay);
@@ -88,9 +87,14 @@
         const imgEl = qs('.gallery-overlay-img', overlay);
         const captionEl = qs('.gcaption', overlay);
         const countEl = qs('.gcount', overlay);
-        const prevBtn = qs('.gzone--prev', overlay);
-        const nextBtn = qs('.gzone--next', overlay);
         const inner = qs('.gallery-overlay-inner', overlay);
+        const closeBtn = qs('.gallery-close-btn', overlay);
+
+        closeBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            hideOverlay();
+        });
 
         let curIndex = 0;
         /** @type {{src:string, alt:string, caption:string}[]} */
@@ -107,9 +111,26 @@
             if (nextSrc && nextIdx !== prevIdx) { var j = new Image(); j.src = nextSrc; }
         }
 
-        function showCurrent() {
+        function showCurrent(direction) {
             const s = currentSlides[curIndex];
             if (!s || !s.src) return;
+
+            if (direction) {
+                var cls = direction === 'left' ? 'gallery-slide-out-left' : 'gallery-slide-out-right';
+                imgEl.classList.add(cls);
+                setTimeout(function () {
+                    imgEl.classList.remove(cls);
+                    applySlide(s);
+                    var inCls = direction === 'left' ? 'gallery-slide-in-right' : 'gallery-slide-in-left';
+                    imgEl.classList.add(inCls);
+                    setTimeout(function () { imgEl.classList.remove(inCls); }, 280);
+                }, 180);
+            } else {
+                applySlide(s);
+            }
+        }
+
+        function applySlide(s) {
             imgEl.classList.add('gallery-overlay-loading');
             imgEl.onload = function () {
                 imgEl.classList.remove('gallery-overlay-loading');
@@ -132,7 +153,7 @@
         function nav(dir) {
             if (!currentSlides.length) return;
             curIndex = (curIndex + dir + currentSlides.length) % currentSlides.length;
-            showCurrent();
+            showCurrent(dir < 0 ? 'right' : 'left');
         }
 
         function hideOverlay() {
@@ -144,17 +165,6 @@
             countEl.textContent = '';
             currentSlides = [];
         }
-
-        prevBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            nav(-1);
-        });
-        nextBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            nav(1);
-        });
 
         document.addEventListener('keydown', function (e) {
             if (!overlay.classList.contains('is-visible')) return;
@@ -175,28 +185,84 @@
             }
         });
 
-        function onPointerDownBackdrop(e) {
-            if (!overlay.classList.contains('is-visible')) return;
-            if (!overlay.contains(e.target)) return;
-            if (e.target.closest && e.target.closest('.gallery-overlay-img')) return;
-            if (e.target.closest && e.target.closest('.gzone')) return;
-            if (e.target.closest && e.target.closest('.gcaption')) return;
-            if (e.target.closest && e.target.closest('.gcount')) return;
-            hideOverlay();
-        }
-        document.addEventListener('pointerdown', onPointerDownBackdrop, true);
+        // Swipe handling with drag animation
+        var touchStartX = 0;
+        var touchStartY = 0;
+        var touchCurrentX = 0;
+        var isDragging = false;
+        var isVerticalScroll = false;
 
-        let touchStartX = 0;
         inner.addEventListener('touchstart', function (e) {
             if (!e.changedTouches || !e.changedTouches.length) return;
             touchStartX = e.changedTouches[0].clientX;
+            touchStartY = e.changedTouches[0].clientY;
+            touchCurrentX = touchStartX;
+            isDragging = true;
+            isVerticalScroll = false;
+            imgEl.style.transition = 'none';
         }, { passive: true });
+
+        inner.addEventListener('touchmove', function (e) {
+            if (!isDragging || !e.changedTouches || !e.changedTouches.length) return;
+            var dx = e.changedTouches[0].clientX - touchStartX;
+            var dy = e.changedTouches[0].clientY - touchStartY;
+
+            if (!isVerticalScroll && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+                isVerticalScroll = true;
+            }
+            if (isVerticalScroll) return;
+
+            touchCurrentX = e.changedTouches[0].clientX;
+            imgEl.style.transform = 'translateX(' + dx + 'px)';
+            imgEl.style.opacity = Math.max(0.5, 1 - Math.abs(dx) / 600);
+        }, { passive: true });
+
         inner.addEventListener('touchend', function (e) {
-            if (!e.changedTouches || !e.changedTouches.length) return;
-            const dx = e.changedTouches[0].clientX - touchStartX;
-            if (Math.abs(dx) < 55) return;
-            if (dx < 0) nav(1);
-            else nav(-1);
+            if (!isDragging) return;
+            isDragging = false;
+            if (isVerticalScroll) {
+                imgEl.style.transform = '';
+                imgEl.style.opacity = '';
+                imgEl.style.transition = '';
+                return;
+            }
+            var dx = (e.changedTouches && e.changedTouches.length) ? e.changedTouches[0].clientX - touchStartX : touchCurrentX - touchStartX;
+
+            imgEl.style.transition = 'transform 0.28s cubic-bezier(.4,0,.2,1), opacity 0.28s ease';
+
+            if (Math.abs(dx) > 50 && currentSlides.length > 1) {
+                var direction = dx < 0 ? 1 : -1;
+                var exitX = dx < 0 ? -window.innerWidth : window.innerWidth;
+                imgEl.style.transform = 'translateX(' + exitX + 'px)';
+                imgEl.style.opacity = '0';
+                setTimeout(function () {
+                    imgEl.style.transition = 'none';
+                    curIndex = (curIndex + direction + currentSlides.length) % currentSlides.length;
+                    imgEl.style.transform = 'translateX(' + (-exitX) + 'px)';
+                    imgEl.style.opacity = '0';
+                    requestAnimationFrame(function () {
+                        applySlide(currentSlides[curIndex]);
+                        requestAnimationFrame(function () {
+                            imgEl.style.transition = 'transform 0.28s cubic-bezier(.4,0,.2,1), opacity 0.28s ease';
+                            imgEl.style.transform = 'translateX(0)';
+                            imgEl.style.opacity = '1';
+                            setTimeout(function () {
+                                imgEl.style.transition = '';
+                                imgEl.style.transform = '';
+                                imgEl.style.opacity = '';
+                            }, 300);
+                        });
+                    });
+                }, 200);
+            } else {
+                imgEl.style.transform = 'translateX(0)';
+                imgEl.style.opacity = '1';
+                setTimeout(function () {
+                    imgEl.style.transition = '';
+                    imgEl.style.transform = '';
+                    imgEl.style.opacity = '';
+                }, 300);
+            }
         }, { passive: true });
 
         window.__gallery_openAt = function (index, slidesInput) {
@@ -217,9 +283,6 @@
             overlay.classList.add('is-visible');
             lockScroll();
             showCurrent();
-            try {
-                imgEl.focus();
-            } catch (err) { /* ignore */ }
         };
 
         window.__gallery_close = hideOverlay;

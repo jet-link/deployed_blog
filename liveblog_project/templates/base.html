@@ -44,7 +44,7 @@
     <link rel="preload" href="{% static 'smart_blog/vendor/fontawesome/fonts/fontawesome-webfont.woff2' %}?v=4.7.0" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="{% static 'smart_blog/vendor/fontawesome/css/font-awesome.min.css' %}" />
     <link rel="stylesheet" href="{% static 'smart_blog/css/fontawesome-tweak.css' %}" />
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" media="print" onload="this.media='all'" />
     {% block extra_head %}
     {% endblock %}
   </head>

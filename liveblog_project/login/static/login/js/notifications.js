@@ -5,6 +5,7 @@
   const READ_URL = apiEl?.dataset?.notificationRead || '/profile/notifications/read/';
   const READ_ALL_URL = apiEl?.dataset?.notificationReadAll || '/profile/notifications/read-all/';
   const DELETE_URL = apiEl?.dataset?.notificationDelete || '/profile/notifications/delete/';
+  const CHECK_TARGET_URL = apiEl?.dataset?.notificationCheckTarget || '/profile/notifications/check-target/';
 
   /** Match base.html meta + Django cookie (must match comment_operate / forms that work). */
   function getCSRF() {
@@ -216,6 +217,44 @@
     }
   }
 
+  function showTargetGoneModal(notifType) {
+    const body = document.getElementById('notifTargetGoneBody');
+    if (body) {
+      const isComment = notifType === 'reply' || notifType === 'comment_like';
+      body.textContent = isComment ? 'Comment does not exist' : 'Post does not exist';
+    }
+    const el = document.getElementById('notifTargetGoneModal');
+    if (el && window.bootstrap) {
+      bootstrap.Modal.getOrCreateInstance(el).show();
+    }
+  }
+
+  async function checkTargetAndNavigate(link) {
+    const id = link.dataset.notificationId;
+    if (!id) { window.location.href = link.href; return; }
+
+    markSeen(id, true);
+
+    const row = link.closest('.notification-row');
+    const notifType = row
+      ? (row.className.match(/notif-(reply|comment_like|item_like)/)?.[1] || 'item_like')
+      : 'item_like';
+
+    try {
+      const resp = await post(CHECK_TARGET_URL, { notification_id: id });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.exists) {
+          window.location.href = link.href;
+          return;
+        }
+      }
+      showTargetGoneModal(notifType);
+    } catch (err) {
+      window.location.href = link.href;
+    }
+  }
+
   function initSeenMarkers() {
     const rows = document.querySelectorAll('.notification-row');
     rows.forEach(row => {
@@ -233,9 +272,7 @@
       link.dataset.seenInit = '1';
       link.addEventListener('click', (e) => {
         e.preventDefault();
-        const id = link.dataset.notificationId;
-        markSeen(id, true);
-        window.location.href = link.href;
+        checkTargetAndNavigate(link);
       });
     });
   }

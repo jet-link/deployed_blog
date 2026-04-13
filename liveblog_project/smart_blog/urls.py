@@ -42,8 +42,15 @@ blog_urlpatterns = [
     ),
     path("tag/<slug:slug>/", views.tag_list, name="tag_list"),
     path("brainews/category/<slug:slug>/", views.category_list, name="category_list"),
-    path("item/create/", views.create_item, name="create_item"),
-    path("item/<slug:slug>/edit/", views.edit_item, name="edit_item"),
+    # Redirect old /blog/item/create and /blog/item/<slug>/edit to top-level
+    path(
+        "item/create/",
+        RedirectView.as_view(pattern_name="smart_blog:create_item", permanent=True),
+    ),
+    path(
+        "item/<slug:slug>/edit/",
+        RedirectView.as_view(pattern_name="smart_blog:edit_item", permanent=True),
+    ),
     path("item/image/<int:pk>/delete/", views.delete_item_image, name="delete_item_image"),
     path(
         "item/<slug:slug>/comments/",
@@ -83,6 +90,7 @@ blog_urlpatterns = [
         name="api_search_history_delete",
     ),
     path("api/trending/", views_trending.trending_api, name="api_trending"),
+    path("api/video-chunk-upload/", views.video_chunk_upload, name="video_chunk_upload"),
 ]
 
 urlpatterns = [
@@ -92,6 +100,8 @@ urlpatterns = [
     path("topics/<slug:slug>/", views_topics.topic_detail, name="topic_detail"),
     path("brainews/filter/", views.items_filtered, name="items_filtered"),
     path("brainews/", views.items_list, name="items_list"),
+    path("item/create/", views.create_item, name="create_item"),
+    path("item/<slug:slug>/edit/", views.edit_item, name="edit_item"),
     path("item/<slug:slug>/comments/", views.item_comments, name="item_comments"),
     path(
         "item/<slug:slug>/comment/<int:pk>/thread/",

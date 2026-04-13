@@ -126,6 +126,7 @@
       data-notification-read="{% url 'login_app:notification_read' %}"
       data-notification-read-all="{% url 'login_app:notifications_read_all' %}"
       data-notification-delete="{% url 'login_app:notifications_delete' %}"
+      data-notification-check-target="{% url 'login_app:notification_check_target' %}"
     ></div>
   </div>
 {% endblock %}
@@ -143,6 +144,21 @@
         <div class="modal-footer">
           <button id="notificationsDeleteAll" type="button" class="cstm-btn custom-danger-btn cstm-btn-sm">Clear all</button>
           <button id="notificationsDeleteLast5" type="button" class="cstm-btn custom-secondary-btn cstm-btn-sm">Clear last 5</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="notifTargetGoneModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header d-flex align-items-center justify-content-between">
+          <h5 class="modal-title text-muted">Not found</h5>
+          <button type="button" class="modal-close-btn" data-bs-dismiss="modal" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body" id="notifTargetGoneBody">Post does not exist</div>
+        <div class="modal-footer">
+          <button type="button" class="cstm-btn custom-secondary-btn cstm-btn-sm" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>

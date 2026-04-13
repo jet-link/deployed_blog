@@ -251,16 +251,20 @@ def run_content_analysis(schedule='now', analysis_run=None, log_callback=None):
         else:
             cutoff = None  # Check all for 'now'
 
-        # Existing violation IDs to avoid duplicates
+        # Existing *active* violation IDs to avoid duplicates (exclude soft-deleted)
         existing_items = set(
-            ContentViolation.objects.filter(item__isnull=False).values_list('item_id', flat=True)
+            ContentViolation.objects.filter(
+                item__isnull=False, deleted_at__isnull=True,
+            ).values_list('item_id', flat=True)
         )
         existing_comments = set(
-            ContentViolation.objects.filter(comment__isnull=False).values_list('comment_id', flat=True)
+            ContentViolation.objects.filter(
+                comment__isnull=False, deleted_at__isnull=True,
+            ).values_list('comment_id', flat=True)
         )
 
         # Items
-        item_qs = Item.objects.prefetch_related('tags', 'category').all()
+        item_qs = Item.objects.select_related('category').prefetch_related('tags').all()
         if cutoff:
             item_qs = item_qs.filter(created__gte=cutoff)
         items = list(item_qs.order_by('-created')[:5000])  # Limit batch

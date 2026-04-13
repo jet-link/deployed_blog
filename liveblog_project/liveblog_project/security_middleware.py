@@ -21,7 +21,7 @@ def _default_csp() -> str:
         "https://cdn.plyr.io; "
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; "
         "img-src 'self' data: https: blob:; "
-        "media-src 'self' blob:; "
+        "media-src 'self' blob: https://cdn.plyr.io https://*.cdn.example.com; "
         "connect-src 'self' https://cdn.ckeditor.com https://cdn.jsdelivr.net "
         "https://cdn.plyr.io https://challenges.cloudflare.com; "
         "frame-src 'self' https://cdn.ckeditor.com blob: https://challenges.cloudflare.com; "

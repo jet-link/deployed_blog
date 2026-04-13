@@ -34,6 +34,7 @@ from smart_blog.views.item_crud_views import (  # noqa: F401
     delete_item,
     delete_item_image,
     find_existing_media_path,
+    video_chunk_upload,
 )
 
 from smart_blog.views.interaction_views import (  # noqa: F401

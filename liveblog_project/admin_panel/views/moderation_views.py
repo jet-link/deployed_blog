@@ -27,13 +27,15 @@ def content_violations_list(request):
         'item__author', 'comment__author',
     )
 
-    # Search (author username, detected word)
+    # Search (author username, detected word, item title, comment text)
     search = request.GET.get('q', '').strip()
     if search:
         qs = qs.filter(
             Q(detected_word__icontains=search)
             | Q(item__author__username__icontains=search)
             | Q(comment__author__username__icontains=search)
+            | Q(item__title__icontains=search)
+            | Q(comment__text__icontains=search)
         )
 
     # Type filter

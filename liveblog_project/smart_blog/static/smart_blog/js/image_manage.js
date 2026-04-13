@@ -26,6 +26,7 @@
         const itemForms = [qs('#itemForm'), qs('#itemEditForm')].filter(Boolean);
 
         const MAX = 10;
+        const MAX_POST_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB total post weight
         // Keep in sync with smart_blog.image_utils.ALLOWED_MIME_TYPES (server rejects others)
         const ALLOWED = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
 
@@ -153,7 +154,30 @@
                 `You can upload up to ${MAX} images per post · selected ${count} new file(s).`,
                 (cntObj.total > MAX),
             );
+            checkPostSizeWarning();
         }
+
+        function computeTotalPostSize() {
+            var total = 0;
+            var imgFiles = Array.from(mainInput.files || []);
+            imgFiles.forEach(function (f) { total += f.size; });
+            _videoQueue.forEach(function (v) { total += v.file.size; });
+            return total;
+        }
+
+        function checkPostSizeWarning() {
+            var warn = document.getElementById('postSizeWarning');
+            if (!warn) return;
+            var total = computeTotalPostSize();
+            if (total > MAX_POST_SIZE_BYTES) {
+                var mb = (total / (1024 * 1024)).toFixed(1);
+                warn.textContent = 'Total file size is ' + mb + ' MB. Posts over 50 MB may cause errors. Remove some files.';
+                warn.hidden = false;
+            } else {
+                warn.hidden = true;
+            }
+        }
+        _checkPostSizeWarning = checkPostSizeWarning;
 
         function mergeFilesToMainInput(newFiles) {
             const current = Array.from(mainInput.files || []);
@@ -333,13 +357,21 @@
 
     });
 
-    // Video upload handling
+    // Shared references (accessible across DOMContentLoaded blocks)
+    var _videoQueue = [];
+    var _checkPostSizeWarning = function () {};
+
+    // Video upload handling — all videos go through chunked upload
     document.addEventListener('DOMContentLoaded', function () {
         var videoInput = document.getElementById('id_videos');
         var addVideoBtn = document.getElementById('btnAddVideo');
         var videoPreview = document.getElementById('videoPreview');
-        var MAX_VIDEOS = 3;
+        var MAX_VIDEOS = 1;
         var ALLOWED_VIDEO = ['video/mp4', 'video/webm', 'video/quicktime'];
+        var CHUNK_SIZE = 2 * 1024 * 1024; // 2 MB per chunk
+
+        var videoQueue = _videoQueue;
+        var uploading = false;
 
         if (addVideoBtn && videoInput) {
             addVideoBtn.addEventListener('click', function () {
@@ -350,21 +382,186 @@
         if (videoInput) {
             videoInput.addEventListener('change', function () {
                 var files = Array.from(videoInput.files || []);
-                if (files.length > MAX_VIDEOS) {
-                    files = files.slice(0, MAX_VIDEOS);
-                    var dt = new DataTransfer();
-                    files.forEach(function (f) { dt.items.add(f); });
-                    videoInput.files = dt.files;
-                }
+                files.forEach(function (f) {
+                    if (videoQueue.length >= MAX_VIDEOS) return;
+                    if (ALLOWED_VIDEO.indexOf(f.type) === -1) return;
+                    videoQueue.push({
+                        file: f,
+                        id: generateUploadId(),
+                        status: 'pending',
+                        progress: 0,
+                        uploadId: null
+                    });
+                });
+                // Clear the file input — videos will go through chunked upload only
+                videoInput.value = '';
+                var dt = new DataTransfer();
+                videoInput.files = dt.files;
+
                 renderVideoPreview();
+                _checkPostSizeWarning();
+                processUploadQueue();
             });
         }
 
+        function generateUploadId() {
+            return 'vu-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
+        }
+
+        function getVideoThumbnail(file, callback) {
+            var video = document.createElement('video');
+            video.preload = 'metadata';
+            video.muted = true;
+            video.playsInline = true;
+            var url = URL.createObjectURL(file);
+            video.src = url;
+            video.onloadeddata = function () {
+                video.currentTime = 0.1;
+            };
+            video.onseeked = function () {
+                try {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth || 320;
+                    canvas.height = video.videoHeight || 240;
+                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                    callback(canvas.toDataURL('image/jpeg', 0.7));
+                } catch (e) {
+                    callback(null);
+                }
+                URL.revokeObjectURL(url);
+            };
+            video.onerror = function () {
+                callback(null);
+                URL.revokeObjectURL(url);
+            };
+        }
+
+        function processUploadQueue() {
+            if (uploading) return;
+            var next = null;
+            for (var k = 0; k < videoQueue.length; k++) {
+                if (videoQueue[k].status === 'pending') { next = videoQueue[k]; break; }
+            }
+            if (!next) return;
+
+            uploading = true;
+            next.status = 'uploading';
+            renderVideoPreview();
+
+            uploadChunked(next.file, next.id,
+                function (pct) {
+                    next.progress = pct;
+                    updateVideoItemUI(next);
+                },
+                function (resp) {
+                    next.status = 'done';
+                    next.progress = 100;
+                    next.uploadId = resp.upload_id;
+                    uploading = false;
+                    updateVideoItemUI(next);
+                    processUploadQueue();
+                },
+                function (err) {
+                    next.status = 'error';
+                    uploading = false;
+                    updateVideoItemUI(next);
+                    processUploadQueue();
+                }
+            );
+        }
+
+        function uploadChunked(file, uploadId, progressCb, doneCb, errCb) {
+            var totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+            var csrfToken = getCookie('csrftoken');
+            var chunkIndex = 0;
+            var uploadUrl = '/blog/api/video-chunk-upload/';
+
+            function sendNext() {
+                if (chunkIndex >= totalChunks) return;
+                var start = chunkIndex * CHUNK_SIZE;
+                var end = Math.min(start + CHUNK_SIZE, file.size);
+                var blob = file.slice(start, end);
+
+                var fd = new FormData();
+                fd.append('chunk', blob, 'chunk');
+                fd.append('upload_id', uploadId);
+                fd.append('chunk_index', chunkIndex);
+                fd.append('total_chunks', totalChunks);
+                fd.append('filename', file.name);
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', uploadUrl, true);
+                xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+                xhr.onload = function () {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        var resp;
+                        try { resp = JSON.parse(xhr.responseText); } catch (e) { resp = {}; }
+                        chunkIndex++;
+                        var pct = Math.round((chunkIndex / totalChunks) * 100);
+                        if (progressCb) progressCb(pct);
+                        if (resp.status === 'complete') {
+                            if (doneCb) doneCb(resp);
+                        } else {
+                            sendNext();
+                        }
+                    } else {
+                        if (errCb) errCb(xhr.responseText);
+                    }
+                };
+                xhr.onerror = function () { if (errCb) errCb('Network error'); };
+                xhr.send(fd);
+            }
+
+            sendNext();
+        }
+
+        function removeFromQueue(idx) {
+            var removed = videoQueue.splice(idx, 1);
+            if (removed[0] && removed[0]._dom && removed[0]._dom.wrap.parentNode) {
+                removed[0]._dom.wrap.remove();
+            }
+            renderVideoPreview();
+            _checkPostSizeWarning();
+        }
+
+        function updateVideoItemUI(entry) {
+            if (!entry._dom) return;
+            var bar = entry._dom.progressBar;
+            var status = entry._dom.statusEl;
+            var barColor = entry.status === 'done' ? '#27ae60' : entry.status === 'error' ? '#e74c3c' : 'var(--btn-primary-bg,#273c75)';
+            bar.style.width = entry.progress + '%';
+            bar.style.background = barColor;
+            if (entry.status === 'pending') status.textContent = 'Waiting...';
+            else if (entry.status === 'uploading') status.textContent = entry.progress + '%';
+            else if (entry.status === 'done') status.textContent = 'Ready';
+            else if (entry.status === 'error') status.textContent = 'Upload failed';
+
+            // Add or remove hidden input
+            var existing = entry._dom.wrap.querySelector('input[name="chunked_video_ids"]');
+            if (entry.status === 'done' && entry.uploadId && !existing) {
+                var hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'chunked_video_ids';
+                hidden.value = entry.uploadId;
+                entry._dom.wrap.appendChild(hidden);
+            }
+        }
+
         function renderVideoPreview() {
-            if (!videoPreview || !videoInput) return;
+            if (!videoPreview) return;
             videoPreview.innerHTML = '';
-            var files = Array.from(videoInput.files || []);
-            files.forEach(function (f, i) {
+
+            videoQueue.forEach(function (entry, i) {
+                // If DOM already built, re-append and update
+                if (entry._dom) {
+                    videoPreview.appendChild(entry._dom.wrap);
+                    updateVideoItemUI(entry);
+                    return;
+                }
+
+                var f = entry.file;
                 var wrap = document.createElement('div');
                 wrap.className = 'video-preview-item existing-video position-relative text-center';
                 wrap.style.width = '150px';
@@ -374,6 +571,37 @@
                 thumb.innerHTML = '<i class="fa fa-video-camera"></i><small class="d-block text-muted mt-1">' + f.name.substring(0, 20) + '</small><small class="text-muted d-block">' + (f.size / (1024 * 1024)).toFixed(1) + ' MB</small>';
                 wrap.appendChild(thumb);
 
+                var progressWrap = document.createElement('div');
+                progressWrap.className = 'video-upload-progress mt-1';
+                progressWrap.style.cssText = 'width:100%;height:6px;background:var(--bg-muted,#eee);border-radius:3px;overflow:hidden;';
+                var progressBar = document.createElement('div');
+                progressBar.className = 'video-upload-progress__bar';
+                progressBar.style.cssText = 'width:0%;height:100%;transition:width .15s ease;border-radius:3px;';
+                progressWrap.appendChild(progressBar);
+                wrap.appendChild(progressWrap);
+
+                var statusEl = document.createElement('small');
+                statusEl.className = 'video-upload-status text-muted d-block mt-1';
+                statusEl.style.fontSize = '.65rem';
+                wrap.appendChild(statusEl);
+
+                entry._dom = { wrap: wrap, progressBar: progressBar, statusEl: statusEl };
+                updateVideoItemUI(entry);
+
+                getVideoThumbnail(f, function (dataUrl) {
+                    if (dataUrl && thumb.parentNode) {
+                        thumb.innerHTML = '';
+                        var img = document.createElement('img');
+                        img.src = dataUrl;
+                        img.style.cssText = 'width:150px;height:100px;object-fit:cover;border-radius:4px;display:block;';
+                        img.alt = 'Video preview';
+                        thumb.appendChild(img);
+                        var meta = document.createElement('div');
+                        meta.innerHTML = '<small class="d-block text-muted mt-1">' + f.name.substring(0, 20) + '</small><small class="text-muted d-block">' + (f.size / (1024 * 1024)).toFixed(1) + ' MB</small>';
+                        thumb.appendChild(meta);
+                    }
+                });
+
                 var btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'btn btn-sm btn-danger btn-delete-video position-absolute';
@@ -381,17 +609,83 @@
                 btn.style.top = '5px';
                 btn.style.fontSize = '.7rem';
                 btn.innerHTML = '<i class="fa fa-times"></i>';
-                btn.addEventListener('click', function () {
-                    var cur = Array.from(videoInput.files || []);
-                    var dt = new DataTransfer();
-                    cur.forEach(function (vf, vi) { if (vi !== i) dt.items.add(vf); });
-                    videoInput.files = dt.files;
-                    renderVideoPreview();
-                });
+                (function (idx) {
+                    btn.addEventListener('click', function () { removeFromQueue(idx); });
+                })(i);
                 wrap.appendChild(btn);
+
                 videoPreview.appendChild(wrap);
             });
         }
+
+        // Block form submission while any video is still uploading.
+        // Use capture phase so this fires before forms_handler.js (which sends AJAX).
+        var itemForm = document.getElementById('itemForm') || document.getElementById('itemEditForm');
+        if (itemForm) {
+            itemForm.addEventListener('submit', function (e) {
+                var hasPending = videoQueue.some(function (v) {
+                    return v.status === 'pending' || v.status === 'uploading';
+                });
+                if (hasPending) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    alert('Please wait for all video uploads to finish before submitting.');
+                    return false;
+                }
+                // Ensure the file input is empty so the AJAX handler
+                // doesn't try to send raw video bytes
+                if (videoInput) {
+                    try {
+                        var dt = new DataTransfer();
+                        videoInput.files = dt.files;
+                    } catch (ex) { videoInput.value = ''; }
+                }
+            }, true);
+        }
+    });
+
+    // Generate poster thumbnails for existing videos on edit page
+    document.addEventListener('DOMContentLoaded', function () {
+        var thumbs = document.querySelectorAll('.existing-video__thumb--poster[data-video-src]');
+        if (!thumbs.length) return;
+
+        thumbs.forEach(function (thumbEl) {
+            var src = thumbEl.getAttribute('data-video-src');
+            if (!src) return;
+            var video = document.createElement('video');
+            video.preload = 'metadata';
+            video.muted = true;
+            video.playsInline = true;
+            video.crossOrigin = 'anonymous';
+            video.src = src;
+            video.onloadeddata = function () { video.currentTime = 0.1; };
+            video.onseeked = function () {
+                try {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth || 320;
+                    canvas.height = video.videoHeight || 240;
+                    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                    var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    if (dataUrl) {
+                        var label = thumbEl.querySelector('small');
+                        var labelText = label ? label.textContent : '';
+                        thumbEl.innerHTML = '';
+                        var img = document.createElement('img');
+                        img.src = dataUrl;
+                        img.alt = 'Video poster';
+                        img.style.cssText = 'width:150px;height:100px;object-fit:cover;border-radius:4px;display:block;';
+                        thumbEl.appendChild(img);
+                        if (labelText) {
+                            var sm = document.createElement('small');
+                            sm.className = 'd-block text-muted mt-1';
+                            sm.textContent = labelText;
+                            thumbEl.appendChild(sm);
+                        }
+                    }
+                } catch (e) { /* cross-origin or other error — keep icon fallback */ }
+            };
+            video.onerror = function () { /* keep icon fallback */ };
+        });
     });
 
     // Video mark-for-delete on edit page

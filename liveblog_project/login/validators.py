@@ -3,11 +3,11 @@ import re
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
-# Username: 1-15 chars, no spaces, allowed: letters, digits, *_-~()^$@?!
-USERNAME_REGEX = re.compile(r'^[a-zA-Z0-9*_\-~()^$@?!]{1,15}$')
+# Username: 1-100 chars, no spaces, allowed: letters, digits, *_-~()^$@?!
+USERNAME_REGEX = re.compile(r'^[a-zA-Z0-9*_\-~()^$@?!]{1,100}$')
 
 USERNAME_RULES_MSG = _(
-    "Username: 1–15 characters, no spaces. "
+    "Username: 1–100 characters, no spaces. "
     "Allowed: letters, digits, * _ - ~ ( ) ^ $ @ ? !"
 )
 
@@ -22,9 +22,9 @@ def validate_username(value):
             _("Username must not contain spaces."),
             code="username_no_spaces",
         )
-    if len(value) > 15:
+    if len(value) > 100:
         raise ValidationError(
-            _("Username must be at most 15 characters."),
+            _("Username must be at most 100 characters."),
             code="username_too_long",
         )
     if not USERNAME_REGEX.match(value):

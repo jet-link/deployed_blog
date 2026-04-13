@@ -19,6 +19,9 @@ from .image_utils import ORIENTATION_LANDSCAPE, compute_orientation_kind
 
 User = get_user_model()
 
+# Stored cap for feed/list excerpts; `item_feed_card` shows 500 chars on small screens, 850 on md+.
+ITEM_LIST_EXCERPT_MAX_CHARS = 850
+
 
 class ItemQuerySet(models.QuerySet):
     def with_counters(self):
@@ -26,7 +29,11 @@ class ItemQuerySet(models.QuerySet):
         return self.annotate(
             comments_count=Count(
                 "comments",
-                filter=Q(comments__parent__isnull=True),
+                filter=Q(
+                    comments__parent__isnull=True,
+                    comments__is_draft=False,
+                    comments__deleted_at__isnull=True,
+                ),
                 distinct=True,
             ),
         )
@@ -171,7 +178,7 @@ class Item(models.Model):
     slug = models.SlugField(max_length=300, unique=True, blank=True)
     search_vector = SearchVectorField(editable=False, null=True)  # PostgreSQL FTS, filled by DB
     excerpt_plain = models.CharField(
-        max_length=620,
+        max_length=1300,
         blank=True,
         default="",
         help_text="Plain excerpt for list cards (synced from text on save).",
@@ -203,7 +210,7 @@ class Item(models.Model):
         return self.title
 
     @staticmethod
-    def plain_excerpt_from_html(html_text, length=600):
+    def plain_excerpt_from_html(html_text, length=ITEM_LIST_EXCERPT_MAX_CHARS):
         if not html_text:
             return ""
         plain = strip_tags(html_text)
@@ -213,7 +220,7 @@ class Item(models.Model):
             return plain
         return plain[:length].rsplit(" ", 1)[0] + " …"
 
-    def short_text(self, length=600):
+    def short_text(self, length=ITEM_LIST_EXCERPT_MAX_CHARS):
         return Item.plain_excerpt_from_html(self.text or "", length)
 
     @property
@@ -285,7 +292,9 @@ class Item(models.Model):
                 counter += 1
             self.slug = slug_candidate
 
-        self.excerpt_plain = Item.plain_excerpt_from_html(self.text or "", length=600)
+        self.excerpt_plain = Item.plain_excerpt_from_html(
+            self.text or "", length=ITEM_LIST_EXCERPT_MAX_CHARS
+        )
 
         super().save(*args, **kwargs)
 
@@ -334,6 +343,7 @@ class ItemImage(models.Model):
     image = models.ImageField(upload_to="items/%Y/%m/%d/")
     image_thumbnail = models.ImageField(upload_to="items/", blank=True, null=True)
     image_medium = models.ImageField(upload_to="items/", blank=True, null=True)
+    external_url = models.URLField(max_length=500, blank=True, help_text="External CDN URL for the full image")
     width = models.PositiveIntegerField(blank=True, null=True)
     height = models.PositiveIntegerField(blank=True, null=True)
     sort_order = models.PositiveSmallIntegerField(default=0, db_index=True)
@@ -356,17 +366,23 @@ class ItemImage(models.Model):
         self.orientation_kind = compute_orientation_kind(self.width, self.height)
         super().save(*args, **kwargs)
 
+    def get_url(self):
+        """Prefer external CDN URL, fall back to local image."""
+        if self.external_url:
+            return self.external_url
+        return self.image.url if self.image else ""
+
     def get_thumbnail_url(self):
         """URL для превью (списки, карточки). Fallback на image."""
         if self.image_thumbnail:
             return self.image_thumbnail.url
-        return self.image.url if self.image else ""
+        return self.get_url()
 
     def get_medium_url(self):
         """URL для medium (srcset). Fallback на image."""
         if self.image_medium:
             return self.image_medium.url
-        return self.image.url if self.image else ""
+        return self.get_url()
 
     def get_srcset(self):
         """Строка srcset для responsive img (thumbnail 300w, medium 800w, large 1600w)."""
@@ -375,8 +391,9 @@ class ItemImage(models.Model):
             parts.append(f"{self.image_thumbnail.url} 300w")
         if self.image_medium:
             parts.append(f"{self.image_medium.url} 800w")
-        if self.image:
-            parts.append(f"{self.image.url} {self.width or 1600}w")
+        full_url = self.get_url()
+        if full_url:
+            parts.append(f"{full_url} {self.width or 1600}w")
         return ", ".join(parts) if parts else ""
 
 
@@ -385,6 +402,11 @@ class ItemVideo(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="videos")
     video = models.FileField(upload_to="items/videos/%Y/%m/%d/")
     thumbnail = models.ImageField(upload_to="items/videos/thumbs/", blank=True, null=True)
+    external_url = models.URLField(max_length=500, blank=True, help_text="External CDN URL for original video")
+    video_360p = models.URLField(max_length=500, blank=True, help_text="360p quality URL")
+    video_480p = models.URLField(max_length=500, blank=True, help_text="480p quality URL")
+    video_720p = models.URLField(max_length=500, blank=True, help_text="720p quality URL")
+    video_1080p = models.URLField(max_length=500, blank=True, help_text="1080p HD quality URL")
     sort_order = models.PositiveSmallIntegerField(default=0, db_index=True)
     caption = models.CharField(max_length=500, blank=True)
     duration = models.FloatField(null=True, blank=True, help_text="Duration in seconds")
@@ -396,6 +418,25 @@ class ItemVideo(models.Model):
 
     def __str__(self):
         return f"Video for {self.item_id}"
+
+    def get_url(self):
+        """Prefer external CDN URL, fall back to local video file."""
+        if self.external_url:
+            return self.external_url
+        return self.video.url if self.video else ""
+
+    def get_quality_sources(self):
+        """Return dict of available quality URLs for the player."""
+        sources = {}
+        if self.video_1080p:
+            sources[1080] = self.video_1080p
+        if self.video_720p:
+            sources[720] = self.video_720p
+        if self.video_480p:
+            sources[480] = self.video_480p
+        if self.video_360p:
+            sources[360] = self.video_360p
+        return sources
 
 
 class Comment(models.Model):

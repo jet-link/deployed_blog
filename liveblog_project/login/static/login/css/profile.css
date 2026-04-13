@@ -372,10 +372,13 @@
         flex-direction: column;
     }
 
-    .profile-owner-actions__secondary .signout-trigger {
+    .profile-owner-actions__secondary > * {
         width: 100%;
         text-align: center;
         box-sizing: border-box;
+    }
+
+    .profile-owner-actions__secondary .signout-trigger {
         padding: 8px 10px;
         font-size: .875rem;
     }

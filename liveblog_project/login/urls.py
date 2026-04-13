@@ -16,6 +16,7 @@ urlpatterns = [
     path("profile/notifications/read/", views.mark_notification_read, name="notification_read"),
     path("profile/notifications/read-all/", views.mark_all_notifications_read, name="notifications_read_all"),
     path("profile/notifications/delete/", views.delete_notifications, name="notifications_delete"),
+    path("profile/notifications/check-target/", views.check_notification_target, name="notification_check_target"),
     path('profile/<str:username>/notifications/', views.notifications_view, name='notifications'),
     path('profile/<str:username>/online/', views.profile_online_status, name='profile-online-status'),
     path('profile/<str:username>/<str:section>/', views.profile_section_view, name='profile-section'),

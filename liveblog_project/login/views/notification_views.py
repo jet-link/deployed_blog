@@ -1,4 +1,4 @@
-"""Notification views: list, mark read, delete."""
+"""Notification views: list, mark read, delete, check target."""
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
@@ -97,3 +97,26 @@ def delete_notifications(request):
         qs.update(cleared_from_inbox=True)
     _invalidate_cache(request.user.pk)
     return JsonResponse({"success": True})
+
+
+@login_required
+@require_POST
+def check_notification_target(request):
+    """Check whether a notification's target (post/comment) still exists."""
+    notif_id = request.POST.get("notification_id")
+    try:
+        notif_id = int(notif_id)
+    except (TypeError, ValueError):
+        return JsonResponse({"exists": False})
+
+    try:
+        notif = Notification.objects.select_related(
+            "item", "parent_comment", "reply_comment",
+        ).get(pk=notif_id, recipient=request.user)
+    except Notification.DoesNotExist:
+        return JsonResponse({"exists": False})
+
+    if not notif.item_id:
+        return JsonResponse({"exists": False})
+
+    return JsonResponse({"exists": True})

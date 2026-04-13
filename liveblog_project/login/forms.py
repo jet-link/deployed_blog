@@ -37,7 +37,7 @@ def is_valid_image_url(url: str) -> bool:
 # Register
 class CustomUserCreationForm(UserCreationForm):
     username = forms.CharField(
-        max_length=15,
+        max_length=100,
         required=True,
         label=_('Username'),
         widget=forms.TextInput(attrs={
@@ -45,12 +45,12 @@ class CustomUserCreationForm(UserCreationForm):
             'id': 'floatingUsername',
             'placeholder': ' ',
             'autocomplete': 'username',
-            'maxlength': '15',
+            'maxlength': '100',
             "required": True
         }),
         error_messages={
             'required': _('Enter username'),
-            'max_length': _('Username must be at most 15 characters.'),
+            'max_length': _('Username must be at most 100 characters.'),
         },
         validators=[validate_username],
     )
@@ -165,7 +165,7 @@ class CustomUserCreationForm(UserCreationForm):
 # Login
 class LoginForm(forms.Form):
     username = forms.CharField(
-        max_length=150,
+        max_length=100,
         required=True,
         label=_('Username *'),
         widget=forms.TextInput(attrs={
@@ -173,6 +173,7 @@ class LoginForm(forms.Form):
             'id': 'floatingInput',
             'placeholder': ' ',
             'autocomplete': 'username',
+            'maxlength': '100',
             "required": True
         }),
         error_messages={'required': _('Please enter username')},
@@ -201,7 +202,7 @@ class LoginForm(forms.Form):
 # Edit profile
 class UserEditForm(forms.ModelForm):
     username = forms.CharField(
-        max_length=15,
+        max_length=100,
         required=True,
         label=_('Username'),
         widget=forms.TextInput(attrs={
@@ -209,7 +210,7 @@ class UserEditForm(forms.ModelForm):
             'id': 'floatingUsernameProfile',
             'autocomplete': 'username',
             'placeholder': ' ',
-            'maxlength': '15',
+            'maxlength': '100',
             "required": True
         }),
     )

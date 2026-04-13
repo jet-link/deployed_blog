@@ -20,6 +20,7 @@ from login.views.notification_views import (  # noqa: F401
     mark_notification_read,
     mark_all_notifications_read,
     delete_notifications,
+    check_notification_target,
 )
 from login.views.vanished_views import (  # noqa: F401
     vanished_generic_view,

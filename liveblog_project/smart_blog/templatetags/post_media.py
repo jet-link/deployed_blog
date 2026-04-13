@@ -14,7 +14,7 @@ def _slides_payload(images) -> List[Dict[str, Any]]:
         alt = (im.alt_text or "").strip()
         out.append(
             {
-                "full": im.image.url,
+                "full": im.get_url(),
                 "thumb": im.get_thumbnail_url(),
                 "srcset": im.get_srcset() or "",
                 "alt": alt,
@@ -30,12 +30,14 @@ def _slides_payload(images) -> List[Dict[str, Any]]:
 def _video_payload(videos) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     for v in videos:
-        out.append(
-            {
-                "src": v.video.url,
-                "caption": (v.caption or "").strip(),
-            }
-        )
+        entry: Dict[str, Any] = {
+            "src": v.get_url(),
+            "caption": (v.caption or "").strip(),
+        }
+        qualities = v.get_quality_sources()
+        if qualities:
+            entry["qualities"] = qualities
+        out.append(entry)
     return out
 
 

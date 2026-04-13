@@ -231,6 +231,21 @@
     }
 }
 
+/* ---------- Item text "Show more" curtain ---------- */
+@media (min-width: 768px) {
+    .item-text-curtain--collapsed {
+        max-height: none !important;
+    }
+
+    .item-text-curtain--collapsed::after {
+        display: none !important;
+    }
+
+    .item-text-show-more-wrap {
+        display: none !important;
+    }
+}
+
 /* ---------- Item detail typography ---------- */
 @media (max-width: 991px) {
     .item-detail-title {
@@ -441,6 +456,11 @@
         right: 11px;
     }
 
+    /* Dark theme: inner fill triangle must track ::before (see styles.css 6px/7px on desktop). */
+    html[data-theme="dark"] .comment-menu--actions-bar .comment-actions::after {
+        right: 12px;
+    }
+
     .overflow-more-btn__dots {
         gap: 4px;
     }
@@ -573,46 +593,119 @@
 /* Pinned media links responsive */
 @media (max-width: 575px) {
     .post-media-pinned__links {
-        flex-direction: column;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+        width: 100%;
     }
 
     .post-media-pinned__link {
-        width: 100%;
+        flex: 1 1 0;
+        min-width: 0;
         justify-content: center;
+        box-sizing: border-box;
+    }
+
+    .post-media-pinned__link:only-child {
+        flex: 1 1 100%;
     }
 }
 
 /* Video gallery overlay responsive */
 @media (max-width: 767px) {
-    .video-gallery-overlay-inner.vg-landscape {
-        width: 98vw;
+    .video-gallery-overlay-inner {
+        width: 96vw;
+        max-height: 75vh;
     }
 
-    .video-gallery-overlay-inner.vg-portrait {
-        height: 75vh;
-        max-width: 98vw;
+    .video-gallery-overlay .plyr {
+        border-radius: 6px;
+        max-height: 75vh;
     }
 
-    .vg-portrait .video-gallery-player {
-        height: 75vh;
-        max-width: 98vw;
+    .video-gallery-overlay .plyr__video-wrapper {
+        max-height: calc(75vh - 46px);
     }
 
-    .vg-portrait .plyr {
-        height: 75vh;
-        max-width: 98vw;
+    .video-gallery-overlay .plyr__video-wrapper video {
+        max-height: calc(75vh - 46px);
     }
 
-    .vg-portrait .plyr__video-wrapper {
-        height: calc(75vh - 46px);
+    .video-gallery-player {
+        border-radius: 6px;
     }
 
-    .vgzone {
-        width: 44px;
+    .video-gallery-overlay .plyr--fullscreen-active,
+    .video-gallery-overlay .plyr--fullscreen-fallback {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: none !important;
+        border-radius: 0 !important;
     }
 
-    .vgzone__arrow {
-        font-size: 1.5rem;
+    .video-gallery-overlay .plyr--fullscreen-active .plyr__video-wrapper,
+    .video-gallery-overlay .plyr--fullscreen-fallback .plyr__video-wrapper {
+        max-height: none;
+        height: calc(100vh - 46px);
+    }
+
+    .video-gallery-overlay .plyr--fullscreen-active .plyr__video-wrapper video,
+    .video-gallery-overlay .plyr--fullscreen-fallback .plyr__video-wrapper video {
+        max-height: none;
+    }
+
+    /* Taller control bar + bigger icons in mobile fullscreen */
+    .plyr--fullscreen-active .plyr__controls,
+    .plyr--fullscreen-fallback .plyr__controls {
+        padding: 14px 16px !important;
+        min-height: 62px !important;
+        font-size: 16px !important;
+        gap: 6px;
+        padding-bottom: max(14px, env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    .plyr--fullscreen-active .plyr__controls button,
+    .plyr--fullscreen-fallback .plyr__controls button {
+        min-width: 40px;
+        min-height: 40px;
+        padding: 8px !important;
+    }
+
+    .plyr--fullscreen-active .plyr__controls button svg,
+    .plyr--fullscreen-fallback .plyr__controls button svg {
+        width: 22px !important;
+        height: 22px !important;
+    }
+
+    .plyr--fullscreen-active .plyr__controls .plyr__time,
+    .plyr--fullscreen-fallback .plyr__controls .plyr__time {
+        font-size: 14px !important;
+    }
+
+    .plyr--fullscreen-active .plyr__progress__container,
+    .plyr--fullscreen-fallback .plyr__progress__container {
+        min-height: 24px;
+    }
+
+    .plyr--fullscreen-active .plyr__progress input[type="range"],
+    .plyr--fullscreen-fallback .plyr__progress input[type="range"] {
+        height: 24px !important;
+    }
+
+    .video-gallery-overlay .plyr--fullscreen-active .plyr__video-wrapper,
+    .video-gallery-overlay .plyr--fullscreen-fallback .plyr__video-wrapper {
+        height: calc(100vh - 62px);
+    }
+
+    /* Ensure controls show/hide properly with mobile tap logic */
+    .plyr--mobile-fs-controls-visible .plyr__controls {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        transform: translateY(0) !important;
+        visibility: visible !important;
     }
 }
 

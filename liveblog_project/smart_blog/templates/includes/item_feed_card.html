@@ -56,13 +56,14 @@
             <div class="feed-card-pin">
               <i class="fa fa-thumb-tack" aria-hidden="true"></i>
               <span class="feed-card-pin__labels">
-                {% if item.has_photos %}photos{% endif %}{% if item.has_photos and item.has_videos %}, {% endif %}{% if item.has_videos %}videos{% endif %}
+                {% if item.has_photos %}photos{% endif %}{% if item.has_photos and item.has_videos %} + {% endif %}{% if item.has_videos %}videos{% endif %}
               </span>
             </div>
           {% endif %}
         </div>
         <hr class="text-muted" />
-        <p class="card-text flex-grow-1 text-muted excerpt-html mb-3">{{ item.list_excerpt }}</p>
+        <p class="card-text flex-grow-1 text-muted excerpt-html excerpt-html--feed-sm d-md-none mb-3">{{ item.list_excerpt|truncatechars:500 }}</p>
+        <p class="card-text flex-grow-1 text-muted excerpt-html excerpt-html--feed-lg d-none d-md-block mb-3">{{ item.list_excerpt|truncatechars:850 }}</p>
         <div class="d-flex pt-2 feed-card-bottom-row">
           <div class="d-flex align-items-center VLB">
             <div class="item-stats item-stats--feed d-inline-flex align-items-center flex-wrap">

@@ -87,7 +87,7 @@
           <span>{{ item.human_published }}</span>
           {% if item.is_edited %}
             <span>/</span>
-            <span class="success_ fw-semibold">Was edited</span>
+            <span class="success_ fw-semibold">Edited</span>
           {% endif %}
         </small>
       </div>
@@ -130,8 +130,14 @@
       {% endif %}
     </div>
     <!-- ===== Body text ===== -->
-    <div class="item-text ck-content my-5">
+    <div id="itemTextCurtain" class="item-text ck-content my-5">
       {{ item.text|safe }}
+    </div>
+    <div id="itemTextShowMoreWrap" class="item-text-show-more-wrap" style="display:none;">
+      <hr class="item-text-show-more-divider" />
+      <button type="button" id="itemTextShowMore" class="item-text-show-more-btn">
+        Show more <i class="fa fa-angle-down" aria-hidden="true"></i>
+      </button>
     </div>
     {% post_media_gallery item %}
     <!-- === published row: liked users left, like/bookmark actions right === -->
@@ -274,9 +280,7 @@
   </div>
 {% endblock %}
 
-{% block floating_comments_nav %}
-  <button id="commentsBackToTop" type="button" aria-label="Back to comments top" title="Back to comments top"><span>↑</span></button>
-{% endblock %}
+{% block floating_comments_nav %}{% endblock %}
 
 {% block page_modals %}
   {% include 'includes/comment_modal.html' %}
@@ -291,4 +295,37 @@
   <script defer src="{% static 'smart_blog/js/comment_operate.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/liked_users_overlay.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/report_modal.js' %}"></script>
+  <script>
+  (function () {
+    var MOBILE_BP = 767;
+    var COLLAPSED_HEIGHT_EM = 100;
+
+    function initCurtain() {
+      var el = document.getElementById('itemTextCurtain');
+      var wrap = document.getElementById('itemTextShowMoreWrap');
+      var btn = document.getElementById('itemTextShowMore');
+      if (!el || !wrap || !btn) return;
+      if (window.innerWidth > MOBILE_BP) return;
+
+      var fontSize = parseFloat(getComputedStyle(el).fontSize) || 16;
+      var maxPx = COLLAPSED_HEIGHT_EM * fontSize;
+
+      if (el.scrollHeight <= maxPx + 8) return;
+
+      el.classList.add('item-text-curtain', 'item-text-curtain--collapsed');
+      wrap.style.display = '';
+
+      btn.addEventListener('click', function () {
+        el.classList.remove('item-text-curtain--collapsed');
+        wrap.style.display = 'none';
+      }, { once: true });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initCurtain);
+    } else {
+      initCurtain();
+    }
+  })();
+  </script>
 {% endblock %}

@@ -7,25 +7,16 @@
       <h4 class="text-muted m-0">Topics</h4>
     </div>
 
-    <div class="topics-local-search-wrap mb-4">
-      <label class="visually-hidden" for="topicsLocalFilter">Filter topics</label>
-      <div class="topics-local-search-inner position-relative">
-        <input
-          type="search"
-          id="topicsLocalFilter"
-          class="form-control topics-local-search-input"
-          placeholder="Filter topics by name…"
-          autocomplete="off"
-          data-topics-filter-input
-          enterkeyhint="search"
-        />
-        <span class="topics-local-search-sign" aria-hidden="true"><i class="fa fa-search"></i></span>
-      </div>
-    </div>
+    {% include 'includes/topic_category_chips.html' with categories=topics_all topic_chips_mode='filter' %}
 
     <div id="topicsFilterEmpty" class="custom-alert custom-alert-info d-none" role="status">
       No topics match this filter.
     </div>
+
+    {% comment %}
+    --- Legacy live text search (optional; not loaded) ---
+    <div class="topics-local-search-wrap mb-4">...</div>
+    {% endcomment %}
 
     {% if topics_featured %}
       <section id="topicsFeaturedSection" class="mb-5" aria-labelledby="topicsFeaturedHeading">

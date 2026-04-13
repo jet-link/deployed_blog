@@ -1807,7 +1807,7 @@ a.admin-link {
 .admin-dropdown-menu a {
   font-family: var(--font-body);
   padding: 8px 14px;
-  color: var(--admin-text);
+  color: var(--admin-accent);
   text-decoration: none;
   font-size: 13px;
   font-weight: 500;
@@ -2603,4 +2603,90 @@ a.admin-link {
 
 [data-theme="light"] .admin-health-banner--warn {
   background: rgba(154, 103, 0, 0.1);
+}
+
+/* Edit post: existing media thumbnails (delete only; shared markup with smart_blog image_manage.js) */
+.admin-label-static {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--admin-text);
+}
+
+.admin-help-text--block {
+  display: block;
+  font-size: 12px;
+  color: var(--admin-text-muted);
+  margin-bottom: 10px;
+}
+
+.admin-existing-media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Admin layout has no Bootstrap utilities — position overlay buttons like edit_item */
+.admin-existing-media .admin-existing-image.existing-image,
+.admin-existing-media .admin-existing-video.existing-video {
+  position: relative;
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.admin-existing-image.existing-image img,
+.admin-existing-media .admin-existing-image img {
+  width: 150px;
+  height: 130px;
+  object-fit: cover;
+  border-radius: var(--admin-radius);
+  border: 1px solid var(--admin-border);
+  display: block;
+  background: var(--admin-bg-hover);
+}
+
+.admin-existing-media .existing-image.marked-for-delete > img,
+.admin-existing-media .existing-video.marked-for-delete > .admin-existing-video-thumb,
+.admin-existing-media .existing-video.marked-for-delete > .existing-video__thumb {
+  opacity: 0.5;
+}
+
+.admin-existing-video-thumb {
+  width: 150px;
+  height: 130px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-bg-hover);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--admin-text-muted);
+  box-sizing: border-box;
+}
+
+.admin-existing-video-thumb .fa-video-camera {
+  font-size: 1.25rem;
+}
+
+.admin-existing-video-label {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--admin-text-muted);
+}
+
+.admin-existing-media-delete {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  z-index: 3;
+  font-size: 10px;
+  line-height: 1;
+  opacity: 1;
+}
+
+.admin-existing-media .existing-image.marked-for-delete .admin-existing-media-delete,
+.admin-existing-media .existing-video.marked-for-delete .admin-existing-media-delete {
+  opacity: 1;
 }

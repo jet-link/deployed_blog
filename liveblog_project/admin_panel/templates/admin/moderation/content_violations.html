@@ -141,11 +141,11 @@
     {% if violations.has_other_pages %}
     <div class="admin-pagination">
         {% if violations.has_previous %}
-            <a href="?page={{ violations.previous_page_number }}{% if search %}&q={{ search }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if analysis_id %}&analysis_id={{ analysis_id }}{% endif %}" class="admin-button admin-button-sm">Previous</a>
+            <a href="?page={{ violations.previous_page_number }}{% if pagination_query %}&amp;{{ pagination_query }}{% endif %}" class="admin-button admin-button-sm">Previous</a>
         {% endif %}
         <span class="admin-pagination-info">Page {{ violations.number }} of {{ violations.paginator.num_pages }}</span>
         {% if violations.has_next %}
-            <a href="?page={{ violations.next_page_number }}{% if search %}&q={{ search }}{% endif %}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if analysis_id %}&analysis_id={{ analysis_id }}{% endif %}" class="admin-button admin-button-sm">Next</a>
+            <a href="?page={{ violations.next_page_number }}{% if pagination_query %}&amp;{{ pagination_query }}{% endif %}" class="admin-button admin-button-sm">Next</a>
         {% endif %}
     </div>
     {% endif %}

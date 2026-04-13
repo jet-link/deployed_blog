@@ -1,80 +1,99 @@
+/**
+ * Topics index: filter featured + all grids by category chip (client-side).
+ * Legacy live text search markup is kept commented in topics_list.html if needed later.
+ */
 (function () {
-  document.addEventListener('DOMContentLoaded', function () {
-    var input = document.querySelector('[data-topics-filter-input]');
-    var grid = document.getElementById('topicsAllGrid');
+  'use strict';
+
+  function initTopicChipsFilter(nav) {
+    var chips = nav.querySelectorAll('.topic-category-chip');
     var featuredRow = document.querySelector('.topics-featured-row');
+    var grid = document.getElementById('topicsAllGrid');
     var featuredSec = document.getElementById('topicsFeaturedSection');
     var allSec = document.getElementById('topicsAllSection');
     var emptyMsg = document.getElementById('topicsFilterEmpty');
-    if (!input) return;
-    if (!featuredRow && !grid) return;
 
-    function countFeaturedMatches(q) {
-      if (!featuredRow) return { visible: 0 };
-      var cols = featuredRow.querySelectorAll(':scope > div');
-      var visible = 0;
-      cols.forEach(function (col) {
-        var card = col.querySelector('.topic-tile');
-        var hay = card ? (card.getAttribute('data-search-text') || '') : '';
-        var show = !q || hay.indexOf(q) !== -1;
-        col.classList.toggle('d-none', !show);
-        if (show) visible += 1;
-      });
-      return { visible: visible };
+    function matchCol(col, slug) {
+      var tile = col.querySelector('.topic-tile');
+      if (!tile) return false;
+      var tslug = tile.getAttribute('data-category-slug');
+      if (slug === 'all') return true;
+      return tslug === slug;
     }
 
-    function countAllMatches(q) {
-      if (!grid) return { visible: 0 };
-      var cols = grid.querySelectorAll('.topics-grid-col');
-      var visible = 0;
-      cols.forEach(function (col) {
-        var card = col.querySelector('.topic-tile');
-        var hay = card ? (card.getAttribute('data-search-text') || '') : '';
-        var show = !q || hay.indexOf(q) !== -1;
-        col.classList.toggle('d-none', !show);
-        if (show) visible += 1;
-      });
-      return { visible: visible };
-    }
+    function applyFilter(slug) {
+      var isAll = slug === 'all';
+      var featVisible = 0;
+      var allVisible = 0;
 
-    function run() {
-      var q = (input.value || '').trim().toLowerCase();
-      var feat = countFeaturedMatches(q);
-      var all = countAllMatches(q);
-      var total = feat.visible + all.visible;
-
-      if (!q) {
-        if (emptyMsg) emptyMsg.classList.add('d-none');
-        if (featuredSec) featuredSec.classList.remove('d-none');
-        if (allSec) allSec.classList.remove('d-none');
-        var fh = document.getElementById('topicsFeaturedHeading');
-        var ah = document.getElementById('topicsAllHeading');
-        if (fh) fh.classList.remove('d-none');
-        if (ah) ah.classList.remove('d-none');
-        return;
+      if (featuredRow) {
+        featuredRow.querySelectorAll(':scope > div').forEach(function (col) {
+          var show = matchCol(col, slug);
+          col.classList.toggle('d-none', !show);
+          if (show) featVisible += 1;
+        });
+      }
+      if (grid) {
+        grid.querySelectorAll('.topics-grid-col').forEach(function (col) {
+          var show = matchCol(col, slug);
+          col.classList.toggle('d-none', !show);
+          if (show) allVisible += 1;
+        });
       }
 
-      if (total === 0) {
-        if (featuredSec) featuredSec.classList.add('d-none');
-        if (allSec) allSec.classList.add('d-none');
-        if (emptyMsg) emptyMsg.classList.remove('d-none');
-        return;
-      }
+      var total = featVisible + allVisible;
 
-      if (emptyMsg) emptyMsg.classList.add('d-none');
+      if (emptyMsg) {
+        emptyMsg.classList.toggle('d-none', total > 0);
+      }
 
       if (featuredSec) {
-        if (feat.visible === 0) featuredSec.classList.add('d-none');
-        else featuredSec.classList.remove('d-none');
+        if (isAll) {
+          featuredSec.classList.remove('d-none');
+        } else {
+          featuredSec.classList.toggle('d-none', featVisible === 0);
+        }
+      }
+      if (allSec) {
+        if (isAll) {
+          allSec.classList.remove('d-none');
+        } else {
+          allSec.classList.toggle('d-none', allVisible === 0);
+        }
       }
 
-      if (allSec) {
-        if (all.visible === 0) allSec.classList.add('d-none');
-        else allSec.classList.remove('d-none');
+      var fh = document.getElementById('topicsFeaturedHeading');
+      var ah = document.getElementById('topicsAllHeading');
+      if (fh) {
+        fh.classList.toggle('d-none', !isAll && featVisible === 0);
       }
+      if (ah) {
+        ah.classList.toggle('d-none', !isAll && allVisible === 0);
+      }
+
+      chips.forEach(function (btn) {
+        var catSlug = btn.getAttribute('data-category-slug');
+        var isAllBtn = btn.getAttribute('data-filter') === 'all';
+        var selected = isAll ? isAllBtn : catSlug === slug;
+        btn.classList.toggle('is-selected', selected);
+        btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      });
     }
 
-    input.addEventListener('input', run);
-    input.addEventListener('change', run);
+    nav.addEventListener('click', function (e) {
+      var btn = e.target.closest('.topic-category-chip');
+      if (!btn) return;
+      e.preventDefault();
+      var slug = btn.getAttribute('data-filter') === 'all' ? 'all' : btn.getAttribute('data-category-slug');
+      if (!slug) return;
+      applyFilter(slug);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var nav = document.querySelector('[data-topic-chips-filter]');
+    if (nav) {
+      initTopicChipsFilter(nav);
+    }
   });
 })();

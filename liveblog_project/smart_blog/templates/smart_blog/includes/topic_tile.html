@@ -1,6 +1,7 @@
 {% comment %}Topic card — badges/typography aligned with In trend; no media column.{% endcomment %}
 <article
   class="topic-tile card border-0 overflow-hidden h-100 trending-card trending-card--topic position-relative{% if topic.pk in trending_category_ids %} topic-tile--in-trend{% endif %}"
+  data-category-slug="{{ topic.slug }}"
   data-topic-name="{{ topic.name|escape }}"
   data-search-text="{{ topic.name|lower }} {{ topic.slug|lower }}"
 >

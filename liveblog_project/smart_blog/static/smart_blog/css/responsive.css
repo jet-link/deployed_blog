@@ -503,7 +503,8 @@
 /* ---------- Topics grid ---------- */
 @media (max-width: 991px) {
     .topics-page .topics-grid,
-    .topics-page [class*="topic"] {
+    /* Do not apply min-width:0 to category chip strip — it was shrinking pill labels */
+    .topics-page [class*="topic"]:not([class*="topic-category"]) {
         min-width: 0;
     }
 }
@@ -518,10 +519,14 @@
 
 /* ---------- Filters / toolbar ---------- */
 @media (max-width: 767px) {
-    .filter-block,
-    .brainews-filter-bar {
+    .filter-block:not(.filter-scroll-x),
+    .brainews-filter-bar:not(.filter-scroll-x) {
         flex-wrap: wrap;
         gap: var(--space-2, 8px);
+    }
+
+    .filter-block.filter-scroll-x {
+        flex-wrap: nowrap !important;
     }
 }
 

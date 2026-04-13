@@ -8,13 +8,28 @@ import logging
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.utils.html import strip_tags
-from django.db.models import Q, Exists, OuterRef
+from django.db import IntegrityError
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
 # Lazy-loaded Detoxify model
 _detoxify_model = None
 DETOXIFY_THRESHOLD = 0.7
+# Detoxify can OOM or slow down on very long inputs; full text still used for words/regex.
+DETOXIFY_MAX_CHARS = 8000
+
+
+def _truncate_for_detoxify(text, max_chars=DETOXIFY_MAX_CHARS):
+    """Use first chunk for ML; prefer breaking at whitespace."""
+    if not text or len(text) <= max_chars:
+        return text
+    chunk = text[:max_chars]
+    last_space = chunk.rfind(' ')
+    if last_space > max_chars * 0.85:
+        chunk = chunk[:last_space]
+    logger.debug('Detoxify input truncated from %s to %s chars', len(text), len(chunk))
+    return chunk
 
 
 def get_detoxify_model():
@@ -155,9 +170,10 @@ def analyze_content(text, forbidden_words, forbidden_patterns, use_detoxify=True
     if found:
         return True, reason, match[:255] if match else 'abuse'
 
-    # 4. Detoxify
+    # 4. Detoxify (truncated input; words/regex above used full text)
     if use_detoxify:
-        found, reason, score_str = check_detoxify(text)
+        ml_text = _truncate_for_detoxify(text)
+        found, reason, score_str = check_detoxify(ml_text)
         if found:
             return True, reason, score_str or 'AI:toxicity'
 
@@ -242,6 +258,8 @@ def run_content_analysis(schedule='now', analysis_run=None, log_callback=None):
         forbidden_words = list(ForbiddenWord.objects.filter(is_active=True))
         forbidden_patterns = list(ForbiddenPattern.objects.filter(is_active=True))
         log(f'Loaded {len(forbidden_words)} forbidden words, {len(forbidden_patterns)} patterns')
+        if not forbidden_words and not forbidden_patterns:
+            log('Warning: no active forbidden words or patterns; only Detoxify (if installed) will flag content.')
 
         # Content created since cutoff
         if schedule == 'hourly':
@@ -299,30 +317,40 @@ def run_content_analysis(schedule='now', analysis_run=None, log_callback=None):
                 str(item.slug or ''),
             ]
             text = ' '.join(p for p in parts if p)
-            is_violation, reason, detected = analyze_content(text, forbidden_words, forbidden_patterns)
+            is_violation, reason, detected = analyze_content(
+                text, forbidden_words, forbidden_patterns, use_detoxify=True,
+            )
             if is_violation:
                 severity = ContentViolation.get_severity_from_reason(reason)
                 confidence = ContentViolation.get_confidence_from_detected(detected, reason)
-                ContentViolation.objects.create(
-                    content_type=ContentViolation.TYPE_POST,
-                    item=item,
-                    reason=reason,
-                    severity=severity,
-                    confidence=confidence,
-                    detected_word=detected[:255],
-                    status=ContentViolation.STATUS_PENDING,
-                    analysis_run=analysis_run,
-                )
-                existing_items.add(item.pk)
-                violations_created += 1
-                user = item.author
-                if user:
-                    try:
-                        from admin_panel.services.trust_score_service import update_user_trust_score
-                        update_user_trust_score(user, set_last_violation=True)
-                    except Exception as e:
-                        logger.exception('Trust score update failed for user %s: %s', user.pk, e)
-                log(f'Violation: Post #{item.pk} ({reason}): {detected[:50]}...')
+                try:
+                    ContentViolation.objects.create(
+                        content_type=ContentViolation.TYPE_POST,
+                        item=item,
+                        reason=reason,
+                        severity=severity,
+                        confidence=confidence,
+                        detected_word=detected[:255],
+                        status=ContentViolation.STATUS_PENDING,
+                        analysis_run=analysis_run,
+                    )
+                except IntegrityError:
+                    logger.warning(
+                        'Skipped duplicate post violation (race or constraint): item_id=%s',
+                        item.pk,
+                    )
+                    existing_items.add(item.pk)
+                else:
+                    existing_items.add(item.pk)
+                    violations_created += 1
+                    user = item.author
+                    if user:
+                        try:
+                            from admin_panel.services.trust_score_service import update_user_trust_score
+                            update_user_trust_score(user, set_last_violation=True)
+                        except Exception as e:
+                            logger.exception('Trust score update failed for user %s: %s', user.pk, e)
+                    log(f'Violation: Post #{item.pk} ({reason}): {detected[:50]}...')
             processed += 1
             if analysis_run and total > 0:
                 analysis_run.progress = min(99, int(100 * processed / total))
@@ -334,30 +362,40 @@ def run_content_analysis(schedule='now', analysis_run=None, log_callback=None):
                 continue
             # Full text, no truncation - banned words checked on entire comment
             text = strip_tags(str(comment.text or ''))
-            is_violation, reason, detected = analyze_content(text, forbidden_words, forbidden_patterns)
+            is_violation, reason, detected = analyze_content(
+                text, forbidden_words, forbidden_patterns, use_detoxify=True,
+            )
             if is_violation:
                 severity = ContentViolation.get_severity_from_reason(reason)
                 confidence = ContentViolation.get_confidence_from_detected(detected, reason)
-                ContentViolation.objects.create(
-                    content_type=ContentViolation.TYPE_COMMENT,
-                    comment=comment,
-                    reason=reason,
-                    severity=severity,
-                    confidence=confidence,
-                    detected_word=detected[:255],
-                    status=ContentViolation.STATUS_PENDING,
-                    analysis_run=analysis_run,
-                )
-                existing_comments.add(comment.pk)
-                violations_created += 1
-                user = comment.author
-                if user:
-                    try:
-                        from admin_panel.services.trust_score_service import update_user_trust_score
-                        update_user_trust_score(user, set_last_violation=True)
-                    except Exception as e:
-                        logger.exception('Trust score update failed for user %s: %s', user.pk, e)
-                log(f'Violation: Comment #{comment.pk} ({reason}): {detected[:50]}...')
+                try:
+                    ContentViolation.objects.create(
+                        content_type=ContentViolation.TYPE_COMMENT,
+                        comment=comment,
+                        reason=reason,
+                        severity=severity,
+                        confidence=confidence,
+                        detected_word=detected[:255],
+                        status=ContentViolation.STATUS_PENDING,
+                        analysis_run=analysis_run,
+                    )
+                except IntegrityError:
+                    logger.warning(
+                        'Skipped duplicate comment violation (race or constraint): comment_id=%s',
+                        comment.pk,
+                    )
+                    existing_comments.add(comment.pk)
+                else:
+                    existing_comments.add(comment.pk)
+                    violations_created += 1
+                    user = comment.author
+                    if user:
+                        try:
+                            from admin_panel.services.trust_score_service import update_user_trust_score
+                            update_user_trust_score(user, set_last_violation=True)
+                        except Exception as e:
+                            logger.exception('Trust score update failed for user %s: %s', user.pk, e)
+                    log(f'Violation: Comment #{comment.pk} ({reason}): {detected[:50]}...')
             processed += 1
             if analysis_run and total > 0:
                 analysis_run.progress = min(99, int(100 * processed / total))

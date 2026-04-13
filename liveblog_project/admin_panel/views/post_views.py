@@ -12,8 +12,10 @@ from smart_blog.models import Item, Category
 from smart_blog.services.item_write import (
     MAX_ITEM_IMAGES,
     attach_item_images_from_uploads,
+    delete_item_images_by_ids,
     merge_item_tags,
 )
+from smart_blog.video_utils import delete_item_videos_by_ids
 from django.db import transaction
 
 @admin_required
@@ -102,9 +104,19 @@ def post_edit(request, pk):
         pk=pk,
     )
     if request.method == 'POST':
+        delete_ids = request.POST.getlist('delete_images')
+        delete_video_ids = request.POST.getlist('delete_videos')
         form = ItemAdminEditForm(request.POST, instance=item)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                if delete_ids or delete_video_ids:
+                    delete_item_images_by_ids(item, delete_ids)
+                    delete_item_videos_by_ids(item, delete_video_ids)
+                instance = form.save(commit=False)
+                if delete_ids or delete_video_ids:
+                    instance.edited = True
+                instance.save()
+                form.save_m2m()
             messages.success(request, 'Post updated.')
             url = reverse('admin_panel:posts_list')
             qs = request.GET.urlencode()
@@ -113,7 +125,12 @@ def post_edit(request, pk):
             return redirect(url)
     else:
         form = ItemAdminEditForm(instance=item)
-    return render(request, 'admin/posts/post_edit.html', {'form': form, 'item': item})
+    return render(request, 'admin/posts/post_edit.html', {
+        'form': form,
+        'item': item,
+        'existing_images': item.images.all(),
+        'existing_videos': item.videos.all(),
+    })
 
 
 @admin_required

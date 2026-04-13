@@ -27,16 +27,27 @@ def content_violations_list(request):
         'item__author', 'comment__author',
     )
 
-    # Search (author username, detected word, item title, comment text)
+    # Search (author username, detected word, item title, comment text).
+    # Use Item.all_objects / Comment.all_objects so soft-deleted posts/comments still match
+    # (default managers would exclude them via FK joins and drop valid rows).
     search = request.GET.get('q', '').strip()
     if search:
-        qs = qs.filter(
-            Q(detected_word__icontains=search)
-            | Q(item__author__username__icontains=search)
-            | Q(comment__author__username__icontains=search)
-            | Q(item__title__icontains=search)
-            | Q(comment__text__icontains=search)
+        search_q = Q(detected_word__icontains=search)
+        item_ids = list(
+            Item.all_objects.filter(
+                Q(title__icontains=search) | Q(author__username__icontains=search)
+            ).values_list('pk', flat=True)
         )
+        if item_ids:
+            search_q |= Q(item_id__in=item_ids)
+        comment_ids = list(
+            Comment.all_objects.filter(
+                Q(text__icontains=search) | Q(author__username__icontains=search)
+            ).values_list('pk', flat=True)
+        )
+        if comment_ids:
+            search_q |= Q(comment_id__in=comment_ids)
+        qs = qs.filter(search_q)
 
     # Type filter
     content_type = request.GET.get('type')
@@ -78,6 +89,9 @@ def content_violations_list(request):
         filter_params['page'] = page_num
     filter_qs = urlencode(filter_params) if filter_params else ''
 
+    pagination_params = {k: v for k, v in filter_params.items() if k != 'page'}
+    pagination_query = urlencode(pagination_params) if pagination_params else ''
+
     context = {
         'violations': violations,
         'search': search,
@@ -85,6 +99,7 @@ def content_violations_list(request):
         'current_status': status_filter,
         'analysis_id': analysis_id,
         'filter_qs': filter_qs,
+        'pagination_query': pagination_query,
     }
     return render(request, 'admin/moderation/content_violations.html', context)
 

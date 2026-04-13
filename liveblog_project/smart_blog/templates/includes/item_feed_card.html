@@ -3,7 +3,7 @@
 {% load user_status %}
 <span class="item-anchor" id="item-anchor-{{ item.pk }}"></span>
 <article id="item-{{ item.pk }}"
-  class="trending-card trending-card--feed item_block item-feed-card item-feed-card--no-media position-relative"
+  class="trending-card trending-card--feed item_block item-feed-card {% if item.has_photos or item.has_videos %}item-feed-card--has-media{% else %}item-feed-card--no-media{% endif %} position-relative"
   data-item-id="{{ item.pk }}">
   <div class="row g-0 h-100">
     {% comment %}
@@ -47,23 +47,50 @@
             {% endif %}
           </div>
         </div>
-        <h3 class="mb-3 item-feed-card__title">{{ item.title }}</h3>
-        <div class="d-flex align-items-center justify-content-between text-muted">
-          <div class="small d-inline-flex align-items-center gap-2">
+        <h3 class="m-0 item-feed-card__title">{{ item.title }}</h3>
+        <hr class="text-muted" />
+        <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 text-muted mb-3">
+          <div class="d-inline-flex align-items-center gap-2">
             <small class="fw-semibold">{{ item.human_published }}</small>
           </div>
           {% if item.has_photos or item.has_videos %}
-            <div class="feed-card-pin">
-              <i class="fa fa-thumb-tack" aria-hidden="true"></i>
-              <span class="feed-card-pin__labels">
-                {% if item.has_photos %}photos{% endif %}{% if item.has_photos and item.has_videos %} + {% endif %}{% if item.has_videos %}videos{% endif %}
-              </span>
+            <div class="item-feed-card__media-preview">
+              {% if item.has_photos %}
+                <div class="item-feed-card__image-stack" aria-hidden="true">
+                  {% for img in item.images.all %}
+                    {% if forloop.counter <= 5 %}
+                      <span class="item-feed-card__stack-disc" style="z-index: {{ forloop.counter }}">
+                        <img src="{{ img.get_thumbnail_url }}" alt="" loading="lazy" decoding="async" width="30" height="30" />
+                      </span>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              {% elif item.has_videos %}
+                {% with vid=item.videos.first %}
+                  {% if vid %}
+                    <div class="item-feed-card__image-stack item-feed-card__image-stack--video-only" aria-hidden="true">
+                      <span class="item-feed-card__stack-disc">
+                        {% if vid.thumbnail %}
+                          <img src="{{ vid.thumbnail.url }}" alt="" loading="lazy" decoding="async" width="30" height="30" />
+                        {% else %}
+                          <span class="item-feed-card__video-fallback"><i class="fa fa-video-camera" aria-hidden="true"></i></span>
+                        {% endif %}
+                      </span>
+                    </div>
+                  {% endif %}
+                {% endwith %}
+              {% endif %}
+              <div class="feed-card-pin">
+                <i class="fa fa-thumb-tack" aria-hidden="true"></i>
+                <span class="feed-card-pin__labels">
+                  {% if item.has_photos %}photos{% endif %}{% if item.has_photos and item.has_videos %} + {% endif %}{% if item.has_videos %}videos{% endif %}
+                </span>
+              </div>
             </div>
           {% endif %}
         </div>
-        <hr class="text-muted" />
-        <p class="card-text flex-grow-1 text-muted excerpt-html excerpt-html--feed-sm d-md-none mb-3">{{ item.list_excerpt|truncatechars:500 }}</p>
-        <p class="card-text flex-grow-1 text-muted excerpt-html excerpt-html--feed-lg d-none d-md-block mb-3">{{ item.list_excerpt|truncatechars:850 }}</p>
+        <p class="card-text flex-grow-1 text-muted excerpt-html excerpt-html--feed-sm d-md-none mb-3">{{ item.list_excerpt|truncatechars:450 }}</p>
+        <p class="card-text flex-grow-1 text-muted excerpt-html excerpt-html--feed-lg d-none d-md-block mb-3">{{ item.list_excerpt|truncatechars:750 }}</p>
         <div class="d-flex pt-2 feed-card-bottom-row">
           <div class="d-flex align-items-center VLB">
             <div class="item-stats item-stats--feed d-inline-flex align-items-center flex-wrap">

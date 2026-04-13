@@ -47,7 +47,7 @@
 
         <!-- Category -->
         <div class="mb-3">
-          <div class="custom-select-wrap">
+          <div class="custom-select-wrap category-select-custom">
             {{ form.category }}
           </div>
           {% for err in form.category.errors %}
@@ -170,4 +170,5 @@
       }
     })();
   </script>
+  <script defer src="{% static 'smart_blog/js/category_select.js' %}"></script>
 {% endblock %}

@@ -26,6 +26,42 @@
             {{ form.text }}
             {{ form.text.errors }}
         </div>
+
+        {% if existing_images %}
+        <div class="admin-form-group">
+            <span class="admin-label-static">Photos</span>
+            <span class="admin-help-text admin-help-text--block">Click × to mark for removal, then Save.</span>
+            <div id="existingImages" class="admin-existing-media admin-existing-media--images">
+                {% for img in existing_images %}
+                <div id="image-{{ img.pk }}" class="admin-existing-image existing-image">
+                    <img src="{{ img.get_thumbnail_url }}" alt="{{ img.alt_text }}" width="150" height="130" loading="lazy" decoding="async" />
+                    <button type="button" class="admin-button admin-button-danger admin-button-sm admin-existing-media-delete btn-mark-delete" data-image-id="{{ img.pk }}" aria-pressed="false" title="Mark for deletion"><i class="fa fa-times" aria-hidden="true"></i></button>
+                </div>
+                {% endfor %}
+            </div>
+            <div id="deleteInputs"></div>
+        </div>
+        {% endif %}
+
+        {% if existing_videos %}
+        <div class="admin-form-group">
+            <span class="admin-label-static">Videos</span>
+            <span class="admin-help-text admin-help-text--block">Click × to mark for removal, then Save.</span>
+            <div id="existingVideos" class="admin-existing-media admin-existing-media--videos">
+                {% for vid in existing_videos %}
+                <div id="video-{{ vid.pk }}" class="admin-existing-video existing-video">
+                    <div class="existing-video__thumb existing-video__thumb--poster admin-existing-video-thumb" data-video-src="{{ vid.video.url }}">
+                        <i class="fa fa-video-camera" aria-hidden="true"></i>
+                        <small class="admin-existing-video-label">Video {{ forloop.counter }}</small>
+                    </div>
+                    <button type="button" class="admin-button admin-button-danger admin-button-sm admin-existing-media-delete btn-mark-delete-video" data-video-id="{{ vid.pk }}" aria-pressed="false" title="Mark for deletion"><i class="fa fa-times" aria-hidden="true"></i></button>
+                </div>
+                {% endfor %}
+            </div>
+            <div id="deleteVideoInputs"></div>
+        </div>
+        {% endif %}
+
         <div class="admin-form-group">
             <label for="id_category">{{ form.category.label }}</label>
             {{ form.category }}
@@ -44,4 +80,9 @@
     </form>
 </div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'admin/js/admin_ckeditor.js' %}"></script>{% endblock %}
+{% block extra_js %}
+<script src="{% static 'admin/js/admin_ckeditor.js' %}"></script>
+{% if existing_images or existing_videos %}
+<script src="{% static 'smart_blog/js/image_manage.js' %}"></script>
+{% endif %}
+{% endblock %}

@@ -711,7 +711,6 @@
             var isMarked = btn.getAttribute('aria-pressed') === 'true';
             if (!isMarked) {
                 wrapper.classList.add('marked-for-delete');
-                wrapper.style.opacity = '0.5';
                 btn.innerHTML = '<i class="fa fa-undo" aria-hidden="true"></i>';
                 btn.setAttribute('aria-pressed', 'true');
                 btn.title = 'Unmark deletion';
@@ -723,7 +722,6 @@
                 deleteVideoContainer.appendChild(hidden);
             } else {
                 wrapper.classList.remove('marked-for-delete');
-                wrapper.style.opacity = '';
                 btn.innerHTML = '<i class="fa fa-times"></i>';
                 btn.setAttribute('aria-pressed', 'false');
                 btn.title = 'Mark for deletion';
@@ -760,11 +758,8 @@
             const isMarked = btn.getAttribute('aria-pressed') === 'true';
 
             if (!isMarked) {
-                // mark visually
+                // mark visually (dimming via CSS on img / .existing-video__thumb only)
                 wrapper.classList.add('marked-for-delete');
-                // dim thumbnail
-                wrapper.style.opacity = '0.5';
-                // change button (optional: icon -> undo)
                 btn.innerHTML = '<i class="fa fa-undo" aria-hidden="true"></i>';
                 btn.setAttribute('aria-pressed', 'true');
                 btn.title = 'Unmark deletion';
@@ -779,7 +774,6 @@
             } else {
                 // unmark
                 wrapper.classList.remove('marked-for-delete');
-                wrapper.style.opacity = '';
                 btn.innerHTML = '<i class="fa fa-times"></i>';
                 btn.setAttribute('aria-pressed', 'false');
                 btn.title = 'Mark for deletion';

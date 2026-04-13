@@ -2,12 +2,6 @@
 (function () {
     'use strict';
 
-    function showBrainPreloader() {
-        if (window.__brainPreloader && typeof window.__brainPreloader.show === 'function') {
-            window.__brainPreloader.show();
-        }
-    }
-
     const FILTER_KEY = 'brainews_filter_active';
     const FILTER_STORAGE_KEY_PREFIX = 'brainews_original_cards_';
     let latestFilterRequestId = 0;
@@ -27,11 +21,6 @@
         if (path === '/search' || path.startsWith('/search/')) return true;
         if (path.includes('/blog/tag/')) return true;
         return false;
-    }
-
-    function isBraiNewsListing() {
-        const path = location.pathname.replace(/\/$/, '') || '/';
-        return path === '/brainews' || path === '/blog/brainews' || path.endsWith('/brainews');
     }
 
     function getPageContextKey() {
@@ -66,20 +55,6 @@
         }
     }
 
-    function getBraiNewsUrl() {
-        try {
-            const a = document.querySelector('a[href*="/brainews"]');
-            if (a) {
-                const href = a.getAttribute('href');
-                if (href && !href.includes('/item/')) {
-                    const u = new URL(href, location.origin);
-                    return u.origin + u.pathname.replace(/\/$/, '') + '/';
-                }
-            }
-        } catch { }
-        return location.origin + '/brainews/';
-    }
-
     function setItem(k, v) { try { sessionStorage.setItem(k, v); } catch { } }
     function getItem(k) { try { return sessionStorage.getItem(k); } catch { return null; } }
     function removeItem(k) { try { sessionStorage.removeItem(k); } catch { } }
@@ -93,14 +68,19 @@
 
     function getActiveFilter() {
         const btn = getFilterButtons().find(b => b.classList.contains('is-selected'));
-        return btn ? btn.dataset.filter : null;
+        if (!btn) return null;
+        const v = btn.dataset.filter;
+        return v === 'all' ? null : v;
     }
 
     const FILTER_TITLES = { liked: 'Liked posts', bookmarked: 'Marked posts' };
 
     function setActiveFilter(value) {
+        const showAll = !value || value === 'all';
         getFilterButtons().forEach(b => {
-            b.classList.toggle('is-selected', b.dataset.filter === value);
+            const f = b.dataset.filter;
+            const sel = showAll ? f === 'all' : f === value;
+            b.classList.toggle('is-selected', sel);
         });
         const titleEl = document.getElementById('brainewsListingTitle');
         const ctxBlock = document.getElementById('filterPageContextBlock');
@@ -226,18 +206,24 @@
     }
 
     function applyFilter(filter) {
-        if (!filter) {
+        if (!filter || filter === 'all') {
             latestFilterRequestId++;
             clearRefreshFlag();
-            setActiveFilter(null);
+            const hadStored = getItem(FILTER_KEY);
+            let hadSnapshot = false;
+            try {
+                hadSnapshot = !!sessionStorage.getItem(FILTER_STORAGE_KEY_PREFIX + getPageContextKey());
+            } catch { /* ignore */ }
             removeItem(FILTER_KEY);
-            if (isBraiNewsListing()) {
-                restoreOriginalContent();
+            setActiveFilter(null);
+            if (!isFilterablePage()) return;
+            if (!hadStored && !hadSnapshot) {
+                showPagination(true);
                 showEmptyHint('');
-            } else {
-                showBrainPreloader();
-                window.location.href = getBraiNewsUrl();
+                return;
             }
+            restoreOriginalContent();
+            showEmptyHint('');
             return;
         }
         latestFilterRequestId++;
@@ -291,17 +277,14 @@
     }
 
     function onFilterChange(e) {
-        const btn = e.target.closest('.filter-reason-btn');
+        const btn = e.target.closest('.filter-block .filter-reason-btn');
         if (!btn) return;
         if (!isFilterablePage()) return;
 
         const value = btn.dataset.filter;
-        const wasSelected = btn.classList.contains('is-selected');
-        getFilterButtons().forEach(b => b.classList.remove('is-selected'));
-        if (wasSelected) {
+        if (value === 'all') {
             applyFilter(null);
         } else {
-            btn.classList.add('is-selected');
             applyFilter(value);
         }
     }

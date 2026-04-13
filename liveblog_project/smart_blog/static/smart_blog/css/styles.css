@@ -237,6 +237,85 @@ html[data-theme="dark"] .custom-select-category:focus {
     box-shadow: 0 0 0 3px var(--input-focus-ring);
 }
 
+/* JS-enhanced category dropdown (see category_select.js) */
+.category-select-custom .category-select-native {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.category-select-custom .category-select-inner {
+    position: relative;
+}
+
+.category-select-trigger.category-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    box-sizing: border-box;
+    cursor: pointer;
+    font: inherit;
+}
+
+.category-select-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 50;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--bg-default);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme="dark"] .category-select-panel {
+    background: var(--bg-muted);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.category-select-options {
+    margin: 0;
+    padding: 0.35rem 0;
+    list-style: none;
+}
+
+.category-select-option {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-default);
+    transition: background-color 0.15s ease;
+}
+
+.category-select-option:hover,
+.category-select-option:focus {
+    background: color-mix(in srgb, var(--text-link) 12%, var(--bg-default));
+    outline: none;
+}
+
+html[data-theme="dark"] .category-select-option:hover,
+html[data-theme="dark"] .category-select-option:focus {
+    background: color-mix(in srgb, var(--text-link) 18%, var(--bg-muted));
+}
+
+.category-select-custom.is-open .category-select-trigger {
+    border-color: var(--text-link);
+    box-shadow: 0 0 0 3px var(--input-focus-ring);
+}
+
 /* ===== Tags: grey VLB chips (item detail, tag list, create/edit) ===== */
 .tag-vlb {
     display: inline-flex;
@@ -1695,6 +1774,43 @@ html[data-theme="dark"] .trending-card__placeholder--hot .trending-card__placeho
     .feed-cards-masonry > .item-card:last-child:nth-child(3n+2) {
         grid-column: 1 / -1;
     }
+
+    /* Equal height in each grid row: short cards stretch; footer aligns at bottom */
+    .feed-cards-masonry > .item-card {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .feed-cards-masonry > .item-card > .item-feed-card.trending-card {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        min-height: 0;
+    }
+
+    .feed-cards-masonry .item-feed-card > .row {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        align-items: stretch;
+        min-height: 0;
+    }
+
+    .feed-cards-masonry .item-feed-card > .row > .col {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .feed-cards-masonry .item-feed-card .card-body.d-flex {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .feed-cards-masonry .item-feed-card .feed-card-bottom-row {
+        margin-top: auto;
+    }
 }
 
 /* --- Card chrome (trending style) --- */
@@ -1724,10 +1840,6 @@ html[data-theme="dark"] .feed-cards-masonry .item_block.trending-card {
 }
 
 @media (min-width: 768px) {
-    .feed-cards-masonry .item-feed-card > .row {
-        align-items: stretch;
-    }
-
     .feed-cards-masonry .item-feed-card > .row > .trending-card__img-wrap {
         display: flex;
         flex-direction: column;
@@ -2981,6 +3093,97 @@ input::-webkit-search-decoration {
     color: var(--btn-primary-fg);
     background: var(--btn-primary-bg);
     /* transform: scale(1.08); */
+}
+
+a.filter-reason-btn.topic-category-link {
+    text-decoration: none;
+    display: inline-block;
+}
+
+a.filter-reason-btn.topic-category-link:hover {
+    text-decoration: none;
+    opacity: 0.92;
+}
+
+/* Segmented filter: shell = border pill — width follows row (max-content), capped at column;
+   horizontal scroll only inside .filter-segment-scroll (the row moves, not the whole pill). */
+.filter-segment-outer {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.filter-segment-shell {
+    display: inline-block;
+    vertical-align: top;
+    max-width: 100%;
+    min-width: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--bg-default);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Scrollport: fixed width = shell inner; only the chip row (.filter-segment-bar) pans inside */
+.filter-segment-scroll {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.filter-segment-bar {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 8px;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: none;
+    position: relative;
+    z-index: 0;
+    white-space: normal;
+}
+
+.filter-segment-bar .filter-reason-btn,
+.filter-segment-bar a.filter-reason-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    border-radius: 999px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    transition: background-color 0.22s ease, color 0.22s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+}
+
+.filter-segment-bar .filter-reason-btn.is-selected,
+.filter-segment-bar a.filter-reason-btn.is-selected {
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-fg);
+}
+
+.filter-segment-bar .filter-reason-btn:hover:not(.is-selected):not(:disabled),
+.filter-segment-bar a.filter-reason-btn:hover:not(.is-selected) {
+    background: var(--bg-subtle);
+}
+
+html[data-theme="dark"] .filter-segment-bar .filter-reason-btn.is-selected,
+html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
+    border-color: transparent;
+    color: var(--btn-primary-fg);
+    background: transparent;
+}
+
+/* `.topic-category-chips` elsewhere uses width 100%; inner row must stay max-content for horizontal scroll */
+.filter-segment-scroll .filter-segment-bar.topic-category-chips,
+.filter-segment-scroll .topic-category-chips.filter-segment-bar {
+    width: max-content;
+    max-width: none;
 }
 
 .filter-empty-hint {
@@ -5237,6 +5440,7 @@ html[data-theme="dark"] .form-wrapper {
 }
 
 .existing-image {
+    position: relative;
     width: 120px;
 }
 
@@ -5434,6 +5638,14 @@ html[data-theme="dark"] .report-reason-btn.is-selected {
     outline: 2px dashed #dc3545;
     border-radius: 6px;
     transform: scale(.995);
+}
+
+.existing-image.marked-for-delete > img {
+    opacity: 0.5;
+}
+
+.existing-video.marked-for-delete > .existing-video__thumb {
+    opacity: 0.5;
 }
 
 /* ========== Container ========== */
@@ -6833,7 +7045,9 @@ html[data-theme="dark"] .categories-modal-card__media-empty::after {
     font-size: 0.9rem;
 }
 
-/* Topics index — local search (aligned with header search, slightly compact) */
+/*
+ * Topics index — local live search (disabled; keep when restoring topics_filter.js + search markup)
+ *
 .topics-local-search-wrap {
     max-width: 30rem;
 }
@@ -6874,6 +7088,7 @@ html[data-theme="dark"] .topics-local-search-input:focus {
     pointer-events: none;
     opacity: 0.85;
 }
+*/
 
 /* Topic tiles (Topics index) — Hot Now visual language */
 .trending-card--topic {
@@ -7361,8 +7576,8 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
 .feed-card-pin {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    font-size: 0.75rem;
+    gap: 0.5rem;
+    font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-link, #273c75);
     white-space: nowrap;
@@ -7376,6 +7591,78 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
 .feed-card-pin__labels {
     font-size: 0.72rem;
     font-weight: 500;
+}
+
+/* Feed card: circular thumbnails above "photos + videos" (images stacked; video not stacked) */
+.item-feed-card__media-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 3px;
+    flex-shrink: 0;
+    max-width: min(100%, 140px);
+    margin-left: auto;
+    text-align: center;
+}
+
+.item-feed-card__image-stack {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    min-height: 32px;
+}
+
+.item-feed-card__stack-disc {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 2px solid var(--card-bg);
+    overflow: hidden;
+    margin-left: -14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    position: relative;
+    background: var(--bg-muted);
+    box-sizing: border-box;
+}
+
+.item-feed-card__stack-disc:first-child {
+    margin-left: 0;
+}
+
+.item-feed-card__stack-disc img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 50%;
+}
+
+/* Slight "book page" tilt — images only (stack is photo-only by design) */
+.item-feed-card__image-stack:not(.item-feed-card__image-stack--video-only) .item-feed-card__stack-disc:nth-child(odd) {
+    transform: rotate(-3deg);
+}
+
+.item-feed-card__image-stack:not(.item-feed-card__image-stack--video-only) .item-feed-card__stack-disc:nth-child(even) {
+    transform: rotate(2.5deg);
+}
+
+.item-feed-card__image-stack--video-only .item-feed-card__stack-disc {
+    margin-left: 0;
+}
+
+.item-feed-card__video-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--bg-muted);
 }
 
 /* ========== Media Upload Row (create/edit) ========== */
@@ -7422,6 +7709,7 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
 
 /* ========== Video Preview Thumbs ========== */
 .existing-video {
+    position: relative;
     width: 150px;
 }
 
@@ -7457,6 +7745,33 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
     display: none;
     width: 0;
     height: 0;
+}
+
+/* Pills keep intrinsic width; row scrolls horizontally (narrow viewports) */
+.filter-scroll-x .filter-reason-btn,
+.filter-scroll-x a.filter-reason-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/*
+ * Segment filter (.filter-segment-scroll + filter-scroll-x): rules MUST come after .filter-scroll-x above,
+ * which sets white-space: nowrap — that breaks hit-testing on the last chips after horizontal scroll (WebKit/iOS).
+ */
+.filter-segment-scroll.filter-scroll-x {
+    white-space: normal;
+    flex-wrap: unset;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+    position: relative;
+    z-index: 2;
+}
+
+.topic-category-chips {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
 }
 
 .filter-block--scrollable {

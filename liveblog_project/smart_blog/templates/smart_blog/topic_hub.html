@@ -20,26 +20,32 @@
       {% comment %} <p class="text-muted small mb-0">{{ page_obj.paginator.count }} post{{ page_obj.paginator.count|pluralize }}</p> {% endcomment %}
     </div>
 
-    <div id="topicSortBar" class="topic-sort-bar filter-select d-flex flex-nowrap gap-1 mb-4 filter-scroll-x" role="tablist" aria-label="Sort posts">
-      {% url 'smart_blog:topic_detail' slug=category.slug as topic_base %}
-      <button
-        type="button"
-        class="filter-reason-btn topic-sort-btn{% if topic_sort == 'latest' %} is-selected{% endif %}"
-        data-sort="latest"
-        data-topic-base="{{ topic_base }}"
-      >Latest</button>
-      <button
-        type="button"
-        class="filter-reason-btn topic-sort-btn{% if topic_sort == 'liked' %} is-selected{% endif %}"
-        data-sort="liked"
-        data-topic-base="{{ topic_base }}"
-      >Liked</button>
-      <button
-        type="button"
-        class="filter-reason-btn topic-sort-btn{% if topic_sort == 'discussed' %} is-selected{% endif %}"
-        data-sort="discussed"
-        data-topic-base="{{ topic_base }}"
-      >Discussed</button>
+    <div class="filter-segment-outer mb-4">
+      <div class="filter-segment-shell">
+        <div class="filter-segment-scroll filter-scroll-x">
+          <div id="topicSortBar" class="topic-sort-bar filter-segment-bar" role="tablist" aria-label="Sort posts">
+            {% url 'smart_blog:topic_detail' slug=category.slug as topic_base %}
+            <button
+              type="button"
+              class="filter-reason-btn topic-sort-btn{% if topic_sort == 'latest' %} is-selected{% endif %}"
+              data-sort="latest"
+              data-topic-base="{{ topic_base }}"
+            >Latest</button>
+            <button
+              type="button"
+              class="filter-reason-btn topic-sort-btn{% if topic_sort == 'liked' %} is-selected{% endif %}"
+              data-sort="liked"
+              data-topic-base="{{ topic_base }}"
+            >Liked</button>
+            <button
+              type="button"
+              class="filter-reason-btn topic-sort-btn{% if topic_sort == 'discussed' %} is-selected{% endif %}"
+              data-sort="discussed"
+              data-topic-base="{{ topic_base }}"
+            >Discussed</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="filterCardsWrapper" class="filter-cards-container filter-cards-transition" data-page-type="topic" data-category-slug="{{ category.slug }}">

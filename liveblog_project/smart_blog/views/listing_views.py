@@ -75,7 +75,7 @@ def items_filtered(request):
     if not request.user.is_authenticated:
         return HttpResponseForbidden()
     filter_type = request.GET.get('filter', '').strip().lower()
-    if filter_type not in ('liked', 'bookmarked'):
+    if filter_type not in ('liked', 'bookmarked', 'posted'):
         return HttpResponse('', content_type='text/html')
     qs = (
         Item.objects
@@ -105,13 +105,17 @@ def items_filtered(request):
             user_like_date=Subquery(like_date_subq)
         ).order_by('-user_like_date', '-pk')
         empty_msg = 'Nothing was liked'
-    else:
+    elif filter_type == 'bookmarked':
         bookmark_exists = Bookmark.objects.filter(item=OuterRef('pk'), user=request.user)
         bookmark_date_subq = Bookmark.objects.filter(item=OuterRef('pk'), user=request.user).values('created_at')[:1]
         qs = qs.filter(Exists(bookmark_exists)).annotate(
             user_bookmark_date=Subquery(bookmark_date_subq)
         ).order_by('-user_bookmark_date', '-pk')
         empty_msg = 'Nothing was bookmarked'
+    else:
+        # posted — current user's published posts
+        qs = qs.filter(author_id=request.user.pk).order_by('-published_date', '-pk')
+        empty_msg = 'No posts yet'
     qs = feed_list_optimizations(
         qs.select_related("category", "author", "author__profile")
     )

@@ -115,36 +115,6 @@
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         updateModalHeight(count, false);
-        // #region agent log
-        try {
-          var _o = document.getElementById('likedUsersOverlay');
-          var _b = _o && _o.querySelector('.liked-users-backdrop');
-          if (_b && window.getComputedStyle) {
-            var _cs = window.getComputedStyle(_b);
-            var _ocs = window.getComputedStyle(_o);
-            fetch('http://localhost:7400/ingest/58d79b52-af46-4f1d-8781-61d6f3c71fcf', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '029f88' },
-              body: JSON.stringify({
-                sessionId: '029f88',
-                location: 'liked_users_overlay.js:openOverlay',
-                message: 'liked-users scrim computed styles',
-                data: {
-                  backdropBg: _cs.backgroundColor,
-                  backdropFilter: _cs.backdropFilter,
-                  backdropPos: _cs.position,
-                  overlayBg: _ocs.backgroundColor,
-                  overlayDisplay: _ocs.display,
-                  innerW: window.innerWidth,
-                  hypothesisId: 'H3'
-                },
-                timestamp: Date.now(),
-                runId: 'post-fix'
-              })
-            }).catch(function () {});
-          }
-        } catch (_e) {}
-        // #endregion
       });
     });
   }

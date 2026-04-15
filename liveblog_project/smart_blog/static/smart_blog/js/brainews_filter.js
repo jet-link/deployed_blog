@@ -73,7 +73,11 @@
         return v === 'all' ? null : v;
     }
 
-    const FILTER_TITLES = { liked: 'Liked posts', bookmarked: 'Marked posts' };
+    const FILTER_TITLES = {
+        liked: 'Liked',
+        bookmarked: 'Marked',
+        posted: 'Posted',
+    };
 
     function setActiveFilter(value) {
         const showAll = !value || value === 'all';

@@ -69,8 +69,9 @@
         if (!ae || !panelDiscover.contains(ae) || ae === btnDiscover) return;
         if (!(ae instanceof HTMLElement)) return;
         if (!ae.closest || !ae.closest('a[href]')) return;
+        /* Blur the popover link only — focusing Discover caused visible flicker on Turbo nav (esp. iOS). */
         preserveScrollHost(function () {
-            try { btnDiscover.focus({ preventScroll: true }); } catch (_) {}
+            try { ae.blur(); } catch (_) {}
         });
     }
 

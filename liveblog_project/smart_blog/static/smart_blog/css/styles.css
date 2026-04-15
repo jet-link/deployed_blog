@@ -3080,7 +3080,7 @@ input::-webkit-search-decoration {
     border: 1px solid var(--border-strong);
     background: var(--bg-default);
     color: var(--text-primary);
-    padding: 8px 20px;
+    padding: 10px 20px;
     border-radius: 25px;
     font-size: .775rem;
     cursor: pointer;
@@ -3138,7 +3138,7 @@ a.filter-reason-btn.topic-category-link:hover {
     flex-wrap: nowrap;
     align-items: center;
     gap: 2px;
-    padding: 4px 8px;
+    padding: 6px 9px;
     box-sizing: border-box;
     width: max-content;
     max-width: none;
@@ -3155,10 +3155,15 @@ a.filter-reason-btn.topic-category-link:hover {
     border-radius: 999px;
     flex-shrink: 0;
     white-space: nowrap;
-    transition: background-color 0.22s ease, color 0.22s ease;
+    transition: background 0.22s ease, background-color 0.22s ease, color 0.22s ease;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     cursor: pointer;
+    position: relative;
+    z-index: 1;
+    /* text-transform: uppercase; */
+    font-weight: 600;
+    letter-spacing: .02rem;
 }
 
 .filter-segment-bar .filter-reason-btn.is-selected,
@@ -3167,16 +3172,24 @@ a.filter-reason-btn.topic-category-link:hover {
     color: var(--btn-primary-fg);
 }
 
+html[data-theme="light"] .filter-segment-bar .filter-reason-btn.is-selected,
+html[data-theme="light"] .filter-segment-bar a.filter-reason-btn.is-selected {
+    border-color: transparent;
+    color: var(--btn-primary-fg);
+    background: #576574;
+}
+
 .filter-segment-bar .filter-reason-btn:hover:not(.is-selected):not(:disabled),
 .filter-segment-bar a.filter-reason-btn:hover:not(.is-selected) {
     background: var(--bg-subtle);
 }
 
+/* Dark: active segment = grey pill (same token as filter chip hover lift), white label */
 html[data-theme="dark"] .filter-segment-bar .filter-reason-btn.is-selected,
 html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
     border-color: transparent;
     color: var(--btn-primary-fg);
-    background: transparent;
+    background: var(--btn-secondary-hover-bg);
 }
 
 /* `.topic-category-chips` elsewhere uses width 100%; inner row must stay max-content for horizontal scroll */
@@ -7761,7 +7774,8 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
 .filter-segment-scroll.filter-scroll-x {
     white-space: normal;
     flex-wrap: unset;
-    touch-action: pan-x;
+    /* pan-x alone can swallow taps on iOS/WebKit inside overflow-x; manipulation keeps pan + reliable clicks */
+    touch-action: manipulation;
     overscroll-behavior-x: contain;
     position: relative;
     z-index: 2;

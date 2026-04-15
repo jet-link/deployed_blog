@@ -297,6 +297,8 @@
     document.addEventListener('click', function (e) {
         const a = e.target.closest('a[href]');
         if (!a) return;
+        /* Breadcrumbs: keep Liked/Bookmarked etc. when returning to listings via trail links. */
+        if (a.closest('.breadcrumb-trail')) return;
         try {
             const u = new URL(a.getAttribute('href') || '', location.origin);
             const path = u.pathname.replace(/\/$/, '') || '/';
@@ -334,7 +336,7 @@
         });
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    function initFilterBlockFromStorage() {
         const block = document.querySelector('.filter-block');
         if (!block) return;
         if (!isFilterablePage()) {
@@ -345,7 +347,10 @@
         if (active) {
             restoreFilterOnReturnForPage();
         }
-    });
+    }
+
+    document.addEventListener('DOMContentLoaded', initFilterBlockFromStorage);
+    (document.documentElement || document).addEventListener('turbo:load', initFilterBlockFromStorage);
 
     window.addEventListener('pageshow', function (e) {
         if (!e.persisted) {

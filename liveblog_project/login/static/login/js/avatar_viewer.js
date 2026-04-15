@@ -63,7 +63,7 @@
     }
 
     function openLightbox(src, alt) {
-        if (!window.__avatarLB__) {
+        if (!window.__avatarLB__ || !document.body.contains(window.__avatarLB__.overlay)) {
             window.__avatarLB__ = createLightbox();
         }
 
@@ -76,14 +76,32 @@
         lockScroll();
     }
 
+    function healAvatarScrollLock() {
+        try {
+            if (typeof window.LB !== 'undefined' && typeof LB.resetScrollLockAfterTurboNavigation === 'function') {
+                LB.resetScrollLockAfterTurboNavigation();
+            }
+        } catch (e) { /* ignore */ }
+    }
+
     function closeLightbox() {
         const lb = window.__avatarLB__;
-        if (!lb) return;
+        if (!lb) {
+            healAvatarScrollLock();
+            return;
+        }
 
-        lb.overlay.style.display = 'none';
-        lb.img.src = '';
+        try {
+            lb.overlay.style.display = 'none';
+        } catch (e) { /* detached node */ }
+        try {
+            lb.img.src = '';
+        } catch (e) { /* ignore */ }
 
-        unlockScroll();
+        if (typeof unlockScroll === 'function') {
+            unlockScroll();
+        }
+        healAvatarScrollLock();
     }
 
     function bindEvents(lb) {
@@ -92,14 +110,21 @@
             closeLightbox();
         });
 
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') closeLightbox();
-        });
+        if (!window.__avatarLBKeydownBound) {
+            window.__avatarLBKeydownBound = true;
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') closeLightbox();
+            });
+        }
     }
 
     document.readyState === 'loading'
         ? document.addEventListener('DOMContentLoaded', init)
         : init();
+
+    (document.documentElement || document).addEventListener('turbo:before-visit', function () {
+        closeLightbox();
+    });
 })();
 
 

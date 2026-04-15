@@ -61,6 +61,29 @@ function unlockScroll() {
     }
 }
 
+/**
+ * Turbo replaces `<body>` but not `<html>`. If an overlay called lockScroll() and the
+ * old body was removed, `html.scroll-locked` still applies to the new body (position:fixed),
+ * which breaks page scrolling until a full reload.
+ */
+function resetScrollLockAfterTurboNavigation() {
+    if (_scrollLockCount === 0 && !document.documentElement.classList.contains('scroll-locked')) {
+        return;
+    }
+    _scrollLockCount = 0;
+    document.documentElement.classList.remove('scroll-locked');
+    document.documentElement.style.removeProperty('--scroll-y');
+}
+
+(document.documentElement || document).addEventListener('turbo:load', resetScrollLockAfterTurboNavigation);
+
+/* bfcache restore: same stale html.scroll-locked as Turbo body swap, but without turbo:load */
+window.addEventListener('pageshow', function (ev) {
+    if (!ev.persisted) return;
+    if (_scrollLockCount === 0 && !document.documentElement.classList.contains('scroll-locked')) return;
+    resetScrollLockAfterTurboNavigation();
+});
+
 function initAutoDismiss(container, onAfterRemove) {
     const root = container || document;
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
@@ -87,6 +110,7 @@ function initAutoDismiss(container, onAfterRemove) {
 window.initAutoDismiss = initAutoDismiss;
 LB.lockScroll = lockScroll;
 LB.unlockScroll = unlockScroll;
+LB.resetScrollLockAfterTurboNavigation = resetScrollLockAfterTurboNavigation;
 LB.initAutoDismiss = initAutoDismiss;
 
 /* Bootstrap modals: same iOS-safe scroll lock as gallery / overlays (backdrop must not scroll). */

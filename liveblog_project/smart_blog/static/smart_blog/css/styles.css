@@ -7125,22 +7125,25 @@ html[data-theme="dark"] .trending-card--topic:hover {
     box-shadow: 0 0.4rem 1.25rem rgba(0, 0, 0, 0.45);
 }
 
+/* In trend: outline matches .trending-badge--hot (#ff6b6b / #ee5a5a); no orange glow */
 .topic-tile--in-trend {
-    box-shadow: 0 2px 12px rgba(238, 90, 90, 0.15);
-    border-color: rgba(238, 90, 90, 0.18);
+    box-shadow: var(--card-shadow);
+    /* border-color: rgba(238, 90, 90, 0.42); */
 }
 
 .topic-tile--in-trend:hover {
-    box-shadow: 0 4px 18px rgba(238, 90, 90, 0.22);
+    box-shadow: var(--card-shadow-lg);
+    border-color: rgba(238, 90, 90, 0.58);
 }
 
 html[data-theme="dark"] .topic-tile--in-trend {
-    box-shadow: 0 2px 12px rgba(255, 107, 107, 0.12);
-    border-color: rgba(255, 107, 107, 0.15);
+    box-shadow: var(--card-shadow);
+    border-color: rgba(255, 107, 107, 0.4);
 }
 
 html[data-theme="dark"] .topic-tile--in-trend:hover {
-    box-shadow: 0 4px 18px rgba(255, 107, 107, 0.2);
+    box-shadow: 0 0.4rem 1.25rem rgba(0, 0, 0, 0.45);
+    border-color: rgba(255, 107, 107, 0.55);
 }
 
 /* Profile created tiles: title row + meta spans; gap replaces margins (badges: global .trending-badge only) */

@@ -12,8 +12,8 @@
 {% block content %}
   <section class="faq-section sitemap-html-section" id="sitemap-page">
     <div class="container-main">
-      <header class="sitemap-html-header mb-4">
-        <h3 class="text-muted m-0">Sitemap</h3>
+      <header class="sitemap-html-header">
+        <h4 class="text-muted m-0">Sitemap</h4>
         {% comment %} <p class="text-muted small mt-2 mb-0">
           Key pages and fresh posts on <strong class="text-body">{{ site_domain }}</strong>.
           Crawlers load the full URL set from <a href="{{ sitemap_xml_url }}" class="text-decoration-none">sitemap.xml</a>
@@ -23,7 +23,7 @@
       <hr class="text-muted"/>
       <div class="sitemap-html-grid">
         <section class="sitemap-html-block" id="sitemap-main-pages" aria-labelledby="sitemap-heading-main">
-          <h4 id="sitemap-heading-main" class="sitemap-html-block-title text-muted">Main pages</h4>
+          <h3 id="sitemap-heading-main" class="sitemap-html-block-title">Main pages</h3>
           <ul class="sitemap-html-list list-unstyled mb-0">
             {% for row in static_links %}
               <li><a href="{{ row.url }}" class="sitemap-html-link text-decoration-none text-muted">{{ row.label }}</a></li>
@@ -32,7 +32,7 @@
         </section>
 
         <section class="sitemap-html-block" id="sitemap-topics" aria-labelledby="sitemap-heading-topics">
-          <h4 id="sitemap-heading-topics" class="sitemap-html-block-title text-muted">Topic hubs</h4>
+          <h3 id="sitemap-heading-topics" class="sitemap-html-block-title">Topic hubs</h3>
           {% if topic_links %}
             <ul class="sitemap-html-list list-unstyled mb-0">
               {% for row in topic_links %}
@@ -45,7 +45,7 @@
         </section>
 
         {% comment %} <section class="sitemap-html-block" id="sitemap-categories" aria-labelledby="sitemap-heading-categories">
-          <h4 id="sitemap-heading-categories" class="sitemap-html-block-title text-muted">Posts by category</h4>
+          <h3 id="sitemap-heading-categories" class="sitemap-html-block-title">Posts by category</h3>
           {% if category_links %}
             <ul class="sitemap-html-list list-unstyled mb-0">
               {% for row in category_links %}
@@ -58,7 +58,7 @@
         </section> {% endcomment %}
 
         <section class="sitemap-html-block" id="sitemap-tags" aria-labelledby="sitemap-heading-tags">
-          <h4 id="sitemap-heading-tags" class="sitemap-html-block-title text-muted">Tags</h4>
+          <h3 id="sitemap-heading-tags" class="sitemap-html-block-title">Tags</h3>
           {% if tag_links %}
             <ul class="sitemap-html-list sitemap-html-list--tags list-unstyled mb-0">
               {% for row in tag_links %}
@@ -71,7 +71,7 @@
         </section>
 
         {% comment %} <section class="sitemap-html-block sitemap-html-block--wide" id="sitemap-recent-posts" aria-labelledby="sitemap-heading-recent">
-          <h2 id="sitemap-heading-recent" class="sitemap-html-block-title text-muted">Recent posts</h2>
+          <h3 id="sitemap-heading-recent" class="sitemap-html-block-title">Recent posts</h3>
           <p class="small text-muted mb-3">Latest {{ recent_total_shown }} published posts. All post URLs are included in the XML sitemap.</p>
           {% if recent_links %}
             <ul class="sitemap-html-list list-unstyled mb-0">

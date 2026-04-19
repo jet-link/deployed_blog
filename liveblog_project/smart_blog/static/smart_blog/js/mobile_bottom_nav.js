@@ -1,5 +1,5 @@
 /**
- * Mobile bottom nav: Discover + Account popovers, Turbo sync for the
+ * Mobile bottom nav: Account popover, Turbo sync for the
  * data-turbo-permanent #mobileBottomNav bar.
  *
  * Idempotency: guarded by nav.__mbnav_initialized so Turbo body-swaps
@@ -14,8 +14,6 @@
     nav.__mbnav_initialized = true;
 
     /* ── DOM refs (persist across Turbo because #mobileBottomNav is permanent) ── */
-    var btnDiscover   = document.getElementById('mobileNavDiscoverBtn');
-    var panelDiscover = document.getElementById('mobileNavDiscoverPopover');
     var btnMore       = document.getElementById('mobileNavMoreBtn');
     var panelAccount  = document.getElementById('mobileNavAccountPopover');
     var scrollHost    = nav.querySelector('.mobile-bottom-nav__scroll');
@@ -57,24 +55,6 @@
         });
     }
 
-    /**
-     * Turbo Drive preserves focus inside [data-turbo-permanent] across page swaps and
-     * re-focuses that node after render (Bardo leavingBardo). If the user clicked
-     * For you / Topics, the popover <a> can become activeElement again and flash
-     * focus rings / scroll the tab strip — keep focus on the Discover control instead.
-     */
-    function pinDiscoverBarFocusIfPopoverLinkFocused() {
-        if (!btnDiscover || !panelDiscover) return;
-        var ae = document.activeElement;
-        if (!ae || !panelDiscover.contains(ae) || ae === btnDiscover) return;
-        if (!(ae instanceof HTMLElement)) return;
-        if (!ae.closest || !ae.closest('a[href]')) return;
-        /* Blur the popover link only — focusing Discover caused visible flicker on Turbo nav (esp. iOS). */
-        preserveScrollHost(function () {
-            try { ae.blur(); } catch (_) {}
-        });
-    }
-
     /* ── Turbo: sync active states from incoming page ── */
     function syncFromNewBody(newBody) {
         if (!newBody || !newBody.querySelector) return;
@@ -95,9 +75,6 @@
                 var live = liveTrack.querySelector('a.mobile-bottom-nav__link[href="' + cssEsc(href) + '"]');
                 if (live) live.className = links[i].className;
             }
-            var sd = srcTrack.querySelector('#mobileNavDiscoverBtn');
-            var ld = liveTrack.querySelector('#mobileNavDiscoverBtn');
-            if (sd && ld) ld.className = sd.className;
             var sm = srcTrack.querySelector('#mobileNavMoreBtn');
             var lm = liveTrack.querySelector('#mobileNavMoreBtn');
             if (sm && lm) lm.className = sm.className;
@@ -120,10 +97,7 @@
                 }
             }
         }
-        syncRows(src.querySelector('#mobileNavDiscoverPopover'), panelDiscover);
         syncRows(src.querySelector('#mobileNavAccountPopover'), panelAccount);
-
-        pinDiscoverBarFocusIfPopoverLinkFocused();
     }
 
     var root = document.documentElement;
@@ -131,17 +105,9 @@
         var d = ev.detail || {};
         if (d.newBody) syncFromNewBody(d.newBody);
     });
-    root.addEventListener('turbo:render', function () {
-        pinDiscoverBarFocusIfPopoverLinkFocused();
-    });
-    root.addEventListener('turbo:load', function () {
-        pinDiscoverBarFocusIfPopoverLinkFocused();
-    });
     root.addEventListener('turbo:before-visit', function () {
-        retreatFocus(panelDiscover, btnDiscover);
         retreatFocus(panelAccount, btnMore);
         closeAll();
-        pinDiscoverBarFocusIfPopoverLinkFocused();
     });
 
     /* ── Popover positioning ── */
@@ -158,7 +124,7 @@
         }
         var pad = 6;
         var left = Math.max(pad, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - pad));
-        /* Gap between popover bottom and anchor top; 0 = flush above the tab (caret bridges to Discover / More). */
+        /* Gap between popover bottom and anchor top; 0 = flush above the tab (caret bridges to More). */
         var gapAboveAnchor = -5;
         var top = r.top - h - gapAboveAnchor;
         if (top < pad) top = pad;
@@ -170,7 +136,6 @@
     }
 
     function reposition() {
-        if (panelDiscover && panelDiscover.classList.contains('is-open') && btnDiscover) position(btnDiscover, panelDiscover);
         if (panelAccount  && panelAccount.classList.contains('is-open')  && btnMore)       position(btnMore, panelAccount);
     }
 
@@ -192,7 +157,7 @@
 
     /* ── Open / close logic ── */
     function isOpen(panel) { return panel && panel.classList.contains('is-open'); }
-    function anyOpen()     { return isOpen(panelDiscover) || isOpen(panelAccount); }
+    function anyOpen()     { return isOpen(panelAccount); }
 
     function setOpen(btn, panel, open) {
         if (!btn || !panel) return;
@@ -208,13 +173,10 @@
         }
     }
 
-    function openDiscover()  { if (isOpen(panelAccount))  setOpen(btnMore, panelAccount, false); setOpen(btnDiscover, panelDiscover, true);  }
-    function closeDiscover() { setOpen(btnDiscover, panelDiscover, false); }
-    function openAccount()   { if (isOpen(panelDiscover)) setOpen(btnDiscover, panelDiscover, false); setOpen(btnMore, panelAccount, true);   }
+    function openAccount()   { setOpen(btnMore, panelAccount, true);   }
     function closeAccount()  { setOpen(btnMore, panelAccount, false); }
 
     function closeAll() {
-        if (panelDiscover) { retreatFocus(panelDiscover, btnDiscover); panelDiscover.classList.remove('is-open'); if (btnDiscover) btnDiscover.setAttribute('aria-expanded', 'false'); panelDiscover.setAttribute('aria-hidden', 'true'); }
         if (panelAccount)  { retreatFocus(panelAccount, btnMore);     panelAccount.classList.remove('is-open');  if (btnMore)     btnMore.setAttribute('aria-expanded', 'false');     panelAccount.setAttribute('aria-hidden', 'true');  }
         unbindReposition();
     }
@@ -236,14 +198,12 @@
         });
     }
 
-    wirePopover(btnDiscover, panelDiscover, openDiscover, closeDiscover);
     wirePopover(btnMore,     panelAccount,  openAccount,  closeAccount);
 
     /* Close on outside click */
     document.addEventListener('click', function (e) {
         if (!anyOpen()) return;
         var t = e.target;
-        if (btnDiscover && (btnDiscover.contains(t) || (panelDiscover && panelDiscover.contains(t)))) return;
         if (btnMore     && (btnMore.contains(t)     || (panelAccount  && panelAccount.contains(t))))  return;
         closeAll();
     });
@@ -251,7 +211,6 @@
     /* Close on Escape */
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
-        if (isOpen(panelDiscover)) { e.preventDefault(); closeDiscover(); if (btnDiscover) btnDiscover.focus(); return; }
         if (isOpen(panelAccount))  { e.preventDefault(); closeAccount();  if (btnMore)     btnMore.focus(); }
     });
 
@@ -259,7 +218,6 @@
     function closeOnScroll(e) {
         if (!anyOpen()) return;
         var t = e.target;
-        if (btnDiscover && (btnDiscover.contains(t) || (panelDiscover && panelDiscover.contains(t)))) return;
         if (btnMore     && (btnMore.contains(t)     || (panelAccount  && panelAccount.contains(t))))  return;
         closeAll();
     }
@@ -270,7 +228,6 @@
     nav.addEventListener('click', function (e) {
         if (!anyOpen()) return;
         var t = e.target;
-        if (btnDiscover && (btnDiscover.contains(t) || (panelDiscover && panelDiscover.contains(t)))) return;
         if (btnMore     && (btnMore.contains(t)     || (panelAccount  && panelAccount.contains(t))))  return;
         closeAll();
     }, true);

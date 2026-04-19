@@ -189,6 +189,13 @@
   flex-shrink: 0;
 }
 
+/* Mobile drawer: hide collapse + sidebar logout strip (use header overflow for logout) */
+@media (max-width: 992px) {
+  .admin-sidebar-footer {
+    display: none;
+  }
+}
+
 .admin-sidebar-logout {
   display: flex;
   align-items: center;
@@ -450,6 +457,215 @@
   align-items: center;
   gap: 5px;
   flex-wrap: wrap;
+}
+
+/* Desktop: “Go to site” in header; mobile: overflow ⋯ menu (see @media max-width 1019px) */
+.admin-header-overflow-menu {
+  display: none;
+}
+
+/* item_detail-style overflow ⋯ + comment-actions (admin tokens) */
+.admin-body .admin-header {
+  position: relative;
+  z-index: 20;
+}
+
+.admin-body .admin-header-overflow-menu.comment-menu--actions-bar {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 6;
+  flex-wrap: nowrap;
+  align-items: center;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+.admin-body .admin-header-overflow-menu.comment-menu--actions-bar > .comment-menu-btn.overflow-more-btn {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: auto;
+  height: auto;
+  min-width: 30px;
+  min-height: 30px;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: inherit;
+  line-height: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.admin-body .admin-header-overflow-menu.comment-menu--actions-bar > .comment-menu-btn.overflow-more-btn:focus {
+  outline: none;
+}
+
+.admin-body .admin-header-overflow-menu.comment-menu--actions-bar > .comment-menu-btn.overflow-more-btn:focus-visible {
+  outline: 2px solid var(--admin-accent);
+  outline-offset: 2px;
+}
+
+.admin-body .admin-header-overflow-menu.comment-menu--actions-bar > .comment-menu-btn.overflow-more-btn:active {
+  opacity: 0.85;
+}
+
+.admin-body .overflow-more-btn__dots {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.admin-body .overflow-more-btn__dot {
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--admin-text-muted);
+  flex-shrink: 0;
+}
+
+.admin-body .admin-header-overflow-menu .comment-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 0;
+  margin-left: 0;
+  margin-top: 8px;
+  padding: 6px 0;
+  width: max-content;
+  min-width: 132px;
+  max-width: min(220px, calc(100vw - 32px));
+  background: var(--admin-bg-elevated);
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  box-shadow: 3px 12px 25px rgba(0, 0, 0, 0.14);
+  position: absolute;
+  right: 0;
+  left: auto;
+  top: 100%;
+  z-index: 30;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+}
+
+.admin-body .admin-header-overflow-menu .comment-actions::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  right: 6px;
+  margin-bottom: -1px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid var(--admin-bg-elevated);
+  filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.08));
+  pointer-events: none;
+  z-index: 1;
+}
+
+[data-theme="light"] .admin-body .admin-header-overflow-menu .comment-actions {
+  box-shadow: 3px 12px 25px rgba(0, 0, 0, 0.12);
+}
+
+html:not([data-theme="light"]) .admin-body .admin-header-overflow-menu .comment-actions {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+}
+
+html:not([data-theme="light"]) .admin-body .admin-header-overflow-menu .comment-actions::before {
+  border-bottom-color: var(--admin-border);
+  filter: none;
+}
+
+html:not([data-theme="light"]) .admin-body .admin-header-overflow-menu .comment-actions::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  right: 7px;
+  margin-bottom: -1px;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 7px solid var(--admin-bg-elevated);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.admin-body .admin-header-overflow-menu.open .comment-actions {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.admin-body .admin-header-overflow-menu .comment-actions .comment-menu-action {
+  min-height: 0 !important;
+  min-width: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 12px 22px !important;
+  font-size: 0.85rem !important;
+  line-height: 1.35 !important;
+  font-weight: 500;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--admin-accent) !important;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.admin-body .admin-header-overflow-menu .comment-actions .comment-menu-action > i {
+  width: 1.35em;
+  margin-right: 0.7rem;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.admin-body .admin-header-overflow-menu .comment-actions .comment-menu-action:not(.disabled):hover {
+  background: var(--admin-bg-hover) !important;
+}
+
+html:not([data-theme="light"]) .admin-body .admin-header-overflow-menu .comment-actions .comment-menu-action:not(.disabled):hover {
+  background: color-mix(in srgb, var(--admin-bg-hover) 85%, var(--admin-border)) !important;
+}
+
+@media (max-width: 1019px) {
+  .admin-header-go-site {
+    display: none !important;
+  }
+
+  .admin-header-overflow-menu {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .admin-sidebar-footer .admin-sidebar-logout {
+    display: none !important;
+  }
+
+  .admin-header-right {
+    flex-wrap: nowrap;
+  }
 }
 
 .admin-page-title {
@@ -720,6 +936,12 @@
   overflow: hidden;
   margin-bottom: 16px;
   padding: 20px;
+}
+
+/* Forms: use horizontal space — slightly less side padding than tables/stat cards */
+.admin-card:has(> form.admin-form) {
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
 /* Tables: allow action dropdowns (portaled to body) not to be masked by rounded card */
@@ -2129,6 +2351,12 @@ a.admin-link {
     padding: 16px;
   }
 
+  /* Single-form cards (create category/tag, page editors, etc.): use card padding only — no extra inset */
+  .admin-card:has(> form.admin-form) {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
   .admin-header {
     padding: 0 16px;
   }
@@ -2209,8 +2437,13 @@ a.admin-link {
     gap: 6px;
   }
 
+  /* Was padding: 16px — doubled card padding and squeezed fields; inputs stay full width of the card */
   .admin-form {
-    padding: 16px;
+    padding: 0;
+  }
+
+  .admin-card:has(> form.admin-form) {
+    padding: 16px 12px;
   }
 
   .admin-form-actions {
@@ -2689,4 +2922,155 @@ a.admin-link {
 .admin-existing-media .existing-image.marked-for-delete .admin-existing-media-delete,
 .admin-existing-media .existing-video.marked-for-delete .admin-existing-media-delete {
   opacity: 1;
+}
+
+/* Bucket (recent deleted): topic-style segment strip + filter-scroll-x + green is-selected (admin-button-primary) */
+.admin-bucket-tabs {
+  margin-bottom: 0.5rem;
+}
+
+.admin-content .filter-segment-outer {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.admin-content .filter-segment-shell {
+  display: inline-block;
+  vertical-align: top;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: 999px;
+  background: var(--admin-bg-elevated);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.admin-content .filter-segment-scroll {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.admin-content .filter-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.admin-content .filter-scroll-x::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.admin-content .filter-segment-scroll.filter-scroll-x {
+  touch-action: manipulation;
+  overscroll-behavior-x: contain;
+  position: relative;
+  z-index: 2;
+  white-space: normal;
+}
+
+.admin-content .filter-segment-bar {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 9px;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: none;
+  position: relative;
+  z-index: 0;
+}
+
+.admin-content .filter-scroll-x .filter-reason-btn,
+.admin-content .filter-scroll-x a.filter-reason-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.admin-content .filter-segment-bar .filter-reason-btn,
+.admin-content .filter-segment-bar a.filter-reason-btn {
+  border: none;
+  background: transparent;
+  color: var(--admin-text);
+  border-radius: 999px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
+  min-height: 32px;
+  padding: 4px 20px;
+  box-sizing: border-box;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.admin-content .filter-segment-bar .filter-reason-btn:hover:not(.is-selected),
+.admin-content .filter-segment-bar a.filter-reason-btn:hover:not(.is-selected) {
+  background: var(--admin-bg-hover);
+}
+
+.admin-content .filter-segment-bar .filter-reason-btn.is-selected,
+.admin-content .filter-segment-bar a.filter-reason-btn.is-selected {
+  background: var(--admin-success);
+  color: #fff;
+  border-color: transparent;
+}
+
+.admin-content .filter-segment-bar .filter-reason-btn.is-selected:hover,
+.admin-content .filter-segment-bar a.filter-reason-btn.is-selected:hover {
+  background: var(--admin-success);
+  color: #fff;
+  filter: brightness(0.95);
+}
+
+[data-theme="light"] .admin-content .filter-segment-bar .filter-reason-btn.is-selected:hover,
+[data-theme="light"] .admin-content .filter-segment-bar a.filter-reason-btn.is-selected:hover {
+  background: #286e33;
+  filter: none;
+}
+
+/* Bucket: press / tap feedback on segment chips */
+.admin-bucket-tabs .filter-segment-bar .filter-reason-btn,
+.admin-bucket-tabs .filter-segment-bar a.filter-reason-btn {
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    transform 0.14s cubic-bezier(0.33, 0.86, 0.36, 1);
+}
+
+.admin-bucket-tabs .filter-segment-bar .filter-reason-btn:active,
+.admin-bucket-tabs .filter-segment-bar a.filter-reason-btn:active {
+  transform: scale(0.94);
+}
+
+.admin-bucket-tabs .filter-segment-bar .filter-reason-btn.is-selected:active,
+.admin-bucket-tabs .filter-segment-bar a.filter-reason-btn.is-selected:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-bucket-tabs .filter-segment-bar .filter-reason-btn,
+  .admin-bucket-tabs .filter-segment-bar a.filter-reason-btn {
+    transition-duration: 0.01ms;
+  }
+
+  .admin-bucket-tabs .filter-segment-bar .filter-reason-btn:active,
+  .admin-bucket-tabs .filter-segment-bar a.filter-reason-btn:active,
+  .admin-bucket-tabs .filter-segment-bar .filter-reason-btn.is-selected:active,
+  .admin-bucket-tabs .filter-segment-bar a.filter-reason-btn.is-selected:active {
+    transform: none;
+  }
 }

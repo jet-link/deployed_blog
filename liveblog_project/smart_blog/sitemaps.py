@@ -21,7 +21,6 @@ def static_sitemap_entries():
         ("FAQ", "pages:faq", None),
         ("BraiNews", "smart_blog:items_list", None),
         ("In trend", "smart_blog:trending_list", None),
-        ("For you", "smart_blog:for_you_list", None),
         ("Topics", "smart_blog:topics_list", None),
         ("Sitemap", "pages:sitemap_page", None),
     ]

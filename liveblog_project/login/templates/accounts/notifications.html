@@ -58,7 +58,7 @@
             <!-- Header row -->
             <div class="notification-header small">
               <div class="d-flex justify-content-between align-items-center">
-                <div class="text-muted d-flex align-items-center gap-2">
+                <div class="text-muted d-flex align-items-center gap-1">
                   {% if n.actor_name %}
                     <a href="{% url 'login_app:profile' n.actor_name %}" class="actor-author-name fw-semibold text-decoration-none">{{ n.actor_name }}</a>
                   {% else %}
@@ -68,7 +68,9 @@
                   {% if n.notif_type == 'item_like' %}
                     <span class="primary_ hidden">{{ n.item.title }}</span>
                   {% else %}
-                    <a href="{{ n.get_absolute_url }}" class="text-decoration-none primary_ notification-target-link fw-semibold" data-notification-id="{{ n.id }}">{{ n.item.title }}</a>
+                    <span class="item-stats item-stats--feed item-stats--solo d-inline-flex align-items-center">
+                      <a href="{{ n.get_absolute_url }}" class="stat stat--views text-decoration-none notification-target-link fw-semibold" data-notification-id="{{ n.id }}" aria-label="{{ n.item.title }}" title="{{ n.item.title }}"><i class="fa fa-eye" aria-hidden="true"></i></a>
+                    </span>
                   {% endif %}
                 </div>
                 {% if n.is_read %}

@@ -187,9 +187,15 @@ def item_detail(request, slug):
             breadcrumb("In trend", safe_source_url or reverse("smart_blog:trending_list")),
             breadcrumb(item.title, None),
         )
-    elif source in ("for_you", "popular"):
+    elif source == "for_you":
+        # For-you feed is the BraiNews filter, not a separate hub; trail always returns to BraiNews.
         breadcrumbs = build_breadcrumbs(
-            breadcrumb("For you", safe_source_url or reverse("smart_blog:for_you_list")),
+            breadcrumb("BraiNews", reverse("smart_blog:items_list")),
+            breadcrumb(item.title, None),
+        )
+    elif source == "popular":
+        breadcrumbs = build_breadcrumbs(
+            breadcrumb("Popular posts", safe_source_url or reverse("smart_blog:items_popular")),
             breadcrumb(item.title, None),
         )
     elif source in ("category", "topic") and source_category_slug:

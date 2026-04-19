@@ -84,6 +84,11 @@
         if (reqId !== replaceTopicFeed._reqId) return;
         replaceTopicFeed(html);
         setSelectedSort(sort);
+        if (typeof window.scrollFilterSegmentSelectedIntoView === 'function') {
+          requestAnimationFrame(function () {
+            requestAnimationFrame(window.scrollFilterSegmentSelectedIntoView);
+          });
+        }
         try {
           var path = base.replace(/\/?$/, '/');
           window.history.replaceState({}, '', path + buildHistoryQuery(sort));

@@ -10,8 +10,11 @@ from pages.static_pages import get_about_page_for_public, get_contacts_page_for_
 
 
 def home_page(request):
-    context = build_home_page_context()
+    context = build_home_page_context(request)
     return render(request, "pages/home.html", context)
+
+
+home_view = home_page
 
 
 class PageView(View):

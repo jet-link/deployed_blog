@@ -101,6 +101,12 @@
       btn.classList.toggle('is-selected', selected);
       btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
     });
+
+    if (typeof window.scrollFilterSegmentSelectedIntoView === 'function') {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(window.scrollFilterSegmentSelectedIntoView);
+      });
+    }
   }
 
   function activateChipFromEventTarget(target) {

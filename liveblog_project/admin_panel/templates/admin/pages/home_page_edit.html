@@ -25,6 +25,10 @@
             <label for="id_hero_lede">Hero lead (short)</label>
             <textarea id="id_hero_lede" name="hero_lede" class="admin-textarea" rows="3" spellcheck="true">{{ page.hero_lede }}</textarea>
         </div>
+        <div class="admin-form-group">
+            <label for="id_hero_featured_item">Hero featured post (optional) — post ID for the large card on the right</label>
+            <input type="text" id="id_hero_featured_item" name="hero_featured_item" value="{{ page.hero_featured_item_id|default:'' }}" class="admin-input" placeholder="e.g. 12" maxlength="20">
+        </div>
         <h2 class="h6 text-muted mb-3 mt-4">Call to action buttons</h2>
         <div class="admin-form-group">
             <label for="id_cta_primary_label">Primary label</label>
@@ -51,7 +55,42 @@
             <label for="id_trust_link_url">Link URL</label>
             <input type="text" id="id_trust_link_url" name="trust_link_url" value="{{ page.trust_link_url }}" class="admin-input" maxlength="500">
         </div>
-        <h2 class="h6 text-muted mb-3 mt-4">Content strip</h2>
+        <h2 class="h6 text-muted mb-3 mt-4">Public home — sections</h2>
+        <p class="text-muted small">Toggle blocks on the live homepage. The full &quot;For you&quot; feed (BraiNews filter and <code>/for-you/</code>) is for signed-in users only.</p>
+        <div class="admin-form-group admin-form-group--checkbox-row">
+            <input type="checkbox" id="id_show_in_trend" name="show_in_trend" class="admin-checkbox-input" {% if page.show_in_trend %}checked{% endif %}>
+            <label for="id_show_in_trend" class="admin-checkbox-label">In Trend (trending posts)</label>
+        </div>
+        <div class="admin-form-group admin-form-group--checkbox-row">
+            <input type="checkbox" id="id_show_for_you_section" name="show_for_you_section" class="admin-checkbox-input" {% if page.show_for_you_section %}checked{% endif %}>
+            <label for="id_show_for_you_section" class="admin-checkbox-label">For you on home (recommendations or sign-in CTA)</label>
+        </div>
+        <div class="admin-form-group admin-form-group--checkbox-row">
+            <input type="checkbox" id="id_show_explore_topics" name="show_explore_topics" class="admin-checkbox-input" {% if page.show_explore_topics %}checked{% endif %}>
+            <label for="id_show_explore_topics" class="admin-checkbox-label">Explore Topics</label>
+        </div>
+        <div class="admin-form-group admin-form-group--checkbox-row">
+            <input type="checkbox" id="id_show_latest_brainews" name="show_latest_brainews" class="admin-checkbox-input" {% if page.show_latest_brainews %}checked{% endif %}>
+            <label for="id_show_latest_brainews" class="admin-checkbox-label">Latest BraiNews</label>
+        </div>
+        <div class="admin-form-group admin-form-group--checkbox-row">
+            <input type="checkbox" id="id_show_bottom_cta" name="show_bottom_cta" class="admin-checkbox-input" {% if page.show_bottom_cta %}checked{% endif %}>
+            <label for="id_show_bottom_cta" class="admin-checkbox-label">Bottom CTA banner</label>
+        </div>
+        <div class="admin-form-group">
+            <label for="id_cta_footer_title">Bottom CTA — title</label>
+            <input type="text" id="id_cta_footer_title" name="cta_footer_title" value="{{ page.cta_footer_title }}" class="admin-input" maxlength="200">
+        </div>
+        <div class="admin-form-group">
+            <label for="id_cta_footer_label">Bottom CTA — button label</label>
+            <input type="text" id="id_cta_footer_label" name="cta_footer_label" value="{{ page.cta_footer_label }}" class="admin-input" maxlength="120">
+        </div>
+        <div class="admin-form-group">
+            <label for="id_cta_footer_url">Bottom CTA — button URL</label>
+            <input type="text" id="id_cta_footer_url" name="cta_footer_url" value="{{ page.cta_footer_url }}" class="admin-input" maxlength="500">
+        </div>
+        <h2 class="h6 text-muted mb-3 mt-4">Legacy content strip (unused on new home layout)</h2>
+        <p class="text-muted small">Kept for compatibility. In Trend on the live site uses the limit below; popular/trending mode here is not rendered on the public homepage.</p>
         <div class="admin-form-group">
             <label for="id_content_strip_mode">Mode</label>
             <select id="id_content_strip_mode" name="content_strip_mode" class="admin-input">

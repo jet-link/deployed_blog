@@ -65,8 +65,17 @@
   var adminMain = document.querySelector('.admin-main');
   var mobileNavScrollY = 0;
 
+  function closeAdminHeaderOverflowMenu() {
+    var wrap = document.getElementById('adminHeaderOverflowMenu');
+    if (!wrap) return;
+    wrap.classList.remove('open');
+    var btn = wrap.querySelector('.comment-menu-btn');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+
   function openSidebar() {
     closeAllAdminDropdowns();
+    closeAdminHeaderOverflowMenu();
     if (window.innerWidth > 1019) return;
     if (sidebar) sidebar.classList.add('is-open');
     if (overlay) { overlay.classList.add('is-open'); overlay.setAttribute('aria-hidden', 'false'); }
@@ -167,6 +176,14 @@
   // Close sidebar on nav click (mobile) or escape (dropdowns first)
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
+      var signoutEl = document.getElementById('adminSignoutModal');
+      if (signoutEl && signoutEl.classList.contains('is-open')) {
+        return;
+      }
+      if (document.querySelector('.admin-header-overflow-menu.open')) {
+        closeAdminHeaderOverflowMenu();
+        return;
+      }
       if (document.querySelector('.admin-dropdown.is-open')) closeAllAdminDropdowns();
       else closeSidebar();
     }
@@ -303,10 +320,30 @@
 
   document.addEventListener('click', function() {
     closeAllAdminDropdowns();
+    closeAdminHeaderOverflowMenu();
   });
+
+  (function initAdminHeaderOverflowMenu() {
+    var wrap = document.getElementById('adminHeaderOverflowMenu');
+    if (!wrap) return;
+    var menuBtn = wrap.querySelector('.comment-menu-btn');
+    if (!menuBtn) return;
+    menuBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var wasOpen = wrap.classList.contains('open');
+      closeAllAdminDropdowns();
+      closeAdminHeaderOverflowMenu();
+      if (!wasOpen) {
+        wrap.classList.add('open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  })();
 
   window.addEventListener('scroll', function() {
     closeAllAdminDropdowns();
+    closeAdminHeaderOverflowMenu();
   }, true);
 
   // Sign out confirmation modal
@@ -343,6 +380,7 @@
   document.querySelectorAll('.admin-signout-trigger').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.preventDefault();
+      closeAdminHeaderOverflowMenu();
       openSignoutModal(btn);
     });
   });

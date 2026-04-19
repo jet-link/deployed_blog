@@ -3,6 +3,7 @@ from pathlib import Path
 
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from admin_panel.decorators import admin_required
@@ -44,6 +45,12 @@ def recent_deleted_content(request):
     if tab not in TABS:
         tab = TAB_POSTS
 
+    partial = request.GET.get("partial") == "1"
+    if tab in (TAB_VIOLATIONS, TAB_BACKUPS) and not request.user.is_superuser:
+        if partial:
+            return HttpResponse(status=403)
+        return redirect("admin_panel:dashboard")
+
     ctx = {"tab": tab, "tabs": TABS}
     if tab == TAB_POSTS:
         qs = Item.all_objects.filter(deleted_at__isnull=False).order_by("-deleted_at")
@@ -65,18 +72,16 @@ def recent_deleted_content(request):
         ).order_by("-deleted_at")
         ctx["rows"] = _paginate(qs, request)
     elif tab == TAB_VIOLATIONS:
-        if not request.user.is_superuser:
-            return redirect("admin_panel:dashboard")
         qs = ContentViolation.objects.filter(deleted_at__isnull=False).select_related(
             "item", "comment"
         ).order_by("-deleted_at")
         ctx["rows"] = _paginate(qs, request)
     elif tab == TAB_BACKUPS:
-        if not request.user.is_superuser:
-            return redirect("admin_panel:dashboard")
         qs = Backup.all_objects.filter(deleted_at__isnull=False).order_by("-deleted_at")
         ctx["rows"] = _paginate(qs, request)
 
+    if partial:
+        return render(request, "admin/system/_recent_deleted_bucket.html", ctx)
     return render(request, "admin/system/recent_deleted.html", ctx)
 
 

@@ -18,20 +18,12 @@
           <span class="mobile-bottom-nav__label">In trend</span>
         </a>
 
-        <div class="mobile-bottom-nav__discover mobile-bottom-nav__nav-cell">
-          <button type="button"
-            class="mobile-bottom-nav__link mobile-bottom-nav__discover-btn{% if ns == 'smart_blog' and un == 'for_you_list' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'topics_list' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'topic_detail' %} mobile-bottom-nav__link--active{% endif %}"
-            id="mobileNavDiscoverBtn"
-            aria-label="Discover"
-            aria-expanded="false"
-            aria-controls="mobileNavDiscoverPopover"
-            aria-haspopup="true">
-            <span class="mobile-bottom-nav__icon-wrap" aria-hidden="true">
-              <i class="fa fa-compass mobile-bottom-nav__icon" aria-hidden="true"></i>
-            </span>
-            <span class="mobile-bottom-nav__label">Discover</span>
-          </button>
-        </div>
+        <a href="{% url 'smart_blog:topics_list' %}" class="mobile-bottom-nav__link mobile-bottom-nav__nav-cell{% if ns == 'smart_blog' and un == 'topics_list' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'topic_detail' %} mobile-bottom-nav__link--active{% endif %}">
+          <span class="mobile-bottom-nav__icon-wrap" aria-hidden="true">
+            <i class="fa fa-compass mobile-bottom-nav__icon" aria-hidden="true"></i>
+          </span>
+          <span class="mobile-bottom-nav__label">Topics</span>
+        </a>
 
         <div class="mobile-bottom-nav__tail-group">
           {% if user.is_authenticated %}
@@ -63,17 +55,6 @@
   </div>
 
   {# Popovers outside __inner so .mobile-bottom-nav__scroll height = tabs only (~113px bug was extra in-flow siblings). #}
-  <div class="mobile-nav-account-popover" id="mobileNavDiscoverPopover" role="dialog" aria-label="Discover" aria-hidden="true">
-    <a href="{% url 'smart_blog:for_you_list' %}" class="mobile-nav-account-popover__row{% if ns == 'smart_blog' and un == 'for_you_list' %} mobile-nav-account-popover__row--active{% endif %}">
-      <i class="fa fa-user mobile-nav-account-popover__ico" aria-hidden="true"></i>
-      <span class="mobile-nav-account-popover__text">For you</span>
-    </a>
-    <a href="{% url 'smart_blog:topics_list' %}" class="mobile-nav-account-popover__row{% if ns == 'smart_blog' and un == 'topics_list' %} mobile-nav-account-popover__row--active{% elif ns == 'smart_blog' and un == 'topic_detail' %} mobile-nav-account-popover__row--active{% endif %}">
-      <i class="fa fa-folder-o mobile-nav-account-popover__ico" aria-hidden="true"></i>
-      <span class="mobile-nav-account-popover__text">Topics</span>
-    </a>
-  </div>
-
   {% if user.is_authenticated %}
   <div class="mobile-nav-account-popover" id="mobileNavAccountPopover" role="dialog" aria-label="Account" aria-hidden="true">
     <a href="{% url 'login_app:profile' user.username %}" class="mobile-nav-account-popover__row{% if slug_user == user.username and un == 'profile' %} mobile-nav-account-popover__row--active{% elif slug_user == user.username and un == 'profile-section' %} mobile-nav-account-popover__row--active{% endif %}">

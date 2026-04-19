@@ -77,7 +77,26 @@
         liked: 'Liked',
         bookmarked: 'Marked',
         posted: 'Posted',
+        for_you: 'For you',
     };
+
+    const FOR_YOU_FILTER_HINT = 'Recommended for you — based on your activity';
+
+    /**
+     * Delegates to global scrollFilterSegmentSelectedIntoView (filter_segment_scroll.js):
+     * all .filter-segment-scroll rows on the page, comfortable padding + center when possible.
+     */
+    function scrollSelectedFilterChipIntoView() {
+        if (typeof window.scrollFilterSegmentSelectedIntoView === 'function') {
+            window.scrollFilterSegmentSelectedIntoView();
+        }
+    }
+
+    function scheduleScrollSelectedFilterChip() {
+        requestAnimationFrame(function () {
+            requestAnimationFrame(scrollSelectedFilterChipIntoView);
+        });
+    }
 
     function setActiveFilter(value) {
         const showAll = !value || value === 'all';
@@ -86,6 +105,17 @@
             const sel = showAll ? f === 'all' : f === value;
             b.classList.toggle('is-selected', sel);
         });
+        const forYouHint = document.getElementById('filterSegmentForYouHint');
+        if (forYouHint) {
+            if (value === 'for_you') {
+                forYouHint.textContent = FOR_YOU_FILTER_HINT;
+                forYouHint.classList.remove('d-none');
+                forYouHint.setAttribute('aria-hidden', 'false');
+            } else {
+                forYouHint.classList.add('d-none');
+                forYouHint.setAttribute('aria-hidden', 'true');
+            }
+        }
         const titleEl = document.getElementById('brainewsListingTitle');
         const ctxBlock = document.getElementById('filterPageContextBlock');
         if (titleEl) {
@@ -100,6 +130,7 @@
                 }
             }
         }
+        scheduleScrollSelectedFilterChip();
     }
 
     function showPagination(show) {

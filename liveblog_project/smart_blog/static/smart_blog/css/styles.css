@@ -3133,6 +3133,16 @@ a.filter-reason-btn.topic-category-link:hover {
     box-sizing: border-box;
 }
 
+/* Subtitle under the segment pill (e.g. For you) — not uppercase like chips */
+.filter-segment-for-you-hint {
+    display: block;
+    padding: 0 2px;
+    line-height: 1.4;
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+}
+
 .filter-segment-bar {
     display: inline-flex;
     flex-wrap: nowrap;
@@ -3161,7 +3171,7 @@ a.filter-reason-btn.topic-category-link:hover {
     cursor: pointer;
     position: relative;
     z-index: 1;
-    /* text-transform: uppercase; */
+    text-transform: uppercase;
     font-weight: 600;
     letter-spacing: .02rem;
 }
@@ -3384,8 +3394,7 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         box-sizing: border-box;
     }
 
-    .mobile-bottom-nav__account.mobile-bottom-nav__nav-cell,
-    .mobile-bottom-nav__discover.mobile-bottom-nav__nav-cell {
+    .mobile-bottom-nav__account.mobile-bottom-nav__nav-cell {
         display: flex;
         flex-direction: column;
         align-items: stretch;
@@ -3393,7 +3402,6 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         transform: translateZ(0);
     }
 
-    .mobile-bottom-nav__discover .mobile-bottom-nav__discover-btn,
     .mobile-bottom-nav__account .mobile-bottom-nav__more-btn {
         flex: 1;
         justify-content: center;
@@ -3408,8 +3416,7 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
     }
 
     .mobile-bottom-nav__link,
-    .mobile-bottom-nav__more-btn,
-    .mobile-bottom-nav__discover-btn {
+    .mobile-bottom-nav__more-btn {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -3434,8 +3441,7 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         transition: color 0.15s ease;
     }
 
-    .mobile-bottom-nav__more-btn,
-    .mobile-bottom-nav__discover-btn {
+    .mobile-bottom-nav__more-btn {
         font-family: inherit;
     }
 
@@ -3503,8 +3509,7 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
     }
 
     html[data-theme="dark"] .mobile-bottom-nav__link,
-    html[data-theme="dark"] .mobile-bottom-nav__more-btn,
-    html[data-theme="dark"] .mobile-bottom-nav__discover-btn {
+    html[data-theme="dark"] .mobile-bottom-nav__more-btn {
         color: var(--text-link);
     }
 
@@ -3537,8 +3542,7 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         opacity: 0.95;
     }
 
-    .mobile-bottom-nav__account .mobile-bottom-nav__more-btn,
-    .mobile-bottom-nav__discover .mobile-bottom-nav__discover-btn {
+    .mobile-bottom-nav__account .mobile-bottom-nav__more-btn {
         width: 100%;
         -webkit-tap-highlight-color: transparent;
     }
@@ -3692,14 +3696,12 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
     }
 
     .mobile-bottom-nav__link:focus:not(:focus-visible),
-    .mobile-bottom-nav__more-btn:focus:not(:focus-visible),
-    .mobile-bottom-nav__discover-btn:focus:not(:focus-visible) {
+    .mobile-bottom-nav__more-btn:focus:not(:focus-visible) {
         outline: none;
     }
 
     .mobile-bottom-nav__link:focus-visible,
-    .mobile-bottom-nav__more-btn:focus-visible,
-    .mobile-bottom-nav__discover-btn:focus-visible {
+    .mobile-bottom-nav__more-btn:focus-visible {
         outline: 2px solid var(--btn-primary-bg);
         outline-offset: 2px;
     }
@@ -3713,19 +3715,6 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         outline-offset: -2px;
     }
 
-    /* Discover submenu: no blue side outline on focus (touch + Turbo refocus). */
-    #mobileNavDiscoverPopover .mobile-nav-account-popover__row:focus,
-    #mobileNavDiscoverPopover .mobile-nav-account-popover__row:focus-visible {
-        outline: none;
-    }
-
-    #mobileNavDiscoverPopover .mobile-nav-account-popover__row:focus-visible {
-        background: var(--bg-subtle, #f1f2f6);
-    }
-
-    html[data-theme="dark"] #mobileNavDiscoverPopover .mobile-nav-account-popover__row:focus-visible {
-        background: rgba(255, 255, 255, 0.06);
-    }
 }
 
 @media (min-width: 992px) {

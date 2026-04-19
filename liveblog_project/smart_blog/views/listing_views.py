@@ -12,7 +12,11 @@ from smart_blog.models import Bookmark, Item, Like, Tag
 from smart_blog.search_utils import build_search_filter
 from smart_blog.utils import breadcrumb, build_breadcrumbs
 from smart_blog.feed_queryset import feed_list_optimizations
-from smart_blog.views._helpers import annotate_user_bookmarked, annotate_user_liked
+from smart_blog.views._helpers import (
+    annotate_feed_page_items,
+    annotate_user_bookmarked,
+    annotate_user_liked,
+)
 
 FILTER_AJAX_PAGE_SIZE = 20
 _ANON_BRAINEWS_CACHE_KEY = "anon_brainews_p{page}"
@@ -71,12 +75,44 @@ def items_list(request):
 
 
 def items_filtered(request):
-    """Returns filtered items HTML for BraiNews filter block (Liked/Bookmarked)."""
+    """Returns filtered items HTML for BraiNews filter block (Liked/Bookmarked/Posted/For you)."""
     if not request.user.is_authenticated:
         return HttpResponseForbidden()
     filter_type = request.GET.get('filter', '').strip().lower()
-    if filter_type not in ('liked', 'bookmarked', 'posted'):
+    if filter_type not in ('liked', 'bookmarked', 'posted', 'for_you'):
         return HttpResponse('', content_type='text/html')
+
+    if filter_type == 'for_you':
+        from smart_blog.services.for_you_recommendations import (
+            for_you_items_for_authenticated_user,
+        )
+
+        result = for_you_items_for_authenticated_user(request.user)
+        paginator = Paginator(result.items, FILTER_AJAX_PAGE_SIZE)
+        page_obj = paginator.get_page(request.GET.get("page"))
+        items = annotate_feed_page_items(request.user, page_obj)
+        empty_msg = 'Nothing to recommend yet'
+        append_fragment = request.GET.get("append") == "1"
+        listing_source_url = request.build_absolute_uri(
+            reverse("smart_blog:items_list")
+        )
+        ctx = {
+            "items": items,
+            "user": request.user,
+            "listing_source": "for_you",
+            "listing_source_url": listing_source_url,
+            "empty_msg": empty_msg,
+            "filter_type": filter_type,
+            "page_obj": page_obj,
+            "paginator": paginator,
+        }
+        tmpl = (
+            "includes/filtered_cards_append.html"
+            if append_fragment
+            else "includes/filtered_cards.html"
+        )
+        html = render_to_string(tmpl, ctx)
+        return HttpResponse(html, content_type="text/html")
     qs = (
         Item.objects
         .with_counters()

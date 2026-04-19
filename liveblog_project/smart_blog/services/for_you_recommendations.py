@@ -1,7 +1,6 @@
-"""Personalized recommendations for the For You feed.
+"""Personalized recommendations for the For You feed (signed-in users).
 
-Authenticated users: scored by liked/bookmarked/viewed categories and tags.
-Guest users: trending + popular, batch-fetched (no N+1).
+Scored by liked/bookmarked/viewed categories and tags.
 """
 from __future__ import annotations
 
@@ -10,11 +9,10 @@ from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from django.core.cache import cache
-from django.db.models import Prefetch, Q
+from django.db.models import Q
 from django.utils import timezone
 
 from smart_blog.models import Bookmark, Item, ItemView, Like, TrendingItem
-from smart_blog.search_utils import apply_popular_filter
 from smart_blog.feed_queryset import feed_list_optimizations
 
 FORYOU_CACHE_TTL = 300
@@ -184,6 +182,29 @@ def invalidate_foryou_cache(user_pk):
     cache.delete(f"foryou:{user_pk}")
 
 
+def for_you_home_preview(user, limit: int = 5):
+    """Return at most `limit` items for the home page (signed-in only). Uses the same ID cache as For You without hydrating the full list."""
+    if not user.is_authenticated:
+        return []
+    cache_key = f"foryou:{user.pk}"
+    cached = cache.get(cache_key)
+    if cached is None:
+        ordered_ids, low_personal_signal = _compute_for_you(user)
+        cache.set(cache_key, (ordered_ids, low_personal_signal), FORYOU_CACHE_TTL)
+    else:
+        ordered_ids, _ = cached
+    if not ordered_ids:
+        return []
+    take = ordered_ids[:limit]
+    qs = feed_list_optimizations(
+        Item.objects.filter(pk__in=take, is_published=True)
+        .with_counters()
+        .select_related("category", "author", "author__profile")
+    )
+    by_id = {it.pk: it for it in qs}
+    return [by_id[pk] for pk in take if pk in by_id]
+
+
 def for_you_items_for_authenticated_user(user: AbstractUser) -> ForYouResult:
     cache_key = f"foryou:{user.pk}"
     cached = cache.get(cache_key)
@@ -206,53 +227,3 @@ def for_you_items_for_authenticated_user(user: AbstractUser) -> ForYouResult:
     ordered = [items_by_pk[pk] for pk in ordered_ids if pk in items_by_pk]
 
     return ForYouResult(items=ordered, low_personal_signal=low_personal_signal)
-
-
-def for_you_items_guest() -> ForYouResult:
-    """Trending + quality recent (popular heuristic), batch-fetched."""
-    trending_rows = list(
-        TrendingItem.objects.filter(item__is_published=True)
-        .prefetch_related(
-            Prefetch(
-                "item",
-                queryset=feed_list_optimizations(
-                    Item.objects.select_related(
-                        "category", "author", "author__profile"
-                    )
-                ),
-            )
-        )
-        .order_by("-trend_score")[:120]
-    )
-
-    seen = set()
-    items_out = []
-
-    for t in trending_rows:
-        it = t.item
-        pk = it.pk
-        if pk in seen:
-            continue
-        if it.author_id and (
-            not it.author.is_active
-            or getattr(getattr(it.author, "profile", None), "trust_banned", False)
-        ):
-            continue
-        items_out.append(it)
-        seen.add(pk)
-
-    since = timezone.now() - timedelta(days=CANDIDATE_DAYS)
-    pop_qs = feed_list_optimizations(
-        apply_popular_filter(
-            Item.objects.filter(is_published=True, published_date__gte=since)
-            .filter(Q(author__isnull=True) | Q(author__is_active=True))
-            .exclude(author__profile__trust_banned=True)
-        )
-        .select_related("category", "author", "author__profile")
-    )
-    for it in pop_qs[:200]:
-        if it.pk not in seen:
-            items_out.append(it)
-            seen.add(it.pk)
-
-    return ForYouResult(items=items_out, low_personal_signal=False)

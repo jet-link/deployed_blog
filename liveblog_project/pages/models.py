@@ -154,6 +154,41 @@ class HomePageContent(models.Model):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    hero_featured_item = models.ForeignKey(
+        "smart_blog.Item",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Large card on the right side of the hero. If empty, the first In Trend or latest post is used.",
+    )
+    show_in_trend = models.BooleanField(
+        default=True,
+        help_text='Show the "In Trend" section (trending posts).',
+    )
+    show_for_you_section = models.BooleanField(
+        default=True,
+        help_text='Show the "For You" block on the home page (signed-in users only; guests see a sign-in prompt).',
+    )
+    show_explore_topics = models.BooleanField(
+        default=True,
+        help_text='Show "Explore Topics" (top categories by post count).',
+    )
+    show_latest_brainews = models.BooleanField(
+        default=True,
+        help_text='Show latest BraiNews posts and "View all" link.',
+    )
+    show_bottom_cta = models.BooleanField(
+        default=True,
+        help_text="Show optional bottom call-to-action banner.",
+    )
+    cta_footer_title = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Bottom CTA heading (e.g. Have something to say?).",
+    )
+    cta_footer_label = models.CharField(max_length=120, blank=True)
+    cta_footer_url = models.CharField(max_length=500, blank=True)
     cache_bump = models.PositiveIntegerField(
         default=0,
         editable=False,
@@ -191,6 +226,10 @@ class HomePageContent(models.Model):
         if (self.trust_line or "").strip() and not (self.trust_link_url or "").strip():
             raise ValidationError(
                 {"trust_link_url": "URL is required when the trust line is set."}
+            )
+        if (self.cta_footer_label or "").strip() and not (self.cta_footer_url or "").strip():
+            raise ValidationError(
+                {"cta_footer_url": "URL is required when the bottom CTA button label is set."}
             )
 
     def save(self, *args, **kwargs):

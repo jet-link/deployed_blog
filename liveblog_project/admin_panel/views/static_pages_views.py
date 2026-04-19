@@ -160,6 +160,17 @@ def home_page_edit(request):
             home.popular_min_likes = 6
         home.show_editor_picks = request.POST.get("show_editor_picks") == "on"
         home.editor_pick_order_after_strip = request.POST.get("editor_pick_order_after_strip") == "on"
+        home.show_in_trend = request.POST.get("show_in_trend") == "on"
+        home.show_for_you_section = request.POST.get("show_for_you_section") == "on"
+        home.show_explore_topics = request.POST.get("show_explore_topics") == "on"
+        home.show_latest_brainews = request.POST.get("show_latest_brainews") == "on"
+        home.show_bottom_cta = request.POST.get("show_bottom_cta") == "on"
+        home.cta_footer_title = request.POST.get("cta_footer_title", "").strip()
+        home.cta_footer_label = request.POST.get("cta_footer_label", "").strip()[:120]
+        home.cta_footer_url = request.POST.get("cta_footer_url", "").strip()[:500]
+
+        hero_feat = _parse_item_pk(request.POST.get("hero_featured_item"))
+        home.hero_featured_item_id = hero_feat
 
         p1 = _parse_item_pk(request.POST.get("editor_pick_1"))
         p2 = _parse_item_pk(request.POST.get("editor_pick_2"))

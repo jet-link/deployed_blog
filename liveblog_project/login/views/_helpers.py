@@ -86,8 +86,10 @@ def _referer_breadcrumb_info(request, referer_url):
             tag = Tag.objects.filter(slug=kwargs["slug"]).values("tag_name").first()
             if tag:
                 return tag["tag_name"], referer_url
-        elif url_name in ("items_popular", "for_you_list"):
+        elif url_name == "for_you_list":
             return "For you", referer_url
+        elif url_name == "items_popular":
+            return "Popular posts", referer_url
         elif url_name == "topics_list":
             return "Topics", referer_url
         elif url_name == "topic_detail" and kwargs.get("slug"):

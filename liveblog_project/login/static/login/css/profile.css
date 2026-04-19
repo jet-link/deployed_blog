@@ -330,56 +330,21 @@
     font-size: .8rem;
 }
 
-/* Profile owner actions: desktop — single row, space-between */
-.profile-owner-actions {
+/* Own profile: only Admin-panel (Create / Edit / Sign out live in header user-tooltip) */
+.profile-owner-admin {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.profile-owner-actions__primary {
-    display: flex;
-    gap: 0.3rem;
-}
-
-.profile-owner-actions__secondary {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
 }
 
 @media (max-width: 767px) {
-    .profile-owner-actions {
-        flex-direction: column;
-        align-items: stretch;
+    .profile-owner-admin {
+        justify-content: stretch;
     }
 
-    .profile-owner-actions__primary {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .profile-owner-actions__primary > * {
-        flex: 1 1 0;
-        min-width: 0;
-        text-align: center;
-        box-sizing: border-box;
-    }
-
-    .profile-owner-actions__secondary {
-        flex-direction: column;
-    }
-
-    .profile-owner-actions__secondary > * {
+    .profile-owner-admin-link {
         width: 100%;
         text-align: center;
         box-sizing: border-box;
-    }
-
-    .profile-owner-actions__secondary .signout-trigger {
-        padding: 8px 10px;
-        font-size: .875rem;
     }
 }

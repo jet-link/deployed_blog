@@ -49,7 +49,7 @@
         </div>
         <h3 class="m-0 item-feed-card__title">{{ item.title }}</h3>
         <hr class="text-muted" />
-        <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 text-muted mb-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 text-muted mb-3">
           <div class="d-inline-flex align-items-center gap-2">
             <i class="fa fa-calendar-o" aria-hidden="true"></i>
             <small class="fw-semibold">{{ item.human_published }}</small>
@@ -81,12 +81,12 @@
                   {% endif %}
                 {% endwith %}
               {% endif %}
-              <div class="feed-card-pin">
+              <!-- <div class="feed-card-pin">
                 <i class="fa fa-thumb-tack" aria-hidden="true"></i>
                 <span class="feed-card-pin__labels">
                   {% if item.has_photos %}photos{% endif %}{% if item.has_photos and item.has_videos %} + {% endif %}{% if item.has_videos %}videos{% endif %}
                 </span>
-              </div>
+              </div> -->
             </div>
           {% endif %}
         </div>
@@ -123,7 +123,7 @@
         {% elif listing_source == 'for_you' and listing_source_url %}
           <a href="{{ item.get_absolute_url }}?from=for_you&amp;source_url={{ listing_source_url|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
         {% elif listing_source == 'popular' and listing_source_url %}
-          <a href="{{ item.get_absolute_url }}?from=for_you&amp;source_url={{ listing_source_url|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
+          <a href="{{ item.get_absolute_url }}?from=popular&amp;source_url={{ listing_source_url|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
         {% elif listing_source == 'search' and listing_source_url and listing_query %}
           <a href="{{ item.get_absolute_url }}?from=search&amp;source_url={{ listing_source_url|urlencode }}&amp;query={{ listing_query|urlencode }}" class="stretched-link" data-item-id="{{ item.pk }}" aria-label="{{ item.title }}"></a>
         {% elif listing_source == 'tag' and listing_source_url and listing_tag %}

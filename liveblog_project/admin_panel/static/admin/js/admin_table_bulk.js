@@ -84,13 +84,20 @@
     { attr: 'data-bulk-delete-content-url', formClass: 'admin-bulk-delete-content-form', btnClass: 'admin-bulk-delete-content-btn', btnText: 'Delete', btnStyle: 'admin-button-danger', modalTitle: function(n) { return n === 1 ? 'Are you sure you want to delete this content (post/comment)?' : 'Are you sure you want to delete ' + n + ' selected posts/comments?'; }, confirmText: 'Delete' }
   ];
 
-  function init() {
-    initBulkDeleteModal();
-    var tables = document.querySelectorAll('.admin-table[data-bulk-delete-url], .admin-table[data-bulk-clear-url], .admin-table[data-bulk-delete-content-url], .admin-table[data-bulk-unban-url], .admin-table[data-bulk-ban-url], .admin-table[data-bulk-restore-url]');
+  function initBulkTablesIn(root) {
+    var scope = root || document;
+    var tables = scope.querySelectorAll('.admin-table[data-bulk-delete-url], .admin-table[data-bulk-clear-url], .admin-table[data-bulk-delete-content-url], .admin-table[data-bulk-unban-url], .admin-table[data-bulk-ban-url], .admin-table[data-bulk-restore-url]');
     tables.forEach(function(table) {
       setupTable(table);
     });
   }
+
+  function init() {
+    initBulkDeleteModal();
+    initBulkTablesIn(document);
+  }
+
+  window.adminInitBulkTablesIn = initBulkTablesIn;
 
   function setupTable(table) {
     var selectAll = table.querySelector('.admin-bulk-select-all');

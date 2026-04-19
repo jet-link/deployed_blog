@@ -26,11 +26,28 @@
                 <div class="admin-header-left">
                     <button type="button" class="admin-menu-toggle" id="adminMenuToggle" aria-label="Open menu" aria-expanded="false">☰</button>
                     <h1 class="admin-page-title">{% block page_title %}<span class="admin-header-brand-full">brainstorm.news</span><span class="admin-header-brand-short">bstrm.news</span>{% endblock %}</h1>
-                    <span class="admin-online-badge">Online: {{ admin_online_count|default:0 }}</span>
+                    <span class="admin-online-badge">Online {{ admin_online_count|default:0 }}</span>
                 </div>
                 <div class="admin-header-right">
                     <button type="button" class="admin-theme-toggle" id="adminThemeToggle" aria-label="Toggle theme" title="Toggle light/dark theme"><i class="admin-theme-icon fa-regular fa-moon" aria-hidden="true"></i></button>
-                    <a href="{% url 'login_app:profile' username=request.user.username %}" class="admin-button admin-button-sm">Go to site</a>
+                    <a href="{% url 'login_app:profile' username=request.user.username %}" class="admin-button admin-button-sm admin-header-go-site">Go to site</a>
+                    <div class="comment-menu comment-menu--actions-bar admin-header-overflow-menu" id="adminHeaderOverflowMenu">
+                        <button type="button" class="comment-menu-btn overflow-more-btn" aria-label="More actions" aria-expanded="false" aria-haspopup="true">
+                            <span class="overflow-more-btn__dots" aria-hidden="true">
+                                <span class="overflow-more-btn__dot"></span>
+                                <span class="overflow-more-btn__dot"></span>
+                                <span class="overflow-more-btn__dot"></span>
+                            </span>
+                        </button>
+                        <div class="comment-actions" role="menu">
+                            <a href="{% url 'login_app:profile' username=request.user.username %}" class="comment-menu-action text-decoration-none" role="menuitem">
+                                <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i><span>Go to site</span>
+                            </a>
+                            <button type="button" class="comment-menu-action admin-signout-trigger" role="menuitem" id="adminHeaderOverflowLogoutBtn" title="Logout">
+                                <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i><span>Logout</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </header>
             {% block breadcrumbs %}<nav class="admin-breadcrumbs" aria-label="Breadcrumb"><ol class="admin-breadcrumbs-list"><li class="admin-breadcrumbs-item"><a href="{% url 'admin_panel:dashboard' %}">Dashboard</a></li></ol></nav>{% endblock %}

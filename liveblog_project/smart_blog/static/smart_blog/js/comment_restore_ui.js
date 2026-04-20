@@ -17,10 +17,20 @@
 
         // 🔄 autosize textarea if any
         root.querySelectorAll('textarea.auto-grow').forEach(ta => {
-            const cs = getComputedStyle(ta);
-            const minH = parseFloat(cs.minHeight) || 0;
-            ta.style.height = 'auto';
-            ta.style.height = Math.max(minH, ta.scrollHeight) + 'px';
+            if (typeof window.syncAutoGrowTextarea === 'function') {
+                window.syncAutoGrowTextarea(ta);
+            } else {
+                const cs = getComputedStyle(ta);
+                const minH = parseFloat(cs.minHeight) || 0;
+                const noChars = !ta.value || ta.value.length === 0;
+                ta.style.height = 'auto';
+                const sh = ta.scrollHeight;
+                let target = Math.max(minH, sh);
+                if (noChars && minH > 0 && sh > minH * 1.5) {
+                    target = minH;
+                }
+                ta.style.height = target + 'px';
+            }
         });
     }
     window.restoreCommentUI = restoreCommentUI;

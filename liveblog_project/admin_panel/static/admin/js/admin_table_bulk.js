@@ -8,6 +8,9 @@
   'use strict';
 
   function getCsrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    var fromMeta = meta && meta.getAttribute('content');
+    if (fromMeta) return fromMeta;
     var input = document.querySelector('input[name="csrfmiddlewaretoken"]');
     if (input) return input.value;
     return (typeof window.ADMIN_CSRF_TOKEN === 'string' && window.ADMIN_CSRF_TOKEN) ? window.ADMIN_CSRF_TOKEN : '';
@@ -17,7 +20,16 @@
   var pendingSubmit = null;
   var lastModalTrigger = null;
 
+  function refreshBulkModalRefs() {
+    bulkDeleteModal = document.getElementById('adminBulkDeleteModal');
+    bulkDeleteTitle = document.getElementById('adminBulkDeleteModalTitle');
+    bulkDeleteConfirmBtn = document.getElementById('adminBulkDeleteConfirmBtn');
+    bulkDeleteCancelBtn = document.getElementById('adminBulkDeleteCancelBtn');
+    bulkDeleteBackdrop = document.getElementById('adminBulkDeleteModalBackdrop');
+  }
+
   function openBulkModal(count, onConfirm, opts) {
+    refreshBulkModalRefs();
     if (!bulkDeleteModal) return;
     opts = opts || {};
     lastModalTrigger = opts.trigger || null;
@@ -37,6 +49,7 @@
   }
 
   function closeBulkDeleteModal() {
+    refreshBulkModalRefs();
     if (!bulkDeleteModal) return;
     if (bulkDeleteModal.contains(document.activeElement)) {
       if (lastModalTrigger && typeof lastModalTrigger.focus === 'function') {
@@ -54,25 +67,29 @@
     lastModalTrigger = null;
   }
 
+  var bulkModalDocListenersDone = false;
+
   function initBulkDeleteModal() {
-    bulkDeleteModal = document.getElementById('adminBulkDeleteModal');
-    bulkDeleteTitle = document.getElementById('adminBulkDeleteModalTitle');
-    bulkDeleteConfirmBtn = document.getElementById('adminBulkDeleteConfirmBtn');
-    bulkDeleteCancelBtn = document.getElementById('adminBulkDeleteCancelBtn');
-    bulkDeleteBackdrop = document.getElementById('adminBulkDeleteModalBackdrop');
-    if (bulkDeleteBackdrop) bulkDeleteBackdrop.addEventListener('click', closeBulkDeleteModal);
-    if (bulkDeleteCancelBtn) bulkDeleteCancelBtn.addEventListener('click', closeBulkDeleteModal);
-    if (bulkDeleteConfirmBtn) {
-      bulkDeleteConfirmBtn.addEventListener('click', function() {
+    if (!bulkModalDocListenersDone) {
+      bulkModalDocListenersDone = true;
+      document.addEventListener('click', function(e) {
+        if (e.target.closest('#adminBulkDeleteModalBackdrop')) closeBulkDeleteModal();
+      });
+      document.addEventListener('click', function(e) {
+        if (e.target.closest('#adminBulkDeleteCancelBtn')) closeBulkDeleteModal();
+      });
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('#adminBulkDeleteConfirmBtn')) return;
         if (pendingSubmit && typeof pendingSubmit === 'function') pendingSubmit();
         closeBulkDeleteModal();
       });
+      document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        refreshBulkModalRefs();
+        if (bulkDeleteModal && bulkDeleteModal.classList.contains('is-open')) closeBulkDeleteModal();
+      });
     }
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && bulkDeleteModal && bulkDeleteModal.classList.contains('is-open')) {
-        closeBulkDeleteModal();
-      }
-    });
+    refreshBulkModalRefs();
   }
 
   var BULK_ACTIONS = [
@@ -99,7 +116,14 @@
 
   window.adminInitBulkTablesIn = initBulkTablesIn;
 
+  window.adminBulkReinitTables = function() {
+    initBulkDeleteModal();
+    initBulkTablesIn(document);
+  };
+
   function setupTable(table) {
+    if (table.getAttribute('data-admin-bulk-inited') === '1') return;
+    table.setAttribute('data-admin-bulk-inited', '1');
     var selectAll = table.querySelector('.admin-bulk-select-all');
     var rowChecks = table.querySelectorAll('.admin-bulk-row-check');
     var card = table.closest('.admin-card');

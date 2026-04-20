@@ -4,10 +4,12 @@ import html
 import bleach
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Case, Count, IntegerField, Q, When
 from django.utils.translation import gettext_lazy as _
 from .models import Item, Tag, Category, Comment
 from .widgets import MultiFileInput
 from .utils import normalize_comment_text
+from .comment_html import expand_bare_domains, sanitize_and_linkify_comment_html
 
 # try import CSSSanitizer (bleach >= 6)
 try:
@@ -136,18 +138,32 @@ class ItemCreateForm(forms.ModelForm):
             }),
         }
 
-    def __init__(self, *args, item=None, tags_recent_limit=25, **kwargs):
+    def __init__(self, *args, item=None, tags_recent_limit=30, **kwargs):
         super().__init__(*args, **kwargs)
         if tags_recent_limit is None:
             self.fields["tags"].queryset = Tag.objects.all().order_by("tag_name")
             return
-        recent = Tag.objects.order_by("-pk")[: int(tags_recent_limit)]
-        ids = list(recent.values_list("pk", flat=True))
+        limit = int(tags_recent_limit)
+        published_items_filter = Q(items__is_published=True, items__deleted_at__isnull=True)
+        top_qs = (
+            Tag.objects.annotate(
+                num_items=Count("items", filter=published_items_filter),
+            )
+            .order_by("-num_items", "-pk")[:limit]
+        )
+        ids = list(top_qs.values_list("pk", flat=True))
         if item is not None:
             for pk in item.tags.values_list("pk", flat=True):
                 if pk not in ids:
                     ids.append(pk)
-        self.fields["tags"].queryset = Tag.objects.filter(pk__in=ids).order_by("-pk")
+        if not ids:
+            self.fields["tags"].queryset = Tag.objects.none()
+            return
+        preserved = Case(
+            *[When(pk=pk, then=pos) for pos, pk in enumerate(ids)],
+            output_field=IntegerField(),
+        )
+        self.fields["tags"].queryset = Tag.objects.filter(pk__in=ids).order_by(preserved)
 
     def clean_title(self):
         title = self.cleaned_data.get("title", "")
@@ -265,7 +281,7 @@ class ItemCreateForm(forms.ModelForm):
 
 # simple CommentForm (оставил как есть; при необходимости можно расширить)
 class CommentForm(forms.ModelForm):
-    MAX_TEXT_LEN = 500
+    MAX_TEXT_LEN = 1500
     class Meta:
         model = Comment
         fields = ["text"]
@@ -296,43 +312,10 @@ class CommentForm(forms.ModelForm):
         text_for_count = re.sub(r'@\[\s*user\s*:\s*\d+\s*\],\s*', '', normalized)
         text_for_count = re.sub(r'[\r\n]', '', text_for_count)
         if len(text_for_count) > self.MAX_TEXT_LEN:
-            raise ValidationError(_('Maximum 500 characters (line breaks are not counted).'))
+            raise ValidationError(_('Maximum 1500 characters (line breaks are not counted).'))
 
-        allowed_tags = ['a', 'b', 'strong', 'i', 'em', 'u', 'br', 'p', 'div', 'span']
-        allowed_attrs = {
-            'a': ['href', 'title', 'target', 'rel', 'class'],
-            'div': ['class'],
-            'span': ['class'],
-            'p': ['class'],
-        }
-
-        cleaned = bleach.clean(raw, tags=allowed_tags, attributes=allowed_attrs, strip=True)
-
-        def _linkify_cb(attrs, new=False):
-            current = attrs.get((None, "class"), "")
-            if "primary_" not in current:
-                attrs[(None, "class")] = (current + " primary_").strip()
-            attrs[(None, "target")] = "_blank"
-            attrs[(None, "rel")] = "noopener noreferrer"
-            return attrs
-
-        try:
-            cleaned = bleach.linkify(cleaned, skip_tags=['a'], parse_email=False, callbacks=[_linkify_cb])
-        except Exception:
-            pass
-
-        # ensure all links open in new tab
-        cleaned = re.sub(
-            r'<a(?![^>]*\btarget=)[^>]*>',
-            lambda m: m.group(0).replace('<a', '<a target="_blank" rel="noopener noreferrer"', 1),
-            cleaned,
-            flags=re.I
-        )
-
-        # collapse multiple line breaks / empty blocks to максимум двух
-        cleaned = re.sub(r'(<br\s*/?>\s*){3,}', '<br><br>', cleaned, flags=re.I)
-        cleaned = re.sub(r'(<p>\s*<br\s*/?>\s*</p>\s*){3,}', '<br><br>', cleaned, flags=re.I)
-        cleaned = re.sub(r'(<div>\s*<br\s*/?>\s*</div>\s*){3,}', '<br><br>', cleaned, flags=re.I)
+        expanded = expand_bare_domains(normalized)
+        cleaned = sanitize_and_linkify_comment_html(expanded)
 
         plain = re.sub(r'<[^>]+>', '', cleaned).strip()
         if not plain or len(plain) < 2:

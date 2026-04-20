@@ -12,10 +12,10 @@ from smart_blog.sitemaps import (
     categories_for_sitemap,
     published_posts_queryset,
     static_sitemap_entries,
-    tags_for_sitemap,
+    tags_for_sitemap_html,
 )
 
-SITEMAP_HTML_CACHE_KEY = "pages:sitemap:html:v2"
+SITEMAP_HTML_CACHE_KEY = "pages:sitemap:html:v3"
 SITEMAP_HTML_TTL = 300
 
 
@@ -34,7 +34,7 @@ def _build_sitemap_cached_payload() -> Dict[str, Any]:
         {"label": c.name, "url": reverse("smart_blog:category_list", kwargs={"slug": c.slug})}
         for c in categories
     ]
-    tags: List[Tag] = list(tags_for_sitemap())
+    tags: List[Tag] = list(tags_for_sitemap_html())
     tag_links = [
         {"label": t.tag_name, "url": reverse("smart_blog:tag_list", kwargs={"slug": t.slug})}
         for t in tags

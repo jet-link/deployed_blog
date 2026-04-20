@@ -85,11 +85,55 @@
     }
 
     function shouldPreload(hrefUrl) {
+        try {
+            var u = hrefUrl instanceof URL ? hrefUrl : new URL(hrefUrl, location.origin);
+            if (isSameItemThreadHop(u)) return false;
+        } catch (err) {
+            /* fall through */
+        }
         if (isTagNav(hrefUrl)) return true;
         if (isPublicationNav(hrefUrl) && (searchOverlayOpen() || onSearchPage() || isContentPreloaderSourcePage())) {
             return true;
         }
         return false;
+    }
+
+    /** Same path + query as current page (only hash differs): native navigation, no full reload — pageshow may not fire. */
+    function sameDocumentExceptHash(candidate) {
+        try {
+            var cur = new URL(location.href);
+            if (candidate.origin !== cur.origin) return false;
+            return normPath(candidate.pathname) === normPath(cur.pathname) && candidate.search === cur.search;
+        } catch (err) {
+            return false;
+        }
+    }
+
+    function itemSlugFromPath(p) {
+        var m = /^\/item\/([^/]+)/.exec(p || '');
+        return m ? m[1] : null;
+    }
+
+    /**
+     * Same item: post → comments → comment thread — fast, same chrome; avoid overlay + assign (flicker).
+     * Full-page preloader still applies when coming from listings, search, tags, etc.
+     */
+    function isSameItemThreadHop(candidate) {
+        try {
+            if (candidate.origin !== location.origin) return false;
+            var next = normPath(candidate.pathname);
+            if (!/^\/item\/[^/]+\/comment\/\d+\/thread$/.test(next)) return false;
+            var cur = normPath(location.pathname);
+            var slugNext = itemSlugFromPath(next);
+            var slugCur = itemSlugFromPath(cur);
+            if (!slugNext || slugNext !== slugCur) return false;
+            if (/^\/item\/[^/]+$/.test(cur)) return true;
+            if (/^\/item\/[^/]+\/comments$/.test(cur)) return true;
+            if (/^\/item\/[^/]+\/comment\/\d+\/thread$/.test(cur)) return true;
+            return false;
+        } catch (err) {
+            return false;
+        }
     }
 
     document.addEventListener('click', function (e) {
@@ -108,10 +152,19 @@
         }
         if (url.origin !== location.origin) return;
         if (!shouldPreload(url)) return;
+        if (sameDocumentExceptHash(url)) {
+            return;
+        }
         e.preventDefault();
         show();
         window.location.assign(url.pathname + url.search + url.hash);
+        /* Do not hide on timers: that ran on the old document before paint/unload and caused a visible flicker.
+           The next document's pageshow clears the overlay. */
     }, true);
+
+    window.addEventListener('hashchange', function () {
+        hide();
+    });
 
     window.addEventListener('pageshow', function (ev) {
         hide();

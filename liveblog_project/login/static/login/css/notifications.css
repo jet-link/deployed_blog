@@ -280,6 +280,39 @@
     padding: 10px 0;
 }
 
+.notification-header-text {
+    min-width: 0;
+}
+
+.notification-post-title-clip {
+    position: relative;
+    min-width: 0;
+    flex: 1 1 0%;
+}
+
+.notification-post-title-link {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Fade at end of truncated title (light: white as requested; dark: match page surface). */
+.notification-post-title-clip::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 2.25rem;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), #fff);
+    pointer-events: none;
+}
+
+html[data-theme="dark"] .notification-post-title-clip::after {
+    background: linear-gradient(to right, transparent, var(--bg-default));
+}
+
 .notification-divider {
     height: 1px;
     background: var(--border-default);

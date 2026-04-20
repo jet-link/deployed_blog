@@ -3,7 +3,7 @@
 {% load mentions %}
 {% load extras %}
 {% load user_status %}
-<div id="comment-{{ comment.pk }}" class="py-3 comment-block comment-card" data-reply-url="{% url 'smart_blog:add_comment' comment.item.slug %}" data-thread-url="{% url 'smart_blog:comment_thread' comment.item.slug comment.pk %}" data-depth="{{ depth|default:0 }}" data-raw-html="{{ comment.text|escape }}" data-edit-text="{{ comment.text|mention_names|escape }}" data-mention-id="{{ comment.text|mention_first_id }}">
+<div id="comment-{{ comment.pk }}" class="py-3 comment-block comment-card" data-reply-url="{% url 'smart_blog:add_comment' comment.item.slug %}" data-thread-url="{% url 'smart_blog:comment_thread' comment.item.slug comment.pk %}" data-depth="{{ depth|default:0 }}" data-raw-html="{{ comment.text|escape }}" data-edit-text="{{ comment.text|comment_plain_for_edit|mention_names|escape }}" data-mention-id="{{ comment.text|mention_first_id }}">
   <span class="comment-anchor" id="comment-anchor-{{ comment.pk }}"></span>
 
   <div class="comment-layout">
@@ -62,10 +62,10 @@
         <div class="comment-text-wrapper position-relative">
           <div class="comment-text">
             {% if no_mentions %}
-              {{ comment.text|linebreaksbr }}
+              {{ comment.text|comment_display }}
             {% else %}
               {% if thread_view and depth|default:0 == 0 %}
-                {{ comment.text|linebreaksbr }}
+                {{ comment.text|comment_display }}
               {% else %}
                 {{ comment.text|render_mentions:comment.parent_id }}
               {% endif %}

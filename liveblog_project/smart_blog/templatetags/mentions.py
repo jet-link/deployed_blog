@@ -4,15 +4,28 @@ from django.contrib.auth import get_user_model
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
+from smart_blog.comment_html import comment_html_for_template, sanitize_and_linkify_comment_html
+
 register = template.Library()
 User = get_user_model()
 
 MENTION_RE = re.compile(r'@\[\s*user\s*:\s*(\d+)\s*\]')
 
+
+@register.filter
+def comment_display(text):
+    """Safe HTML for comment body (links + line breaks). Same pipeline as CommentForm."""
+    if not text:
+        return ""
+    return mark_safe(comment_html_for_template(text))
+
+
 @register.filter
 def render_mentions(text, parent_comment_id=None):
     if not text:
         return ""
+
+    text = sanitize_and_linkify_comment_html(text)
 
     def repl(match):
         user_id = match.group(1)
@@ -44,7 +57,6 @@ def render_mentions(text, parent_comment_id=None):
                 f'@deleted-user</a>'
             )
 
-    text = text.replace('\r\n', '\n').replace('\r', '\n')
     text = MENTION_RE.sub(repl, text)
     text = text.replace('\n', '<br>')
     return mark_safe(text)
@@ -55,6 +67,19 @@ def strip_mentions(text):
     """Strip @[user:ID], from text. Returns plain comment body for admin display."""
     from smart_blog.utils import strip_mention_tokens
     return strip_mention_tokens(text or "")
+
+
+@register.filter
+def comment_plain_for_edit(text):
+    """Strip tags from stored comment HTML so edit field shows plain URLs, not <a>...</a>."""
+    if not text:
+        return ''
+    from django.utils.html import strip_tags
+
+    t = text.replace('\r\n', '\n').replace('\r', '\n')
+    t = re.sub(r'<br\s*/?>\s*', '\n', t, flags=re.I)
+    t = re.sub(r'</p>\s*', '\n\n', t, flags=re.I)
+    return strip_tags(t)
 
 
 @register.filter

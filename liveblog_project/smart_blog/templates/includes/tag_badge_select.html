@@ -5,7 +5,7 @@
     </legend>
   <div class="tags-badge-wrap d-flex flex-wrap gap-1 align-items-center" data-field-name="{{ form.tags.html_name }}">
     {% for tag in form.tags.field.queryset %}
-      <label class="tag-vlb tag-badge-option text-decoration-none mb-0 cursor-pointer{% if tag.pk in selected_tag_ids %} tag-badge-selected{% endif %}{% if forloop.counter > 25 %} tag-badge-overflow d-none{% endif %}">
+      <label class="tag-vlb tag-badge-option text-decoration-none mb-0 cursor-pointer{% if tag.pk in selected_tag_ids %} tag-badge-selected{% endif %}{% if forloop.counter > 30 %} tag-badge-overflow d-none{% endif %}">
         <input type="checkbox" name="{{ form.tags.html_name }}" value="{{ tag.pk }}" class="tag-badge-checkbox d-none"{% if tag.pk in selected_tag_ids %} checked{% endif %}>
         {{ tag.tag_name }}
       </label>
@@ -16,7 +16,7 @@
   {% with tag_count=form.tags.field.queryset.count %}
   {% if tag_count > 12 %}
   <div class="d-flex align-items-center flex-wrap gap-2 mt-2">
-    {% if tag_count > 25 %}
+    {% if tag_count > 30 %}
     <button type="button" class="btn-tag-show-more" aria-expanded="false">More tags</button>
     <span class="text-muted" aria-hidden="true">–</span>
     {% endif %}

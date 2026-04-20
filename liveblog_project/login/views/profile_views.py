@@ -30,6 +30,8 @@ from login.views.vanished_views import user_not_found_view
 from smart_blog.models import Item
 from smart_blog.feed_queryset import feed_list_optimizations
 
+PROFILE_CREATED_PREVIEW_LIMIT = 12
+
 
 def profile_view(request, username):
     user_obj = User._base_manager.select_related("profile", "deleted_queue_entry").filter(username=username).first()
@@ -53,8 +55,8 @@ def profile_view(request, username):
     user_items_qs = annotate_user_bookmarked(user_items_qs, request.user)
 
     all_count = user_items_qs.count()
-    if all_count > 9:
-        created_items = list(user_items_qs[:9])
+    if all_count > PROFILE_CREATED_PREVIEW_LIMIT:
+        created_items = list(user_items_qs[:PROFILE_CREATED_PREVIEW_LIMIT])
     else:
         created_items = list(user_items_qs)
     apply_human_counts(created_items)
@@ -117,6 +119,7 @@ def profile_view(request, username):
         'is_online': is_online,
         'trust_score': trust_score,
         'all_count': all_count,
+        'show_view_all_created': all_count > PROFILE_CREATED_PREVIEW_LIMIT,
     }
     return render(request, 'accounts/profile.html', context)
 

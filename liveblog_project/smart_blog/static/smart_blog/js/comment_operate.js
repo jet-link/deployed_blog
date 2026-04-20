@@ -462,9 +462,18 @@
     err.className = 'field-error';
     err.textContent = message;
 
-    (textarea.closest('.form-floating') || textarea).after(err);
+    const bucket = form.querySelector('.reply-form-errors');
+    const fieldErrorsLikeMain =
+      form.matches('.reply-comment-form') || form.matches('.comment-edit-form');
+    if (bucket && !fieldErrorsLikeMain) {
+      bucket.appendChild(err);
+    } else {
+      (textarea.closest('.form-floating') || textarea).after(err);
+    }
     textarea.focus();
   }
+
+  window.showCommentFieldError = showFieldError;
 
   function clearFieldError(textarea) {
     textarea?.closest('form')?.querySelector('.field-error')?.remove();
@@ -480,7 +489,7 @@
     if (window.closeAllReplyForms) window.closeAllReplyForms();
   }
 
-  const COMMENT_MAX_CHARS = 500;
+  const COMMENT_MAX_CHARS = 1500;
 
   function countCommentChars(value) {
     return String(value || '').replace(/\r?\n/g, '').length;
@@ -494,7 +503,7 @@
       else clearFieldError(textarea);
       return true;
     }
-    const msg = 'Maximum 500 characters (line breaks are not counted).';
+    const msg = `Maximum ${COMMENT_MAX_CHARS} characters (line breaks are not counted).`;
     if (errorContainer) {
       errorContainer.textContent = msg;
     } else {
@@ -503,6 +512,14 @@
     return false;
   }
   window.enforceCommentLimit = enforceCommentLimit;
+
+  document.addEventListener('input', (e) => {
+    const ta = e.target;
+    if (ta.tagName !== 'TEXTAREA' || ta.name !== 'text') return;
+    const replyForm = ta.closest('.reply-comment-form');
+    if (!replyForm) return;
+    enforceCommentLimit(ta);
+  });
 
   /* ===============================
      ADD COMMENT
@@ -703,7 +720,7 @@
     // очистка по клику
     clearBtn.addEventListener('click', () => {
       textarea.value = '';
-      textarea.style.height = 'auto';
+      textarea.style.removeProperty('height');
       clearFieldError(textarea);
       toggle();
       textarea.focus();
@@ -796,7 +813,7 @@
           }
 
           textarea.value = '';
-          textarea.style.height = 'auto';
+          textarea.style.removeProperty('height');
 
           // 🔥 ВАЖНО: скрываем кнопку Clear после отправки
           clearBtn?.classList.add('hidden');
@@ -857,6 +874,19 @@
   /* ===============================
      DELETE COMMENT
   =============================== */
+  function forceCloseBootstrapModal(modalEl) {
+    if (!modalEl || typeof window.bootstrap === 'undefined' || !window.bootstrap.Modal) return;
+    const inst = bootstrap.Modal.getInstance(modalEl);
+    if (inst) inst.hide();
+    modalEl.classList.remove('show');
+    modalEl.setAttribute('aria-hidden', 'true');
+    modalEl.style.display = 'none';
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('padding-right');
+    document.body.style.removeProperty('overflow');
+    document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove());
+  }
+
   function initDeleteComments() {
     const modal = document.getElementById('confirmDeleteModal');
     const confirmBtn = document.getElementById('confirmDeleteBtn');
@@ -894,8 +924,6 @@
           const deleted = document.getElementById('comment-' + data.comment_id);
           if (!deleted) return;
 
-          const container = getRootCommentsContainer();
-          const isRootComment = container && deleted.parentElement === container;
           const threadContext = getThreadContext();
           const isThreadRoot = threadContext && String(data.comment_id) === String(threadContext.parentId);
 
@@ -917,8 +945,6 @@
             }
             return;
           }
-
-          bootstrap.Modal.getInstance(modal)?.hide();
 
           function doCleanup() {
             if (data.parent_id) {
@@ -977,6 +1003,7 @@
             updateCommentsHeader(count);
           }
 
+          forceCloseBootstrapModal(modal);
           deleted.remove();
           doCleanup();
         }
@@ -1083,8 +1110,16 @@
 
   function autoResizeTextarea(textarea) {
     if (!textarea) return;
+    const cs = getComputedStyle(textarea);
+    const minH = parseFloat(cs.minHeight) || 0;
+    const noChars = !textarea.value || textarea.value.length === 0;
     textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    const sh = textarea.scrollHeight;
+    let target = Math.max(minH, sh);
+    if (noChars && minH > 0 && sh > minH * 1.5) {
+      target = minH;
+    }
+    textarea.style.height = target + 'px';
   }
 
   function getCookie(name) {
@@ -1116,8 +1151,14 @@
     err.className = 'field-error';
     err.textContent = message;
 
-    const wrap = textarea.closest('.form-floating') || textarea;
-    wrap.after(err);
+    const bucket = form.querySelector('.reply-form-errors');
+    const fieldErrorsLikeMain =
+      form.matches('.reply-comment-form') || form.matches('.comment-edit-form');
+    if (bucket && !fieldErrorsLikeMain) {
+      bucket.appendChild(err);
+    } else {
+      (textarea.closest('.form-floating') || textarea).after(err);
+    }
 
     textarea.focus();
   }
@@ -1145,6 +1186,18 @@
     return m ? m[1] : '';
   }
 
+  /** Текст для textarea: из HTML всегда через DOM textContent (никогда сырой <a>…). */
+  function htmlToPlainText(html) {
+    if (!html || typeof html !== 'string') return '';
+    const s = html.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    if (!s.includes('<')) {
+      return s.trim();
+    }
+    const d = document.createElement('div');
+    d.innerHTML = s;
+    return (d.textContent || d.innerText || '').replace(/\r\n/g, '\n').trim();
+  }
+
   function openEditor(commentNode, commentId, editUrl) {
     if (window.closeAllReplyForms) {
       window.closeAllReplyForms();
@@ -1158,8 +1211,8 @@
 
     const originalHtml = body.innerHTML;
     const textDiv = body.querySelector('.comment-text');
-    const rawHtml = commentNode.dataset.rawHtml || '';
-    const editText = commentNode.dataset.editText || '';
+    const rawHtml = commentNode.getAttribute('data-raw-html') || '';
+    const editAttr = commentNode.getAttribute('data-edit-text');
 
     const decodeHtml = (value) => {
       if (!value) return '';
@@ -1171,12 +1224,7 @@
     const displayHtml =
       textDiv?.dataset.fullHtml || textDiv?.innerHTML || '';
     const rawDecoded = decodeHtml(rawHtml);
-    const fullHtml =
-      editText ? decodeHtml(editText) : (rawDecoded || displayHtml);
-    if (fullHtml && !commentNode.dataset.rawHtml && !editText) {
-      commentNode.dataset.rawHtml = fullHtml;
-    }
-    // cache rendered html for restore after cancel
+
     if (displayHtml) {
       commentNode.dataset.fullHtmlCache = displayHtml;
     }
@@ -1186,26 +1234,34 @@
       mentionId = extractMentionUserIdFromRaw(rawDecoded);
     }
 
+    let primaryPlain = '';
+    if (editAttr != null && String(editAttr).trim() !== '') {
+      primaryPlain = decodeHtml(editAttr).replace(/\r\n/g, '\n').trim();
+    }
+    if (!primaryPlain) {
+      primaryPlain =
+        htmlToPlainText(rawDecoded) ||
+        htmlToPlainText(displayHtml) ||
+        '';
+    }
+
     let originalText = '';
     let mention = '';
-    const editDecoded = editText ? decodeHtml(editText) : '';
+    const bodyPlain = primaryPlain;
 
-    if (editDecoded.startsWith('@')) {
-      const comma = editDecoded.indexOf(', ');
+    if (bodyPlain.startsWith('@')) {
+      const comma = bodyPlain.indexOf(', ');
       if (comma === -1) {
-        mention = editDecoded.slice(1).trim();
+        mention = bodyPlain.slice(1).trim();
         originalText = '';
       } else {
-        mention = editDecoded.slice(1, comma).trim();
-        originalText = editDecoded.slice(comma + 2).trim();
+        mention = bodyPlain.slice(1, comma).trim();
+        originalText = bodyPlain.slice(comma + 2).trim();
       }
     } else {
-      originalText = fullHtml
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/p>/gi, '\n\n')
-        .replace(/<[^>]+>/g, '')
+      originalText = bodyPlain
+        .replace(/^\s*@\[user:\d+\]\s*,?\s*/i, '')
         .trim();
-      originalText = originalText.replace(/^\s*@\[user:\d+\]\s*,?\s*/i, '').trim();
       const legacy = originalText.match(/^@([\w.-]+)\s*,?\s*/);
       if (legacy) {
         mention = legacy[1];
@@ -1213,9 +1269,11 @@
       }
     }
 
-    if (!editText && rawDecoded) {
-      let fallback = rawDecoded.replace(/^\s*@\[user:\d+\]\s*,?\s*/i, '').trim();
-      if (!originalText && fallback) {
+    if (!originalText && rawDecoded) {
+      const fallback = htmlToPlainText(rawDecoded)
+        .replace(/^\s*@\[user:\d+\]\s*,?\s*/i, '')
+        .trim();
+      if (fallback) {
         originalText = fallback;
       }
     }
@@ -1225,8 +1283,12 @@
     =============================== */
 
     const form = document.createElement('form');
-    form.className = 'comment-edit-form';
+    form.className = 'comment-edit-form pb-4';
     form.noValidate = true;
+
+    const errSlot = document.createElement('div');
+    errSlot.className = 'reply-form-errors mb-2';
+    form.appendChild(errSlot);
 
     const wrap = document.createElement('div');
     wrap.className = 'mb-2';
@@ -1251,16 +1313,16 @@
     form.appendChild(wrap);
 
     const btnRow = document.createElement('div');
-    btnRow.className = 'd-flex gap-1 comment-edit-actions';
+    btnRow.className = 'comment-form-actions';
 
     const btnSave = document.createElement('button');
     btnSave.type = 'submit';
-    btnSave.className = 'cstm-btn custom-primary-btn cstm-btn-sm';
+    btnSave.className = 'cstm-btn cstm-btn-sm custom-primary-btn comment-btn';
     btnSave.textContent = 'Edit';
 
     const btnCancel = document.createElement('button');
     btnCancel.type = 'button';
-    btnCancel.className = 'cstm-btn custom-secondary-btn cstm-btn-sm';
+    btnCancel.className = 'cstm-btn cstm-btn-sm custom-secondary-btn';
     btnCancel.textContent = 'Cancel';
     btnCancel.classList.add('cancel-edit');
 
@@ -1272,11 +1334,24 @@
     body.appendChild(form);
 
     textarea.focus();
-    autoResizeTextarea(textarea);
-
-    textarea.addEventListener('input', () => {
+    if (typeof window.bindAutoGrowTextarea === 'function') {
+      window.bindAutoGrowTextarea(textarea);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.syncAutoGrowTextarea?.(textarea);
+        });
+      });
+    } else {
       autoResizeTextarea(textarea);
+      textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+      textarea.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        requestAnimationFrame(() => autoResizeTextarea(textarea));
+      });
+    }
+    textarea.addEventListener('input', () => {
       clearFieldError(textarea);
+      if (window.enforceCommentLimit) window.enforceCommentLimit(textarea);
     });
 
     btnCancel.addEventListener('click', () => {
@@ -1303,6 +1378,10 @@
       e.preventDefault();
 
       clearFieldError(textarea);
+
+      if (window.enforceCommentLimit && !window.enforceCommentLimit(textarea)) {
+        return;
+      }
 
       let text = textarea.value.trim();
       if (!text) {
@@ -1601,37 +1680,47 @@
 
 // autosize_textarea.js
 (function () {
+  /**
+   * Высота = max(min-height, scrollHeight), чтобы одна строка текста не «подпрыгивала» после первого символа.
+   * Пустое поле: иногда scrollHeight сильно завышен — тогда держимся min-height из CSS.
+   */
   function autoResize(textarea) {
     if (!textarea) return;
     const cs = getComputedStyle(textarea);
     const minH = parseFloat(cs.minHeight) || 0;
+    const noChars = !textarea.value || textarea.value.length === 0;
     textarea.style.height = 'auto';
     const sh = textarea.scrollHeight;
-    textarea.style.height = Math.max(minH, sh) + 'px';
+    let target = Math.max(minH, sh);
+    if (noChars && minH > 0 && sh > minH * 1.5) {
+      target = minH;
+    }
+    textarea.style.height = target + 'px';
+  }
+
+  function bindAutoGrowTextarea(textarea) {
+    if (!textarea || textarea.dataset.autoGrowBound === '1') return;
+    textarea.dataset.autoGrowBound = '1';
+    autoResize(textarea);
+    textarea.addEventListener('input', () => {
+      autoResize(textarea);
+    });
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      requestAnimationFrame(() => autoResize(textarea));
+    });
   }
 
   function initAutosize() {
-    const textareas = document.querySelectorAll('textarea.auto-grow');
-
-    textareas.forEach(textarea => {
-      autoResize(textarea);
-
-      textarea.addEventListener('input', () => {
-        autoResize(textarea);
-      });
-    });
+    document.querySelectorAll('textarea.auto-grow').forEach(bindAutoGrowTextarea);
   }
 
 
   // при обычной загрузке
   document.addEventListener('DOMContentLoaded', initAutosize);
 
-  // если textarea появляется динамически (редактирование комментария)
-  document.addEventListener('focusin', (e) => {
-    if (e.target.tagName === 'TEXTAREA' && e.target.classList.contains('auto-grow')) {
-      autoResize(e.target);
-    }
-  });
+  window.bindAutoGrowTextarea = bindAutoGrowTextarea;
+  window.syncAutoGrowTextarea = autoResize;
 })();
 
 
@@ -1671,10 +1760,11 @@
       const textarea = form.querySelector('textarea[name="text"]');
       if (textarea) {
         textarea.value = '';
-        textarea.style.height = 'auto';
+        textarea.style.removeProperty('height');
         delete textarea.dataset.mentionId;
       }
 
+      form.querySelectorAll('.field-error').forEach((el) => el.remove());
       const errors = form.querySelector('.reply-form-errors');
       if (errors) {
         errors.textContent = '';
@@ -1732,6 +1822,13 @@
       ?.classList.add('comment-active');
 
     scrollReplyFormIntoView(container);
+
+    /* Reply изначально в d-none: первый bind мог измерить min-height как 0 — пересчитать после показа. */
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.syncAutoGrowTextarea?.(textarea);
+      });
+    });
   }
 
   function positionCommentMenuArrow() {
@@ -1929,10 +2026,10 @@
     if (textarea) {
       textarea.value = '';
       delete textarea.dataset.mentionId;
-      textarea.style.height = 'auto';
+      textarea.style.removeProperty('height');
     }
 
-    // 🔥 УБИРАЕМ ТЕКСТ ОШИБКИ
+    form.querySelectorAll('.field-error').forEach((el) => el.remove());
     const errors = form.querySelector('.reply-form-errors');
     if (errors) {
       errors.textContent = '';
@@ -1957,12 +2054,15 @@
 
     const parentId = form.dataset.parentId;
     const parentComment = document.getElementById('comment-' + parentId);
-    if (!textarea || !errors || !parentComment) return;
+    if (!textarea || !parentComment) return;
 
-    errors.textContent = '';
+    form.querySelectorAll('.field-error').forEach((el) => el.remove());
+    if (errors) {
+      errors.textContent = '';
+    }
 
     const limitOk = window.enforceCommentLimit
-      ? window.enforceCommentLimit(textarea, errors)
+      ? window.enforceCommentLimit(textarea)
       : true;
     if (!limitOk) {
       textarea.focus();
@@ -1971,8 +2071,7 @@
 
     let text = textarea.value.trim();
     if (!text) {
-      errors.textContent = 'Please write a reply...';
-      textarea.focus();
+      window.showCommentFieldError?.(textarea, 'Please write a reply...');
       return;
     }
 
@@ -1991,7 +2090,10 @@
         if (statusResp.ok) {
           const statusData = await statusResp.json();
           if (statusData && statusData.shadow_banned) {
-            errors.textContent = 'You have been shadow banned. Improve your trust score to restore access.';
+            if (errors) {
+              errors.textContent =
+                'You have been shadow banned. Improve your trust score to restore access.';
+            }
             return;
           }
         }
@@ -2006,7 +2108,7 @@
       const replyContainer = form.closest('[data-reply-url]') || parentComment;
       const replyUrl = replyContainer?.dataset.replyUrl;
       if (!replyUrl) {
-        errors.textContent = 'Reply URL not found.';
+        if (errors) errors.textContent = 'Reply URL not found.';
         return;
       }
       const threadUrl =
@@ -2029,7 +2131,7 @@
 
       const data = await parseJsonSafeReply(resp);
       if (!resp.ok || !data?.success) {
-        errors.textContent = data?.error || 'Server error.';
+        if (errors) errors.textContent = data?.error || 'Server error.';
         return;
       }
 
@@ -2061,7 +2163,7 @@
           replies = window.ensureRepliesBucketForAjax?.(parentComment, parentId, { initialCount: 1 });
         }
         if (!replies) {
-          errors.textContent = 'Render error.';
+          if (errors) errors.textContent = 'Render error.';
           return;
         }
 
@@ -2100,10 +2202,10 @@
         window.startReplyCooldown?.(parentId);
         closeAllReplyForms();
       } catch (renderErr) {
-        errors.textContent = 'Render error.';
+        if (errors) errors.textContent = 'Render error.';
       }
     } catch (err) {
-      errors.textContent = 'Unable to submit. Please try again.';
+      if (errors) errors.textContent = 'Unable to submit. Please try again.';
     }
   });
 

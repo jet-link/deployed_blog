@@ -11,7 +11,7 @@
 
 {% block content %}
 <div class="admin-card">
-    <form method="post" enctype="multipart/form-data" class="admin-form" novalidate>
+    <form method="post" enctype="multipart/form-data" class="admin-form" novalidate data-turbo="false">
         {% csrf_token %}
         {% for field in form %}
         {% if field.name != 'tags' %}

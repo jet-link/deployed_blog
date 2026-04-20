@@ -1,8 +1,15 @@
 """Public XML sitemaps (django.contrib.sitemaps)."""
+from __future__ import annotations
+
+from typing import Optional
+
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
 from smart_blog.models import Category, Item, Tag
+
+# Human HTML sitemap: only the N most recently created tags (newest first); XML sitemap lists all tags.
+SITEMAP_HTML_TAGS_LIMIT = 50
 
 # Whitelist: only slugs backed by templates (see pages.views.PageView).
 PAGE_SLUGS_FOR_SITEMAP = ("about", "contacts")
@@ -54,6 +61,15 @@ def categories_for_sitemap():
 def tags_for_sitemap():
     """Active tags (not soft-deleted)."""
     return Tag.objects.all().order_by("slug")
+
+
+def tags_for_sitemap_html(limit: Optional[int] = None):
+    """
+    Tags shown on the public /sitemap/ page only: last `limit` tags by primary key (newest first).
+    Older tags are omitted from the HTML list; XML sitemap still uses tags_for_sitemap().
+    """
+    lim = int(limit) if limit is not None else SITEMAP_HTML_TAGS_LIMIT
+    return Tag.objects.order_by("-pk")[:lim]
 
 
 class StaticAndListSitemap(Sitemap):

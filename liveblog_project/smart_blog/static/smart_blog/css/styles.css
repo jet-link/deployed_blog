@@ -767,7 +767,8 @@ textarea.form-control {
 textarea.form-control.auto-grow {
     resize: none;
     overflow: hidden;
-    min-height: calc(1.5em + 1.25rem + 2px);
+    /* Same one-line baseline as Comment Textareas block — avoids reply/edit min-height losing tie-break to this rule */
+    min-height: calc(1.45em + 1.7rem + 2px);
 }
 
 .form-control::placeholder {
@@ -4267,8 +4268,8 @@ html[data-theme="dark"] .avatar-file-trigger:hover {
     gap: 0.25rem;
 }
 
-.reply-form-actions,
-.comment-edit-actions {
+.reply-form .comment-form-actions,
+.comment-edit-form .comment-form-actions {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -4277,14 +4278,21 @@ html[data-theme="dark"] .avatar-file-trigger:hover {
     width: 100%;
 }
 
-.reply-form-actions > .cstm-btn-sm,
-.comment-edit-actions > .cstm-btn-sm {
+.reply-form .comment-form-actions > .cstm-btn,
+.comment-edit-form .comment-form-actions > .cstm-btn {
     flex: 0 0 auto;
 }
 
 @media (max-width: 575.98px) {
-    .reply-form-actions > .cstm-btn-sm,
-    .comment-edit-actions > .cstm-btn-sm {
+    /* На мобильных reply/edit кнопки — как основная форма (не компактные sm). */
+    .reply-form .comment-form-actions .cstm-btn-sm,
+    .comment-edit-form .comment-form-actions .cstm-btn-sm {
+        padding: 8px 13px;
+        font-size: 1rem;
+    }
+
+    .reply-form .comment-form-actions > .cstm-btn,
+    .comment-edit-form .comment-form-actions > .cstm-btn {
         flex: 1 1 0;
         min-width: 0;
         justify-content: center;
@@ -4295,7 +4303,9 @@ html[data-theme="dark"] .avatar-file-trigger:hover {
         width: 100%;
     }
 
-    .comment-form-actions #submitCommentBtn {
+    .comment-form-actions #submitCommentBtn,
+    .reply-form .comment-form-actions .comment-btn,
+    .comment-edit-form .comment-form-actions .comment-btn {
         flex: 1 1 auto;
         min-width: 0;
     }
@@ -4769,9 +4779,8 @@ a.comment-replies-thread-link {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    background: transparent;
-    /* border: 1px solid color-mix(in srgb, var(--text-link) 28%, var(--border-default, #c4c4c4)); */
-    /* background: color-mix(in srgb, var(--text-link) 6%, var(--bg-default)); */
+    background: color-mix(in srgb, var(--text-link) 12%, var(--bg-default));
+    color: var(--text-link);
     border: none;
     color: var(--text-link);
     font-size: 0.76rem;
@@ -4781,6 +4790,7 @@ a.comment-replies-thread-link {
     line-height: 1.2;
     margin: .7rem 0;
     box-sizing: border-box;
+    border: 1px solid var(--text-link);
 }
 
 .comment-replies-toggle {
@@ -4793,11 +4803,11 @@ a.comment-replies-thread-link {
     color: var(--text-link);
 }
 
-.comment-replies-toggle:hover,
+/* .comment-replies-toggle:hover,
 a.comment-replies-thread-link:hover {
     background: color-mix(in srgb, var(--text-link) 12%, var(--bg-default));
     color: var(--text-link);
-}
+} */
 
 .comment-replies-toggle:focus-visible,
 a.comment-replies-thread-link:focus-visible {
@@ -5634,6 +5644,17 @@ html[data-theme="dark"] .report-reason-btn.is-selected {
     font-size: .8rem;
     font-weight: 500;
     border-left: 4px solid var(--text-link)
+}
+
+.comment-text a.primary_ {
+    color: var(--text-link);
+    text-decoration: underline;
+    font-weight: 500;
+    word-break: break-all;
+}
+
+.comment-text a.primary_:hover {
+    opacity: 0.9;
 }
 
 .existing-image.marked-for-delete {
@@ -7789,8 +7810,11 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
 /* ========== Comment Textareas — Auth-style ========== */
 #commentForm textarea.form-control,
 .reply-form textarea.form-control,
-.edit-comment-form textarea.form-control,
+.comment-edit-form textarea.form-control,
 .comment-form-body textarea.form-control {
+    /* One text line + vertical padding + border; grows via JS, no inner scroll (.auto-grow overflow) */
+    min-height: calc(1.45em + 1.7rem + 2px);
+    overflow-y: hidden;
     font-size: 0.875rem;
     line-height: 1.45;
     padding: 0.85rem;
@@ -7799,12 +7823,19 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
     resize: none;
     background: var(--bg-default);
     color: var(--text-default);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    /* Без анимации рамки/тени — иначе при фокусе кажется «прыжок» высоты в reply/edit */
+    transition: none;
+}
+
+/* Reply/edit: постоянное место под focus-ring как у основной формы, без смены габарита при фокусе */
+.reply-form textarea.form-control,
+.comment-edit-form textarea.form-control {
+    box-shadow: 0 0 0 3px transparent;
 }
 
 #commentForm textarea.form-control:focus,
 .reply-form textarea.form-control:focus,
-.edit-comment-form textarea.form-control:focus,
+.comment-edit-form textarea.form-control:focus,
 .comment-form-body textarea.form-control:focus {
     border-color: var(--text-link, #2980b9);
     box-shadow: 0 0 0 3px var(--input-focus-ring);
@@ -7813,16 +7844,21 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
 
 html[data-theme="dark"] #commentForm textarea.form-control,
 html[data-theme="dark"] .reply-form textarea.form-control,
-html[data-theme="dark"] .edit-comment-form textarea.form-control,
+html[data-theme="dark"] .comment-edit-form textarea.form-control,
 html[data-theme="dark"] .comment-form-body textarea.form-control {
     background: var(--bg-muted);
     border-color: var(--border-default);
     color: var(--text-default);
 }
 
+html[data-theme="dark"] .reply-form textarea.form-control,
+html[data-theme="dark"] .comment-edit-form textarea.form-control {
+    box-shadow: 0 0 0 3px transparent;
+}
+
 html[data-theme="dark"] #commentForm textarea.form-control:focus,
 html[data-theme="dark"] .reply-form textarea.form-control:focus,
-html[data-theme="dark"] .edit-comment-form textarea.form-control:focus,
+html[data-theme="dark"] .comment-edit-form textarea.form-control:focus,
 html[data-theme="dark"] .comment-form-body textarea.form-control:focus {
     border-color: var(--text-link);
     box-shadow: 0 0 0 3px var(--input-focus-ring);
@@ -7831,9 +7867,10 @@ html[data-theme="dark"] .comment-form-body textarea.form-control:focus {
 @media (max-width: 767.98px) {
     #commentForm textarea.form-control,
     .reply-form textarea.form-control,
-    .edit-comment-form textarea.form-control,
+    .comment-edit-form textarea.form-control,
     .comment-form-body textarea.form-control {
         font-size: 16px !important;
         padding: 0.9rem;
+        min-height: calc(1.45em + 1.8rem + 2px);
     }
 }

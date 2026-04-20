@@ -10,7 +10,7 @@
     <div class="{% if comments_page %}pt-2{% elif comment_form_expand %}pt-0{% else %}pt-4{% endif %}">
       {% if comment_form_expand %}
         <h5 class="text-muted m-0 mb-3">Leave comment</h5>
-        <!-- <small class="text-muted d-block mb-2" title="Max 500 characters.">Max 500 characters (line breaks not counted).</small> -->
+        <!-- <small class="text-muted d-block mb-2" title="Max 1500 characters.">Max 1500 characters (line breaks not counted).</small> -->
       {% else %}
         <div class="d-inline-flex gap-2 align-items-center">
           <h6 class="text-muted m-0">Leave a comment</h6>
@@ -19,7 +19,7 @@
             <i class="fa fa-angle-up hidden"></i>
           </button>
         </div>
-        <small class="text-muted hidden" title="Max 500 characters.">(Max 500 chars)</small>
+        <small class="text-muted hidden" title="Max 1500 characters.">(Max 1500 chars)</small>
       {% endif %}
     </div>
     <div id="commentFormBody" class="comment-form-body{% if not comment_form_expand %} hidden{% endif %}">

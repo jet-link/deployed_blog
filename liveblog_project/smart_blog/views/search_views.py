@@ -30,7 +30,7 @@ def api_search_suggest(request):
     items_qs = build_search_filter(items_qs, q, True, True, True)
     rows = list(items_qs.values('title', 'slug')[:SEARCH_SUGGEST_LIMIT])
     items = [
-        {'title': r['title'], 'url': reverse('smart_blog:item_detail', args=[r['slug']])}
+        {'title': r['title'], 'url': reverse('smart_blog:post_detail', args=[r['slug']])}
         for r in rows
     ]
     return JsonResponse({'items': items})

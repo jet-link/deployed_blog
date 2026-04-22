@@ -11,6 +11,7 @@ from admin_panel.models import ContentViolation
 from admin_panel.views.bulk_views import _get_ids
 from backups.models import Backup
 from smart_blog.models import Category, Comment, ContentReport, Item, Tag
+from smart_blog.public_listing_cache import invalidate_public_listing_caches
 
 TAB_POSTS = "posts"
 TAB_COMMENTS = "comments"
@@ -149,6 +150,9 @@ def recent_deleted_restore(request):
         n = Backup.all_objects.filter(pk__in=id_ints, deleted_at__isnull=False).update(deleted_at=None)
     if n:
         messages.success(request, f"Recovered {n} record(s).")
+        if kind == TAB_POSTS:
+            # Bulk .update() bypasses model save signals; public caches must refresh immediately.
+            invalidate_public_listing_caches(bump_home=True)
     else:
         messages.info(request, "No matching records to recover.")
     return _redirect_recent_deleted(request, kind)

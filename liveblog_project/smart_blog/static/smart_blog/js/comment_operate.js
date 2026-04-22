@@ -237,7 +237,7 @@
   }
   window.getThreadContext = getThreadContext;
 
-  /** Canonical thread path /item/<slug>/comment/<id>/thread/; legacy /blog/.../ if slug unknown. */
+  /** Canonical thread path /post/<slug>/comment/<id>/thread/; legacy /blog/.../ if slug unknown. */
   function defaultThreadUrl(parentId) {
     const pid = parentId == null ? '' : String(parentId);
     if (!pid) return `${window.location.origin}/`;
@@ -245,7 +245,7 @@
       document.getElementById('commentsContext') || document.getElementById('threadViewMarker');
     const slug = ctx?.dataset?.itemSlug;
     if (slug) {
-      return `${window.location.origin}/item/${encodeURIComponent(slug)}/comment/${pid}/thread/`;
+      return `${window.location.origin}/post/${encodeURIComponent(slug)}/comment/${pid}/thread/`;
     }
     return `${window.location.origin}/blog/comment/${pid}/thread/`;
   }
@@ -288,6 +288,12 @@
     return `${n} replies`;
   }
 
+  function syncRepliesToggleVisual(btn, isExpanded) {
+    if (!btn || !btn.classList.contains('comment-replies-toggle')) return;
+    btn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    btn.classList.toggle('active', isExpanded);
+  }
+
   function expandCommentThreadAncestors(commentEl) {
     if (!commentEl) return;
     let el = commentEl;
@@ -302,7 +308,7 @@
           const prev = outer.previousElementSibling;
           if (prev && prev.classList.contains('comment-replies-toggle')) toggle = prev;
         }
-        if (toggle) toggle.setAttribute('aria-expanded', 'true');
+        if (toggle) syncRepliesToggleVisual(toggle, true);
       }
       const nextRoot = el.parentElement?.closest?.('.comment-block');
       if (!nextRoot || nextRoot === el) break;
@@ -323,7 +329,7 @@
     }
     if (!outer || !outer.classList.contains('comment-replies-outer')) return;
     const expanded = outer.classList.toggle('is-expanded');
-    btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    syncRepliesToggleVisual(btn, expanded);
   });
 
   function ensureRepliesBucketForAjax(parentComment, parentId, opts) {
@@ -410,7 +416,7 @@
     if (!outer) return;
     outer.classList.add('is-expanded');
     const btn = getToggleForRepliesOuter(outer);
-    if (btn) btn.setAttribute('aria-expanded', 'true');
+    if (btn) syncRepliesToggleVisual(btn, true);
   }
   window.expandRepliesBucketForParent = expandRepliesBucketForParent;
 
@@ -1990,12 +1996,12 @@
         shareCommentUrl(url);
       } else if (action === 'report') {
         window.dispatchEvent(new CustomEvent('comment-report', { detail: { commentId } }));
-      } else if (action === 'item-open-share') {
-        window.dispatchEvent(new CustomEvent('open-item-share-modal', { detail: { trigger: actionBtn } }));
-      } else if (action === 'item-report') {
-        const itemId = actionBtn.dataset.itemId;
-        if (itemId) {
-          window.dispatchEvent(new CustomEvent('item-report', { detail: { itemId } }));
+      } else if (action === 'post-open-share') {
+        window.dispatchEvent(new CustomEvent('open-post-share-modal', { detail: { trigger: actionBtn } }));
+      } else if (action === 'post-report') {
+        const postId = actionBtn.dataset.itemId;
+        if (postId) {
+          window.dispatchEvent(new CustomEvent('post-report', { detail: { postId } }));
         }
       }
 

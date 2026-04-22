@@ -27,7 +27,7 @@
     <h3>Last Posts</h3>
     <ul class="admin-profile-list">
         {% for p in posts %}
-        <li>{% if p.is_published %}<a href="{% url 'smart_blog:item_detail' p.slug %}" class="admin-profile-link">{{ p.title }}</a>{% else %}<span class="admin-profile-link admin-link-draft">{{ p.title }}</span>{% endif %}</li>
+        <li>{% if p.is_published %}<a href="{% url 'smart_blog:post_detail' p.slug %}" class="admin-profile-link">{{ p.title }}</a>{% else %}<span class="admin-profile-link admin-link-draft">{{ p.title }}</span>{% endif %}</li>
         {% empty %}
         <li>No posts yet.</li>
         {% endfor %}

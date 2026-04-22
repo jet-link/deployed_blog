@@ -4779,18 +4779,18 @@ a.comment-replies-thread-link {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    background: color-mix(in srgb, var(--text-link) 12%, var(--bg-default));
+    background: transparent;
     color: var(--text-link);
     border: none;
     color: var(--text-link);
     font-size: 0.76rem;
     font-weight: 600;
-    padding: 0.28rem 0.7rem 0.28rem 0.85rem;
+    padding: 0.33rem 0.85rem;
     border-radius: 999px;
     line-height: 1.2;
     margin: .7rem 0;
     box-sizing: border-box;
-    border: 1px solid var(--text-link);
+    border: 1px solid transparent;
 }
 
 .comment-replies-toggle {
@@ -4803,11 +4803,19 @@ a.comment-replies-thread-link {
     color: var(--text-link);
 }
 
-/* .comment-replies-toggle:hover,
+.comment-replies-toggle:hover,
 a.comment-replies-thread-link:hover {
     background: color-mix(in srgb, var(--text-link) 12%, var(--bg-default));
     color: var(--text-link);
-} */
+    border-color: var(--text-link);
+}
+
+/* Open reply bucket — same look as hover (set by JS via .active) */
+.comment-replies-toggle.active {
+    background: color-mix(in srgb, var(--text-link) 12%, var(--bg-default));
+    color: var(--text-link);
+    border-color: var(--text-link);
+}
 
 .comment-replies-toggle:focus-visible,
 a.comment-replies-thread-link:focus-visible {
@@ -5133,7 +5141,7 @@ a.comment-replies-thread-link:focus-visible {
     outline-offset: 2px;
 }
 
-.item_report_btn {
+.post_report_btn {
     border: 1.5px solid var(--danger-fg);
     background-color: transparent;
     color: var(--danger-fg);
@@ -5150,15 +5158,15 @@ a.comment-replies-thread-link:focus-visible {
     transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.item_report_btn:hover {
+.post_report_btn:hover {
     background-color: rgba(231, 76, 60, 0.08);
 }
 
-html[data-theme="dark"] .item_report_btn:hover {
+html[data-theme="dark"] .post_report_btn:hover {
     background-color: var(--danger-bg);
 }
 
-.item_report_btn:focus-visible {
+.post_report_btn:focus-visible {
     outline: 2px solid var(--danger-fg);
     outline-offset: 2px;
 }
@@ -5697,7 +5705,7 @@ html[data-theme="dark"] .report-reason-btn.is-selected {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     min-width: 0;
-    padding-bottom: 6px;
+    /* padding-bottom: 6px; */
     margin-bottom: -4px;
 }
 
@@ -6254,9 +6262,9 @@ html[data-theme="dark"] .comment_likes_badge {
 .custom_badge,
 .replied-badge {
     padding: 3px 12px;
-    border-radius: 6px;
+    border-radius: 7px;
     text-decoration: none;
-    font-size: .7rem;
+    font-size: .775rem;
     border: 1px solid transparent;
     font-weight: 500;
     color: #ffffff;

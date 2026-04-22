@@ -19,7 +19,7 @@
         if (path === '/brainews' || path === '/blog/brainews' || path.endsWith('/brainews')) return true;
         if (path.startsWith('/brainews/filter') || path.startsWith('/blog/brainews/filter')) return true;
         if (path === '/search' || path.startsWith('/search/')) return true;
-        if (path.includes('/blog/tag/')) return true;
+        if (path.startsWith('/tag/') || path.includes('/blog/tag/')) return true;
         return false;
     }
 

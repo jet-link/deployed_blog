@@ -38,8 +38,8 @@ def _get_csrf_token(request):
 @login_required
 @ratelimit(key='ip', rate='90/m', method='GET', block=False)
 @require_http_methods(["GET"])
-def api_report_item(request, pk):
-    """GET /api/report/item/<pk>/ - return current user's report for item or exists: false."""
+def api_report_post(request, pk):
+    """GET /blog/api/report/post/<pk>/ — current user's report for this post or exists: false."""
     if getattr(request, 'limited', False):
         return JsonResponse({'error': 'rate_limited'}, status=429)
     item = get_object_or_404(Item.objects.filter(is_published=True), pk=pk)
@@ -90,8 +90,8 @@ def api_report_comment(request, pk):
 @login_required
 @ratelimit(key='ip', rate=settings.RATELIMIT_REPORT_POST_RATE, method='POST', block=False)
 @require_POST
-def report_item(request, pk):
-    """POST /report/item/<pk>/ - create or update report for item."""
+def report_post(request, pk):
+    """POST /blog/report/post/<pk>/ — create or update report for this post."""
     if getattr(request, 'limited', False):
         return JsonResponse({'success': False, 'error': 'rate_limited'}, status=429)
     item = get_object_or_404(Item.objects.filter(is_published=True), pk=pk)

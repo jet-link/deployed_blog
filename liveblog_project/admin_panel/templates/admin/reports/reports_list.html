@@ -49,7 +49,7 @@
                     <td class="admin-report-preview-cell">
                         {% if r.item %}
                             {% if r.item.is_published %}
-                                <a href="{% url 'smart_blog:item_detail' r.item.slug %}" class="admin-link">{{ r.item.title }}</a>
+                                <a href="{% url 'smart_blog:post_detail' r.item.slug %}" class="admin-link">{{ r.item.title }}</a>
                             {% else %}
                                 <span class="admin-link admin-link-draft">{{ r.item.title }}</span>
                             {% endif %}

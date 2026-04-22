@@ -76,7 +76,7 @@ def _referer_breadcrumb_info(request, referer_url):
         url_name = match.url_name or ""
         kwargs = match.kwargs or {}
 
-        if url_name == "item_detail" and kwargs.get("slug"):
+        if url_name == "post_detail" and kwargs.get("slug"):
             item = Item.objects.filter(slug=kwargs["slug"]).values("title").first()
             if item:
                 return item["title"], referer_url

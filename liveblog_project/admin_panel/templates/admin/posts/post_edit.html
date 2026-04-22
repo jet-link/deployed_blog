@@ -75,7 +75,7 @@
         <div class="admin-form-actions">
             <button type="submit" class="admin-button admin-button-primary">Save</button>
             <a href="{% url 'admin_panel:posts_list' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="admin-button admin-button-outline">Cancel</a>
-            {% if item.is_published and item.slug %}<a href="{% url 'smart_blog:item_detail' item.slug %}" class="admin-button admin-button-outline">View</a>{% else %}<span class="admin-button admin-button-outline admin-link-draft">View</span>{% endif %}
+            {% if item.is_published and item.slug %}<a href="{% url 'smart_blog:post_detail' item.slug %}" class="admin-button admin-button-outline">View</a>{% else %}<span class="admin-button admin-button-outline admin-link-draft">View</span>{% endif %}
         </div>
     </form>
 </div>

@@ -4,6 +4,11 @@
 (function() {
   'use strict';
 
+  /* Turbo re-evaluates body scripts on visits — without this, every listener is registered again.
+     Double theme/collapse handlers each fire once per click = toggle twice = no visible effect. */
+  if (window.__adminPanelCoreInit) return;
+  window.__adminPanelCoreInit = true;
+
   var STORAGE_THEME = 'admin_theme';
 
   function isAdminAppPath(pathname) {
@@ -73,7 +78,7 @@
     return getAdminTheme() === 'light';
   }
   function syncAdminThemeIcon() {
-    var icon = document.querySelector('.admin-theme-icon');
+    var icon = document.querySelector('#adminThemeToggle .admin-theme-icon');
     if (!icon) return;
     var light = isAdminLight();
     icon.classList.remove('fa-moon', 'fa-sun');
@@ -115,8 +120,16 @@
   })();
 
   // Mobile sidebar
-  var sidebar = document.getElementById('adminSidebar');
   var mobileNavScrollY = 0;
+
+  function getAdminSidebar() {
+    return document.getElementById('adminSidebar');
+  }
+
+  function getSidebarCollapseIconEl() {
+    var btn = document.getElementById('adminSidebarCollapseToggle');
+    return btn && btn.querySelector('.admin-sidebar-toggle-icon');
+  }
 
   function closeAdminHeaderOverflowMenu() {
     var wrap = document.getElementById('adminHeaderOverflowMenu');
@@ -191,22 +204,22 @@
     }
   });
 
-  // Sidebar collapse toggle (desktop)
+  // Sidebar collapse toggle (desktop) — delegate so it keeps working after Turbo / DOM swaps
   var STORAGE_COLLAPSED = 'admin_sidebar_collapsed';
-  var collapseBtn = document.getElementById('adminSidebarCollapseToggle');
-  var collapseIcon = collapseBtn ? collapseBtn.querySelector('.admin-sidebar-toggle-icon') : null;
 
   function applyCollapsed(collapsed) {
-    if (!sidebar) return;
+    var sb = getAdminSidebar();
+    if (!sb) return;
+    var icon = getSidebarCollapseIconEl();
     var root = document.documentElement;
     if (collapsed) {
       root.classList.add('admin-sidebar-collapsed');
-      sidebar.classList.add('admin-sidebar-collapsed');
-      if (collapseIcon) { collapseIcon.classList.remove('fa-angle-left'); collapseIcon.classList.add('fa-angle-right'); }
+      sb.classList.add('admin-sidebar-collapsed');
+      if (icon) { icon.classList.remove('fa-angle-left'); icon.classList.add('fa-angle-right'); }
     } else {
       root.classList.remove('admin-sidebar-collapsed');
-      sidebar.classList.remove('admin-sidebar-collapsed');
-      if (collapseIcon) { collapseIcon.classList.remove('fa-angle-right'); collapseIcon.classList.add('fa-angle-left'); }
+      sb.classList.remove('admin-sidebar-collapsed');
+      if (icon) { icon.classList.remove('fa-angle-right'); icon.classList.add('fa-angle-left'); }
     }
     try { localStorage.setItem(STORAGE_COLLAPSED, collapsed ? '1' : ''); } catch (e) {}
   }
@@ -214,37 +227,41 @@
   (function initCollapse() {
     if (window.innerWidth >= 993) {
       var saved = localStorage.getItem(STORAGE_COLLAPSED);
+      var sb = getAdminSidebar();
       if (saved === '1') {
         applyCollapsed(true);
-      } else if (document.documentElement.classList.contains('admin-sidebar-collapsed') && sidebar) {
-        sidebar.classList.add('admin-sidebar-collapsed');
-        if (collapseIcon) { collapseIcon.classList.remove('fa-angle-left'); collapseIcon.classList.add('fa-angle-right'); }
+      } else if (document.documentElement.classList.contains('admin-sidebar-collapsed') && sb) {
+        sb.classList.add('admin-sidebar-collapsed');
+        var icon = getSidebarCollapseIconEl();
+        if (icon) { icon.classList.remove('fa-angle-left'); icon.classList.add('fa-angle-right'); }
       }
     }
   })();
 
-  if (collapseBtn) {
-    collapseBtn.addEventListener('click', function() {
-      if (window.innerWidth < 993) return;
-      var sb = document.getElementById('adminSidebar');
-      if (!sb) return;
-      var collapsed = sb.classList.contains('admin-sidebar-collapsed');
-      applyCollapsed(!collapsed);
-    });
-  }
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#adminSidebarCollapseToggle')) return;
+    e.preventDefault();
+    if (window.innerWidth < 993) return;
+    var sb = getAdminSidebar();
+    if (!sb) return;
+    var collapsed = sb.classList.contains('admin-sidebar-collapsed');
+    applyCollapsed(!collapsed);
+  }, true);
 
   window.addEventListener('resize', function() {
     closeAllAdminDropdowns();
     if (window.innerWidth > 1019) {
-      var sb = document.getElementById('adminSidebar');
+      var sb = getAdminSidebar();
       if (sb && sb.classList.contains('is-open')) {
         closeSidebar();
       }
     }
     if (window.innerWidth < 993) {
       document.documentElement.classList.remove('admin-sidebar-collapsed');
-      if (sidebar) sidebar.classList.remove('admin-sidebar-collapsed');
-      if (collapseIcon) { collapseIcon.classList.remove('fa-angle-right'); collapseIcon.classList.add('fa-angle-left'); }
+      var sbNarrow = getAdminSidebar();
+      if (sbNarrow) sbNarrow.classList.remove('admin-sidebar-collapsed');
+      var iconNarrow = getSidebarCollapseIconEl();
+      if (iconNarrow) { iconNarrow.classList.remove('fa-angle-right'); iconNarrow.classList.add('fa-angle-left'); }
     } else {
       var saved = localStorage.getItem(STORAGE_COLLAPSED);
       if (saved === '1') applyCollapsed(true);
@@ -266,10 +283,10 @@
       else closeSidebar();
     }
   });
-  document.querySelectorAll('.admin-nav-item').forEach(function(link) {
-    link.addEventListener('click', function() {
-      if (window.innerWidth <= 992) closeSidebar();
-    });
+  document.addEventListener('click', function(e) {
+    var navLink = e.target.closest('a.admin-nav-item');
+    if (!navLink || !navLink.closest('#adminSidebar')) return;
+    if (window.innerWidth <= 992) closeSidebar();
   });
 
   // Debounce helper (300ms for instant search)
@@ -433,6 +450,7 @@
   }, true);
 
   document.documentElement.addEventListener('turbo:load', function() {
+    syncAdminThemeIcon();
     bindInstantSearch(document);
     bindAdminDropdowns(document);
     if (typeof window.adminBindToolbarSelectFilters === 'function') {

@@ -172,7 +172,7 @@ def create_item(request):
     profile_url = redirect('login_app:profile', username=request.user.username).url
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return JsonResponse({"success": True, "redirect": profile_url})
-    messages.success(request, "Item created successfully.")
+    messages.success(request, "Post created successfully.")
     return redirect(profile_url)
 
 
@@ -182,7 +182,7 @@ def edit_item(request, slug):
     item = get_object_or_404(Item, slug=slug)
 
     if request.user != item.author:
-        return HttpResponseForbidden("You are not allowed to edit this item.")
+        return HttpResponseForbidden("You are not allowed to edit this post.")
 
     if not item.is_editable and not request.user.is_staff:
         return HttpResponseForbidden("Editing period expired (24 hours after publication).")

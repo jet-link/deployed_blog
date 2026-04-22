@@ -40,7 +40,7 @@ from smart_blog.views.item_crud_views import (  # noqa: F401
 from smart_blog.views.interaction_views import (  # noqa: F401
     toggle_like,
     toggle_bookmark,
-    item_counters,
+    post_counters,
     api_repost,
 )
 

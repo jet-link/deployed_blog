@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from smart_blog.models import Category, Item, TrendingItem
+from smart_blog.public_listing_cache import TOPICS_LIST_CACHE_KEY
 from smart_blog.utils import breadcrumb, build_breadcrumbs
 from smart_blog.views import (
     annotate_user_bookmarked,
@@ -24,7 +25,11 @@ FEATURED_COUNT = 6
 
 def _trending_category_ids(limit=40):
     return set(
-        TrendingItem.objects.filter(item__category__isnull=False)
+        TrendingItem.objects.filter(
+            item__deleted_at__isnull=True,
+            item__is_published=True,
+            item__category__isnull=False,
+        )
         .order_by("-trend_score")[:limit]
         .values_list("item__category_id", flat=True)
     )
@@ -32,7 +37,7 @@ def _trending_category_ids(limit=40):
 
 def _get_topics_data():
     """Cached topics list data (heavy aggregation query)."""
-    cache_key = "topics_list_data"
+    cache_key = TOPICS_LIST_CACHE_KEY
     data = cache.get(cache_key)
     if data is not None:
         return data

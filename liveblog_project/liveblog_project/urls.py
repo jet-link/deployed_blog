@@ -36,7 +36,7 @@ urlpatterns = [
     # Global search at /search/
     path('search/', smart_views.search_view, name='global_search'),
 
-    # Blog: hub pages at /for-you/, /trending/, /topics/; rest under /blog/ (see smart_blog.urls)
+    # Public feed hubs + /tag/, /post/, /brainews/; APIs and legacy paths under /blog/ (see smart_blog.urls)
     path('', include('smart_blog.urls')),
 
     # Auth at /login/, /register/; profile at /profile/<username>/

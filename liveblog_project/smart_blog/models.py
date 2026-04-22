@@ -300,11 +300,11 @@ class Item(models.Model):
 
     def get_absolute_url(self):
         # для удобства
-        return reverse("smart_blog:item_detail", kwargs={"slug": self.slug})
+        return reverse("smart_blog:post_detail", kwargs={"slug": self.slug})
 
     def get_comments_absolute_url(self):
         """Dedicated comments page for this post (all threads)."""
-        return reverse("smart_blog:item_comments", kwargs={"slug": self.slug})
+        return reverse("smart_blog:post_comments", kwargs={"slug": self.slug})
 
     EDITABLE_HOURS = 24  # или 1 день = 24 часа
 

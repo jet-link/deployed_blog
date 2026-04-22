@@ -9,6 +9,7 @@ from django.urls import reverse
 from urllib.parse import urlencode
 
 from smart_blog.models import Bookmark, Item, Like, Tag
+from smart_blog.public_listing_cache import get_anon_brainews_cache_version
 from smart_blog.search_utils import build_search_filter
 from smart_blog.utils import breadcrumb, build_breadcrumbs
 from smart_blog.feed_queryset import feed_list_optimizations
@@ -19,8 +20,11 @@ from smart_blog.views._helpers import (
 )
 
 FILTER_AJAX_PAGE_SIZE = 20
-_ANON_BRAINEWS_CACHE_KEY = "anon_brainews_p{page}"
 _ANON_BRAINEWS_CACHE_TTL = 60
+
+
+def _anon_brainews_cache_key(page_key: str) -> str:
+    return f"anon_brainews_p{page_key}_v{get_anon_brainews_cache_version()}"
 
 
 def items_list(request):
@@ -29,7 +33,7 @@ def items_list(request):
     page_key = page_number or "1"
 
     if is_anon:
-        cached = cache.get(_ANON_BRAINEWS_CACHE_KEY.format(page=page_key))
+        cached = cache.get(_anon_brainews_cache_key(page_key))
         if cached is not None:
             return cached
 
@@ -66,7 +70,7 @@ def items_list(request):
 
     if is_anon:
         cache.set(
-            _ANON_BRAINEWS_CACHE_KEY.format(page=page_key),
+            _anon_brainews_cache_key(page_key),
             response,
             _ANON_BRAINEWS_CACHE_TTL,
         )

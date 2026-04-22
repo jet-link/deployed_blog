@@ -6,12 +6,12 @@ All browser-initiated **state-changing** requests must include the **CSRF** cook
 
 | Endpoint | Methods | Auth | CSRF (session cookie) | Application rate limit (IP unless noted) |
 |----------|---------|------|----------------------|-------------------------------------------|
-| `api/report/item/<pk>/` | GET | Login | N/A (safe) | 90/m |
+| `api/report/post/<pk>/` | GET | Login | N/A (safe) | 90/m |
 | `api/report/comment/<pk>/` | GET | Login | N/A | 90/m |
-| `report/item/<pk>/` | POST | Login | Yes | `RATELIMIT_REPORT_POST_RATE` (default 40/m) |
+| `report/post/<pk>/` | POST | Login | Yes | `RATELIMIT_REPORT_POST_RATE` (default 40/m) |
 | `report/comment/<pk>/` | POST | Login | Yes | same as row above |
 | `report/<pk>/delete/` | DELETE/POST | Login | Yes | (reuse report service limits) |
-| `api/item/<item_id>/counters/` | GET | No | N/A | `RATELIMIT_ITEM_COUNTERS_RATE` (default 90/m) |
+| `api/post/<post_id>/counters/` | GET | No | N/A | `RATELIMIT_ITEM_COUNTERS_RATE` (default 90/m) |
 | `api/repost/` | POST | No | Yes | 30/m (+ per-item cooldowns in code) |
 | `api/search-suggest/` | GET | No | N/A | `RATELIMIT_SEARCH_SUGGEST_RATE` (default 60/m) |
 | `api/search-history/` | GET | Login | N/A | `RATELIMIT_SEARCH_HISTORY_RATE` |

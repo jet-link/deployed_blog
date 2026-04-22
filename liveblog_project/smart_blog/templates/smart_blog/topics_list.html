@@ -7,6 +7,7 @@
       <h4 class="text-muted m-0">Topics</h4>
     </div>
 
+    {% if topics_all %}
     {% include 'includes/topic_category_chips.html' with categories=topics_all topic_chips_mode='filter' %}
 
     <div id="topicsFilterEmpty" class="custom-alert custom-alert-info d-none" role="status">
@@ -33,7 +34,6 @@
 
     <section id="topicsAllSection" aria-labelledby="topicsAllHeading">
       <h5 id="topicsAllHeading" class="text-muted mb-3">All topics</h5>
-      {% if topics_all %}
         <div class="row g-3" id="topicsAllGrid">
           {% for t in topics_all %}
             <div class="col-12 col-md-6 col-lg-4 topics-grid-col">
@@ -41,14 +41,16 @@
             </div>
           {% endfor %}
         </div>
-      {% else %}
-        <p class="text-muted">No topics with posts yet.</p>
-      {% endif %}
     </section>
+    {% else %}
+      <p class="text-muted mb-0">No topics with posts yet</p>
+    {% endif %}
   </div>
 {% endblock %}
 
 {% block extra_js %}
   {{ block.super }}
+  {% if topics_all %}
   <script defer src="{% static 'smart_blog/js/topics_filter.js' %}"></script>
+  {% endif %}
 {% endblock %}

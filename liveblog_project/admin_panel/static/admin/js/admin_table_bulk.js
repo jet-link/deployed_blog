@@ -127,7 +127,9 @@
     var selectAll = table.querySelector('.admin-bulk-select-all');
     var rowChecks = table.querySelectorAll('.admin-bulk-row-check');
     var card = table.closest('.admin-card');
-    var toolbar = document.querySelector('.admin-toolbar');
+    var listParent = card && card.parentNode;
+    var toolbar = listParent ? listParent.querySelector('.admin-toolbar') : null;
+    if (!toolbar) toolbar = document.querySelector('.admin-toolbar');
     var recentDeletedKind = table.getAttribute('data-recent-deleted-kind');
 
     if (!toolbar && card) {

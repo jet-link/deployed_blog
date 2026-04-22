@@ -49,7 +49,7 @@
                 {% for post in posts %}
                 <tr>
                     <td><input type="checkbox" class="admin-bulk-row-check" value="{{ post.pk }}" aria-label="Select"></td>
-                    <td>{% if post.is_published %}{% if post.slug %}<a href="{% url 'smart_blog:item_detail' post.slug %}" class="admin-link">{{ post.title|truncatewords:8 }}</a>{% else %}{{ post.title|truncatewords:8 }}{% endif %}{% else %}<span class="admin-link admin-link-draft">{{ post.title|truncatewords:8 }}</span>{% endif %}</td>
+                    <td>{% if post.is_published %}{% if post.slug %}<a href="{% url 'smart_blog:post_detail' post.slug %}" class="admin-link">{{ post.title|truncatewords:8 }}</a>{% else %}{{ post.title|truncatewords:8 }}{% endif %}{% else %}<span class="admin-link admin-link-draft">{{ post.title|truncatewords:8 }}</span>{% endif %}</td>
                     <td>{{ post.author.username|default:"—" }}</td>
                     <td>{{ post.category.name|default:"—" }}</td>
                     <td>{{ post.published_date|date:"M d, Y" }}</td>

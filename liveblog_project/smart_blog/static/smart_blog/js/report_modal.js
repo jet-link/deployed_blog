@@ -132,8 +132,8 @@
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     modal.show();
 
-    const apiUrl = type === 'item'
-      ? buildUrl(modalEl.dataset.apiItemUrl || '', targetId)
+    const apiUrl = type === 'post'
+      ? buildUrl(modalEl.dataset.apiPostUrl || '', targetId)
       : buildUrl(modalEl.dataset.apiCommentUrl || '', targetId);
 
     fetch(apiUrl, {
@@ -164,15 +164,15 @@
   }
 
   function markTargetReported(type, id) {
-    if (type === 'item') {
-      const el = document.getElementById('item-reported-label');
+    if (type === 'post') {
+      const el = document.getElementById('post-reported-label');
       if (el) el.classList.remove('d-none');
     }
   }
 
   function unmarkTargetReported(type, id) {
-    if (type === 'item') {
-      const el = document.getElementById('item-reported-label');
+    if (type === 'post') {
+      const el = document.getElementById('post-reported-label');
       if (el) el.classList.add('d-none');
     }
   }
@@ -265,8 +265,8 @@
       setFeedback('Report target error.', true);
       return;
     }
-    const reportUrl = targetType === 'item'
-      ? buildUrl(modalEl.dataset.reportItemUrl || '', targetId)
+    const reportUrl = targetType === 'post'
+      ? buildUrl(modalEl.dataset.reportPostUrl || '', targetId)
       : buildUrl(modalEl.dataset.reportCommentUrl || '', targetId);
     const reasons = [...selectedReasons];
 
@@ -302,11 +302,11 @@
   });
 
   document.addEventListener('click', (e) => {
-    const itemBtn = e.target.closest('.item_report_btn');
-    if (itemBtn) {
+    const postBtn = e.target.closest('.post_report_btn');
+    if (postBtn) {
       e.preventDefault();
-      const id = itemBtn.dataset.itemId || itemBtn.dataset.itemPk || itemBtn.dataset.targetId || itemBtn.dataset.item || document.getElementById('itemIdForReport')?.value;
-      if (id) openReportModal('item', id);
+      const id = postBtn.dataset.itemId || postBtn.dataset.itemPk || postBtn.dataset.targetId || postBtn.dataset.postId || postBtn.dataset.post || document.getElementById('postIdForReport')?.value;
+      if (id) openReportModal('post', id);
       return;
     }
   });
@@ -316,8 +316,8 @@
     if (commentId) openReportModal('comment', commentId);
   });
 
-  window.addEventListener('item-report', (e) => {
-    const itemId = e?.detail?.itemId;
-    if (itemId) openReportModal('item', String(itemId));
+  window.addEventListener('post-report', (e) => {
+    const postId = e?.detail?.postId ?? e?.detail?.itemId;
+    if (postId) openReportModal('post', String(postId));
   });
 })();

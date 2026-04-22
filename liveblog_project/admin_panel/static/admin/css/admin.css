@@ -20,6 +20,8 @@
   --admin-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   /* Same outer height as .admin-input (min-height 40 + padding + border with box-sizing) */
   --admin-control-height: 40px;
+  /* Bucket: same visual row as .admin-button — natural block ~42.3–43px (border+padding+14px/1.45), devtools often ~42.97px; single px avoids jump */
+  --admin-bucket-align-height: 43px;
 }
 
 /* Light theme */
@@ -304,6 +306,25 @@
     color: #2880B9;
     background: var(--admin-bg-hover);
   }
+
+  /* Collapsed rail: thinner scrollbar (default ~12–15px is loud next to 56px width) */
+  html.admin-sidebar-collapsed .admin-sidebar .admin-sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: var(--admin-border) transparent;
+  }
+
+  html.admin-sidebar-collapsed .admin-sidebar .admin-sidebar-nav::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  html.admin-sidebar-collapsed .admin-sidebar .admin-sidebar-nav::-webkit-scrollbar-thumb {
+    background: var(--admin-border);
+    border-radius: 4px;
+  }
+
+  html.admin-sidebar-collapsed .admin-sidebar .admin-sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 /* Also support class on sidebar for JS toggle (smooth transition) */
@@ -369,6 +390,24 @@
   .admin-sidebar.admin-sidebar-collapsed .admin-sidebar-toggle:hover {
     color: #2880B9;
     background: var(--admin-bg-hover);
+  }
+
+  .admin-sidebar.admin-sidebar-collapsed .admin-sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: var(--admin-border) transparent;
+  }
+
+  .admin-sidebar.admin-sidebar-collapsed .admin-sidebar-nav::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .admin-sidebar.admin-sidebar-collapsed .admin-sidebar-nav::-webkit-scrollbar-thumb {
+    background: var(--admin-border);
+    border-radius: 4px;
+  }
+
+  .admin-sidebar.admin-sidebar-collapsed .admin-sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
   }
 }
 
@@ -2347,6 +2386,11 @@ a.admin-link {
     display: block;
   }
 
+  /* Tighter drawer: no gap under last group (e.g. System) before footer */
+  .admin-sidebar-nav .admin-nav-group:last-child {
+    margin-bottom: 0;
+  }
+
   .admin-content {
     padding: 16px;
   }
@@ -2411,7 +2455,7 @@ a.admin-link {
   }
 
   .admin-page-title {
-    font-size: 18px;
+    display: none;
   }
 
   .admin-stats-grid {
@@ -2925,8 +2969,21 @@ a.admin-link {
 }
 
 /* Bucket (recent deleted): topic-style segment strip + filter-scroll-x + green is-selected (admin-button-primary) */
-.admin-bucket-tabs {
+.admin-bucket-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
   margin-bottom: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.admin-bucket-tabs {
+  margin-bottom: 0;
+  min-width: 0;
 }
 
 .admin-content .filter-segment-outer {
@@ -3003,7 +3060,7 @@ a.admin-link {
   flex-shrink: 0;
   white-space: nowrap;
   text-decoration: none;
-  font-size: 12px;
+  font-size: .9rem;
   font-weight: 500;
   line-height: 1.25;
   min-height: 32px;
@@ -3044,6 +3101,67 @@ a.admin-link {
   filter: none;
 }
 
+/* Bucket: segment width = content; square corners; height matches bulk toolbar .admin-button (after generic .filter-segment rules) */
+.admin-content .admin-bucket-tabs.filter-segment-outer {
+  width: fit-content;
+  max-width: 100%;
+  align-self: flex-start;
+}
+
+.admin-content .admin-bucket-tabs .filter-segment-shell {
+  border-radius: var(--admin-radius);
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  /* Match .admin-button real outer height (see --admin-bucket-align-height) */
+  height: var(--admin-bucket-align-height);
+  min-height: var(--admin-bucket-align-height);
+  display: flex;
+  align-items: stretch;
+  vertical-align: top;
+}
+
+.admin-content .admin-bucket-tabs .filter-segment-scroll.filter-scroll-x {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 100%;
+  width: max-content;
+  max-width: 100%;
+}
+
+/* Inner track: flush tabs (no outer padding, no flex gap) — 1px dividers so chips stay visually distinct */
+.admin-content .admin-bucket-tabs .filter-segment-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  box-sizing: border-box;
+  width: max-content;
+  min-height: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 0;
+}
+
+.admin-content .admin-bucket-tabs .filter-segment-bar .filter-reason-btn,
+.admin-content .admin-bucket-tabs .filter-segment-bar a.filter-reason-btn {
+  border-radius: 0;
+  min-height: 100%;
+  padding: 0 12px;
+  box-sizing: border-box;
+  line-height: 1.2;
+  border: none;
+  border-left: 1px solid var(--admin-border);
+  margin: 0;
+}
+
+.admin-content .admin-bucket-tabs .filter-segment-bar > a.filter-reason-btn:first-child {
+  border-left: none;
+}
+
 /* Bucket: press / tap feedback on segment chips */
 .admin-bucket-tabs .filter-segment-bar .filter-reason-btn,
 .admin-bucket-tabs .filter-segment-bar a.filter-reason-btn {
@@ -3072,5 +3190,43 @@ a.admin-link {
   .admin-bucket-tabs .filter-segment-bar .filter-reason-btn.is-selected:active,
   .admin-bucket-tabs .filter-segment-bar a.filter-reason-btn.is-selected:active {
     transform: none;
+  }
+}
+
+/* Bucket: toolbar (bulk actions) */
+.admin-bucket-head .admin-bucket-bulk-toolbar {
+  margin-bottom: 0;
+  box-sizing: border-box;
+}
+
+/* Same block height as filter-segment-shell; overrides .admin-button min-height 40px that grows the row */
+.admin-bucket-head .admin-bucket-bulk-toolbar .admin-bulk-restore-form .admin-button,
+.admin-bucket-head .admin-bucket-bulk-toolbar .admin-bulk-delete-form .admin-button {
+  height: var(--admin-bucket-align-height);
+  min-height: var(--admin-bucket-align-height);
+  max-height: var(--admin-bucket-align-height);
+  box-sizing: border-box;
+}
+
+@media (min-width: 1020px) {
+  .admin-bucket-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .admin-bucket-head .admin-bucket-tabs {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .admin-bucket-head .admin-bucket-bulk-toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    /* Only on wide layout: row height stays stable when Recovery/Delete toggle visibility */
+    min-height: var(--admin-bucket-align-height);
   }
 }

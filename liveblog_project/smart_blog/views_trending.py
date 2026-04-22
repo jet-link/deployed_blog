@@ -25,12 +25,19 @@ def _preview_from_list_excerpt(item, max_len=220):
 
 
 def _base_qs():
-    return TrendingItem.objects.select_related(
-        "item",
-        "item__category",
-        "item__author",
-        "item__author__profile",
-    ).prefetch_related("item__images")
+    return (
+        TrendingItem.objects.filter(
+            item__deleted_at__isnull=True,
+            item__is_published=True,
+        )
+        .select_related(
+            "item",
+            "item__category",
+            "item__author",
+            "item__author__profile",
+        )
+        .prefetch_related("item__images")
+    )
 
 
 def _get_trending_page_data(page=1):
@@ -115,6 +122,9 @@ def trending_list(request):
     page = max(1, page)
 
     hot_rows, rising_rows, feed_page = _get_trending_page_data(page)
+    has_trending_content = bool(
+        hot_rows or rising_rows or feed_page.object_list
+    )
 
     return render(
         request,
@@ -123,6 +133,7 @@ def trending_list(request):
             "hot_rows": hot_rows,
             "rising_rows": rising_rows,
             "feed_page": feed_page,
+            "has_trending_content": has_trending_content,
             "trending_api_url": reverse("smart_blog:api_trending"),
         },
     )

@@ -91,7 +91,7 @@
     function isItemDetailHref(href) {
         try {
             const u = new URL(href, location.origin);
-            if (!u.pathname.includes('/item/')) return false;
+            if (!u.pathname.includes('/post/')) return false;
             return !u.pathname.includes('/edit/');
         } catch {
             return false;
@@ -116,7 +116,7 @@
     }
 
     /* =====================================================
-       Save views_count to listing_changes when on item_detail
+       Save views_count to listing_changes when on post_detail
        (user just viewed → count increased → cards will show it on return)
     ===================================================== */
     function saveItemDetailViewsToListingChanges() {
@@ -293,7 +293,7 @@
     document.addEventListener('click', function (e) {
         const crumbLink = e.target.closest?.('.breadcrumb-trail a');
         if (!crumbLink) return;
-        if (!location.pathname.includes('/item/') || location.pathname.includes('/edit/')) return;
+        if (!location.pathname.includes('/post/') || location.pathname.includes('/edit/')) return;
 
         // Ensure instant restore when leaving detail via breadcrumbs
         try {
@@ -595,7 +595,7 @@
     ===================================================== */
     document.addEventListener('submit', function (e) {
         const form = e.target;
-        if (!form || !form.matches || !form.matches('form[data-delete-item]')) return;
+        if (!form || !form.matches || !form.matches('form[data-delete-post]')) return;
 
         const redirectInput = form.querySelector('input.delete-redirect[name="redirect_to"]');
         if (!redirectInput) return;
@@ -629,10 +629,10 @@
         }
 
         if (target.origin === location.origin) {
-            if (target.pathname.includes('/item/')) {
+            if (target.pathname.includes('/post/')) {
                 return;
             }
-            if (target.pathname.includes('/item/') && target.pathname.includes('/edit/')) {
+            if (target.pathname.includes('/post/') && target.pathname.includes('/edit/')) {
                 return;
             }
             if (isProfilePage() && !target.pathname.includes('/profile/')) {

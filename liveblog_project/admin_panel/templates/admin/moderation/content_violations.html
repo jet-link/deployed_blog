@@ -59,7 +59,7 @@
                     <td class="admin-violation-preview-cell">
                         {% if v.item %}
                             {% if v.item.is_published %}
-                                <a href="{% url 'smart_blog:item_detail' v.item.slug %}" class="admin-link">{{ v.item.title|truncatechars:50 }}</a>
+                                <a href="{% url 'smart_blog:post_detail' v.item.slug %}" class="admin-link">{{ v.item.title|truncatechars:50 }}</a>
                             {% else %}
                                 <span class="admin-link admin-link-draft" style="text-decoration:line-through">{{ v.item.title|truncatechars:50 }}</span>
                             {% endif %}

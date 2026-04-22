@@ -36,9 +36,9 @@
             var u = url instanceof URL ? url : new URL(url, location.origin);
             if (u.origin !== location.origin) return false;
             var p = normPath(u.pathname);
-            if (/^\/item\/[^/]+$/.test(p)) return true;
-            if (/^\/item\/[^/]+\/comments$/.test(p)) return true;
-            if (/^\/item\/[^/]+\/comment\/\d+\/thread$/.test(p)) return true;
+            if (/^\/post\/[^/]+$/.test(p)) return true;
+            if (/^\/post\/[^/]+\/comments$/.test(p)) return true;
+            if (/^\/post\/[^/]+\/comment\/\d+\/thread$/.test(p)) return true;
             return false;
         } catch (e) {
             return false;
@@ -50,7 +50,7 @@
             var u = url instanceof URL ? url : new URL(url, location.origin);
             if (u.origin !== location.origin) return false;
             var p = normPath(u.pathname);
-            return /^\/blog\/tag\/[^/]+$/.test(p);
+            return /^\/tag\/[^/]+$/.test(p) || /^\/blog\/tag\/[^/]+$/.test(p);
         } catch (e) {
             return false;
         }
@@ -75,12 +75,12 @@
         if (p === '/for-you' || p.startsWith('/for-you/')) return true;
         if (p === '/trending' || p.startsWith('/trending/')) return true;
         if (p === '/topics' || p.startsWith('/topics/')) return true;
-        if (p.startsWith('/blog/tag/')) return true;
+        if (p.startsWith('/tag/') || p.startsWith('/blog/tag/')) return true;
         if (p.startsWith('/blog/brainews/category/')) return true;
         if (p.startsWith('/blog/topics/')) return true;
-        if (/^\/item\/[^/]+$/.test(p)) return true;
-        if (/^\/item\/[^/]+\/comments$/.test(p)) return true;
-        if (/^\/item\/[^/]+\/comment\/\d+\/thread$/.test(p)) return true;
+        if (/^\/post\/[^/]+$/.test(p)) return true;
+        if (/^\/post\/[^/]+\/comments$/.test(p)) return true;
+        if (/^\/post\/[^/]+\/comment\/\d+\/thread$/.test(p)) return true;
         return false;
     }
 
@@ -109,27 +109,27 @@
         }
     }
 
-    function itemSlugFromPath(p) {
-        var m = /^\/item\/([^/]+)/.exec(p || '');
+    function postSlugFromPath(p) {
+        var m = /^\/post\/([^/]+)/.exec(p || '');
         return m ? m[1] : null;
     }
 
     /**
-     * Same item: post → comments → comment thread — fast, same chrome; avoid overlay + assign (flicker).
+     * Same post: detail → comments → comment thread — fast, same chrome; avoid overlay + assign (flicker).
      * Full-page preloader still applies when coming from listings, search, tags, etc.
      */
     function isSameItemThreadHop(candidate) {
         try {
             if (candidate.origin !== location.origin) return false;
             var next = normPath(candidate.pathname);
-            if (!/^\/item\/[^/]+\/comment\/\d+\/thread$/.test(next)) return false;
+            if (!/^\/post\/[^/]+\/comment\/\d+\/thread$/.test(next)) return false;
             var cur = normPath(location.pathname);
-            var slugNext = itemSlugFromPath(next);
-            var slugCur = itemSlugFromPath(cur);
+            var slugNext = postSlugFromPath(next);
+            var slugCur = postSlugFromPath(cur);
             if (!slugNext || slugNext !== slugCur) return false;
-            if (/^\/item\/[^/]+$/.test(cur)) return true;
-            if (/^\/item\/[^/]+\/comments$/.test(cur)) return true;
-            if (/^\/item\/[^/]+\/comment\/\d+\/thread$/.test(cur)) return true;
+            if (/^\/post\/[^/]+$/.test(cur)) return true;
+            if (/^\/post\/[^/]+\/comments$/.test(cur)) return true;
+            if (/^\/post\/[^/]+\/comment\/\d+\/thread$/.test(cur)) return true;
             return false;
         } catch (err) {
             return false;

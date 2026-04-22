@@ -391,7 +391,7 @@ h6 {
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    background: #271d1d;
+    background: var(--text-link);
     border-radius: 50%;
 }
 
@@ -469,7 +469,7 @@ html[data-theme="dark"] .faq-item-header:hover {
 }
 
 html[data-theme="dark"] .faq-toggle-line {
-    background: var(--text-muted);
+    background: #ffffff;
 }
 
 html[data-theme="dark"] .faq-item-header:hover .faq-toggle-line {

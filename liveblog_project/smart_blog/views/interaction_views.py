@@ -1,4 +1,4 @@
-"""Interaction views: toggle_like, toggle_bookmark, item_counters, api_repost."""
+"""Interaction views: toggle_like, toggle_bookmark, post_counters, api_repost."""
 import json
 from datetime import timedelta
 
@@ -83,10 +83,10 @@ def toggle_bookmark(request, slug):
 
 
 @ratelimit(key='ip', rate=settings.RATELIMIT_ITEM_COUNTERS_RATE, method='GET', block=False)
-def item_counters(request, item_id):
+def post_counters(request, post_id):
     if getattr(request, 'limited', False):
         return JsonResponse({'error': 'rate_limited'}, status=429)
-    item = get_object_or_404(Item.objects.with_counters(), pk=item_id)
+    item = get_object_or_404(Item.objects.with_counters(), pk=post_id)
     return JsonResponse({
         "views": item.views_count,
         "likes": item.likes_count,

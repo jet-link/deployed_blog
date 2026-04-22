@@ -55,18 +55,37 @@
     </div>
 </div>
 {% comment %} <div class="admin-card"> {% endcomment %}
-    {% if item.is_published %}<a href="{% url 'smart_blog:item_detail' item.slug %}" class="admin-button">View Post</a>{% else %}<span class="admin-button admin-link-draft">View Post</span>{% endif %}
+    {% if item.is_published %}<a href="{% url 'smart_blog:post_detail' item.slug %}" class="admin-button">View Post</a>{% else %}<span class="admin-button admin-link-draft">View Post</span>{% endif %}
     <a href="{% url 'admin_panel:post_edit' item.pk %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="admin-button admin-button-outline">Edit</a>
 {% comment %} </div> {% endcomment %}
 {% endblock %}
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var ctx = document.getElementById('postStatsChart');
-    if (ctx && typeof Chart !== 'undefined') {
-        var data = {{ activity_json|safe }};
-        if (data && data.labels) {
-            var chart = new Chart(ctx, {
+(function() {
+    var chartInstance = null;
+    function destroyPostStatsChart() {
+        if (chartInstance) {
+            try { chartInstance.destroy(); } catch (e) {}
+            chartInstance = null;
+        }
+    }
+    function initPostStatsChart() {
+        var ctx = document.getElementById('postStatsChart');
+        if (!ctx) {
+            destroyPostStatsChart();
+            return;
+        }
+        destroyPostStatsChart();
+        var attempts = 0;
+        function tryInit() {
+            if (typeof Chart === 'undefined') {
+                if (++attempts > 100) return;
+                setTimeout(tryInit, 40);
+                return;
+            }
+            var data = {{ activity_json|safe }};
+            if (!data || !data.labels) return;
+            chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: data.labels,
@@ -82,11 +101,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     plugins: { legend: { display: false } }
                 }
             });
-            document.getElementById('chartPostViews').addEventListener('change', function() { chart.setDatasetVisibility(0, this.checked); chart.update(); });
-            document.getElementById('chartPostLikes').addEventListener('change', function() { chart.setDatasetVisibility(1, this.checked); chart.update(); });
-            document.getElementById('chartPostComments').addEventListener('change', function() { chart.setDatasetVisibility(2, this.checked); chart.update(); });
+            var cv = document.getElementById('chartPostViews');
+            var cl = document.getElementById('chartPostLikes');
+            var cc = document.getElementById('chartPostComments');
+            if (cv) cv.onchange = function() { chartInstance.setDatasetVisibility(0, this.checked); chartInstance.update(); };
+            if (cl) cl.onchange = function() { chartInstance.setDatasetVisibility(1, this.checked); chartInstance.update(); };
+            if (cc) cc.onchange = function() { chartInstance.setDatasetVisibility(2, this.checked); chartInstance.update(); };
         }
+        tryInit();
     }
-});
+    document.addEventListener('DOMContentLoaded', initPostStatsChart);
+    document.addEventListener('turbo:load', initPostStatsChart);
+    document.addEventListener('turbo:before-cache', destroyPostStatsChart);
+})();
 </script>
 {% endblock %}

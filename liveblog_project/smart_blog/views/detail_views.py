@@ -98,7 +98,7 @@ def item_detail(request, slug):
 
     if request.GET.get("focus_comment"):
         params = request.GET.urlencode()
-        target = reverse("smart_blog:item_comments", kwargs={"slug": slug})
+        target = reverse("smart_blog:post_comments", kwargs={"slug": slug})
         return HttpResponseRedirect(f"{target}?{params}" if params else target)
 
     register_item_view(request, item)
@@ -304,7 +304,7 @@ def item_comments(request, slug):
 
 
 def comment_thread_blog_redirect(request, pk):
-    """Legacy /blog/comment/<pk>/thread/ → /item/<slug>/comment/<pk>/thread/."""
+    """Legacy /blog/comment/<pk>/thread/ → /post/<slug>/comment/<pk>/thread/."""
     comment = get_object_or_404(
         Comment.objects.filter(is_draft=False).select_related("item"),
         pk=pk,

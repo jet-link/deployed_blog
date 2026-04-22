@@ -87,7 +87,7 @@ window.addEventListener('pageshow', function (ev) {
 function initAutoDismiss(container, onAfterRemove) {
     const root = container || document;
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
-    const isSmartBlogPage = path.startsWith('/blog/') || path.startsWith('/search/');
+    const isSmartBlogPage = path.startsWith('/blog/') || path.startsWith('/search/') || path.startsWith('/post/');
     let els = root.querySelectorAll ? Array.from(root.querySelectorAll('[data-auto-dismiss]')) : [];
     if (root.nodeType === 1 && root.matches && root.matches('[data-auto-dismiss]') && !els.includes(root)) {
         els.unshift(root);
@@ -346,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    window.addEventListener('open-item-share-modal', function (ev) {
+    window.addEventListener('open-post-share-modal', function (ev) {
         const t = ev.detail && ev.detail.trigger;
         showShareItemModal(t || null);
     });

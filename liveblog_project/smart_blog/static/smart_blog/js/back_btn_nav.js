@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Save current page when user clicks a tag link (capture phase — before navigation)
     document.addEventListener('click', function (e) {
-        var a = e.target.closest('a[href*="/blog/tag/"]');
+        var a = e.target.closest('a[href*="/tag/"], a[href*="/blog/tag/"]');
         if (a && a.href) {
             try {
                 sessionStorage.setItem('tag_return_url', location.pathname + location.search);

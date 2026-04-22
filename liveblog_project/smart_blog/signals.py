@@ -5,7 +5,8 @@ from django.dispatch import receiver
 from django.db.models import F
 from django.db.models.functions import Greatest
 
-from .models import Like, Item, ItemView, Bookmark, PostRepost, Comment
+from .models import Category, Like, Item, ItemView, Bookmark, PostRepost, Comment
+from .public_listing_cache import invalidate_public_listing_caches
 from .search_utils import schedule_search_vector_refresh
 from smart_blog.services.trending_service import TRENDING_API_CACHE_KEY
 
@@ -73,6 +74,42 @@ def comment_changed_trending_cache(sender, instance, **kwargs):
 @receiver(post_delete, sender=Comment)
 def comment_deleted_trending_cache(sender, instance, **kwargs):
     _invalidate_trending_api_cache()
+
+
+_ITEM_LISTING_FIELDS = frozenset(
+    {"is_published", "deleted_at", "category", "title", "text", "excerpt_plain"}
+)
+
+
+@receiver(post_save, sender=Item)
+def item_public_listing_cache_sync(sender, instance, created, **kwargs):
+    """BraiNews / Topics / trending / home strips stay in sync after admin edits."""
+    update_fields = kwargs.get("update_fields")
+    bump_home = True
+    if created:
+        invalidate_public_listing_caches(bump_home=True)
+        return
+    if update_fields is not None:
+        if not (_ITEM_LISTING_FIELDS & set(update_fields)):
+            return
+        if set(update_fields) <= {"category"}:
+            bump_home = False
+    invalidate_public_listing_caches(bump_home=bump_home)
+
+
+@receiver(post_delete, sender=Item)
+def item_deleted_public_listing_cache(sender, instance, **kwargs):
+    invalidate_public_listing_caches(bump_home=True)
+
+
+@receiver(post_save, sender=Category)
+def category_public_listing_cache_sync(sender, instance, **kwargs):
+    invalidate_public_listing_caches(bump_home=False)
+
+
+@receiver(post_delete, sender=Category)
+def category_deleted_public_listing_cache(sender, instance, **kwargs):
+    invalidate_public_listing_caches(bump_home=False)
 
 
 @receiver(post_save, sender=Item)

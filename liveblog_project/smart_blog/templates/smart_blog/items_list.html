@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}
   BraiNews
 {% endblock %}
@@ -7,12 +8,12 @@
    <div class="d-flex align-items-center justify-content-between mb-4">
       <h4 id="brainewsListingTitle" class="text-muted m-0">BraiNews</h4>
    </div>
+    {% if page_obj.paginator.count %}
    <div class="mb-4">
      {% if user.is_authenticated %}
         {% include 'includes/filter_block.html' %}
       {% endif %}
    </div>
-    {% if items %}
       <div id="filterCardsWrapper" class="brainews-cards-wrapper">
         {% include 'includes/all_cards.html' with listing_source='items_list' listing_source_url=request.get_full_path %}
       </div>
@@ -20,11 +21,12 @@
         {% include 'includes/pagination.html' %}
       </div>
     {% else %}
-      <h5 class="text-muted pt-4">There are not items yet.</h5>
+      <h5 class="text-muted pt-4">There are not items yet</h5>
     {% endif %}
   </div>
 {% endblock %}
-{% load static %}
 {% block extra_js %}
+  {% if page_obj.paginator.count %}
   <script defer src="{% static 'smart_blog/js/brainews_filter.js' %}"></script>
+  {% endif %}
 {% endblock %}

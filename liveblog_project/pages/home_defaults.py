@@ -25,7 +25,7 @@ HOME_PAGE_DEFAULTS = {
     "show_bottom_cta": True,
     "cta_footer_title": "Have something to say? Share your ideas with the community.",
     "cta_footer_label": "Create Post",
-    "cta_footer_url": "/item/create/",
+    "cta_footer_url": "/post/create/",
     "cache_bump": 0,
 }
 

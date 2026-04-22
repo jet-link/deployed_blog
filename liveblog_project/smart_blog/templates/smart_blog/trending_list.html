@@ -3,6 +3,7 @@
 {% load counters %}
 {% block title %}Trending Now{% endblock %}
 {% block content %}
+{% if has_trending_content %}
 <div class="container-main content_block trending-page"
      id="trendingPageRoot"
      data-trending-api-url="{{ trending_api_url|escape }}">
@@ -64,8 +65,6 @@
       {% endfor %}
     </div>
   </section>
-  {% else %}
-  <p class="text-muted mb-4">No trending posts yet. Check back after activity picks up.</p>
   {% endif %}
 
   {% if rising_rows %}
@@ -171,7 +170,14 @@
     {% endif %}
   </section>
 </div>
+{% else %}
+<div class="container-main content_block trending-page">
+  <p class="text-muted mb-0" role="status">No trend posts</p>
+</div>
+{% endif %}
 {% endblock %}
 {% block extra_js %}
+{% if has_trending_content %}
 <script defer src="{% static 'smart_blog/js/trending_poll.js' %}"></script>
+{% endif %}
 {% endblock %}

@@ -120,7 +120,7 @@ class ItemCreateForm(forms.ModelForm):
     class Meta:
         model = Item
         fields = ["title", "text", "category", "tags", "new_tags"]
-        labels = {"title": "Enter title", "text": "Item text"}
+        labels = {"title": "Enter title", "text": "Post text"}
         widgets = {
             "title": forms.TextInput(attrs={
                 "class": "form-control",
@@ -207,7 +207,7 @@ class ItemCreateForm(forms.ModelForm):
 
         # basic validation
         if not raw or not raw.strip():
-            raise ValidationError(_('Please write the item text *'))
+            raise ValidationError(_('Please write the post text *'))
 
         # normalize
         raw = raw.replace('\x00', '')
@@ -274,7 +274,7 @@ class ItemCreateForm(forms.ModelForm):
         # 4) ensure there is visible text
         plain = re.sub(r'<[^>]+>', '', cleaned).strip()
         if not plain:
-            raise ValidationError(_('Please write the item text *'))
+            raise ValidationError(_('Please write the post text *'))
 
         return cleaned
 

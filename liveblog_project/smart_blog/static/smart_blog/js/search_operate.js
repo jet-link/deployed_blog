@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var i;
 
         i = parts.lastIndexOf('edit');
-        if (i >= 2 && parts[i - 1] && parts[i - 2] === 'item') {
+        if (i >= 2 && parts[i - 1] && parts[i - 2] === 'post') {
             return '/' + parts.slice(0, i).join('/') + '/';
         }
 

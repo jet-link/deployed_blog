@@ -18,11 +18,11 @@
       <div class="comment-menu comment-menu--actions-bar item-detail-head-menu flex-shrink-0">
         {% include 'includes/overflow_more_button.html' with aria_label='More post actions' %}
         <div class="comment-actions" role="menu">
-          <button type="button" class="comment-menu-action" data-action="item-open-share">
+          <button type="button" class="comment-menu-action" data-action="post-open-share">
             <i class="fa fa-share" aria-hidden="true"></i><span>Share</span>
           </button>
           {% if user.is_authenticated and user == item.author and is_editable %}
-            <a href="{% url 'smart_blog:edit_item' item.slug %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="comment-menu-action text-decoration-none">
+            <a href="{% url 'smart_blog:edit_post' item.slug %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="comment-menu-action text-decoration-none">
               <i class="fa fa-pencil" aria-hidden="true"></i><span>Edit</span>
             </a>
             <button type="button" class="comment-menu-action badge_danger" data-bs-toggle="modal" data-bs-target="#confirmItemDeleteModal-{{ item.pk }}" data-editable-until="{{ editable_until_iso }}">
@@ -30,7 +30,7 @@
             </button>
           {% endif %}
           {% if user != item.author and user.is_authenticated and not user.is_staff and not report_rate_limited and item.reports_count|default:0 < 10 %}
-            <button type="button" class="comment-menu-action badge_danger" data-action="item-report" data-item-id="{{ item.pk }}">
+            <button type="button" class="comment-menu-action badge_danger" data-action="post-report" data-item-id="{{ item.pk }}">
               <i class="fa fa-flag" aria-hidden="true"></i><span>Report</span>
             </button>
           {% endif %}
@@ -170,7 +170,7 @@
       <div class="d-flex gap-1 action-block">
         {% if user.is_authenticated %}
           {% if user != item.author %}
-            <button class="like-btn fs-6 round" data-url="{% url 'smart_blog:toggle_like' item.slug %}" data-item-id="{{ item.pk }}" title="Like item"><i class="fa fa-{{ user_liked|yesno:'heart,heart-o' }}"></i></button>
+            <button class="like-btn fs-6 round" data-url="{% url 'smart_blog:toggle_like' item.slug %}" data-item-id="{{ item.pk }}" title="Like post"><i class="fa fa-{{ user_liked|yesno:'heart,heart-o' }}"></i></button>
             <button class="bookmark-btn fs-6 round" data-url="{% url 'smart_blog:toggle_bookmark' item.slug %}" data-item-id="{{ item.pk }}" title="I'm reading"><i class="fa fa-{{ user_bookmarked|yesno:'bookmark,bookmark-o' }}"></i></button>
           {% endif %}
         {% endif %}
@@ -266,7 +266,7 @@
         {% endfor %}
       </div>
       <div class="mt-3" id="detailCommentsReadMoreWrap"{% if item.comments_count <= detail_comment_preview_limit %} hidden{% endif %}>
-        <a href="{% url 'smart_blog:item_comments' item.slug %}#scroll-to-11" class="text-decoration-none fw-semibold d-inline-flex align-items-center gap-3 item-all-comments-link" id="detailCommentsMoreLink">
+        <a href="{% url 'smart_blog:post_comments' item.slug %}#scroll-to-11" class="text-decoration-none fw-semibold d-inline-flex align-items-center gap-3 item-all-comments-link" id="detailCommentsMoreLink">
           <span>More comments</span>
           <i class="fa fa-angle-right reading-angle" aria-hidden="true"></i>
         </a>

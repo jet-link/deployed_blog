@@ -237,7 +237,7 @@
 
     const row = link.closest('.notification-row');
     const notifType = row
-      ? (row.className.match(/notif-(reply|comment_like|item_like)/)?.[1] || 'item_like')
+      ? (row.className.match(/notif-(reply|comment_like|item_like|from_admin)/)?.[1] || 'item_like')
       : 'item_like';
 
     try {

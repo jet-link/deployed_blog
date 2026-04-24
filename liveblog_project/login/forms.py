@@ -174,6 +174,7 @@ class LoginForm(forms.Form):
             'placeholder': ' ',
             'autocomplete': 'username',
             'maxlength': '100',
+            'autofocus': True,
             "required": True
         }),
         error_messages={'required': _('Please enter username')},

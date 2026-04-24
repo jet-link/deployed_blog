@@ -31,6 +31,9 @@ from .analytics_views import analytics_view
 from .sitemap_views import sitemap_stats_view
 from .logs_views import logs_view
 from .notification_views import (
+    notification_from_admin_detail,
+    notification_send_manual,
+    notification_user_search,
     notifications_list,
     notifications_bulk_clear,
     notifications_bulk_delete,
@@ -70,6 +73,7 @@ __all__ = [
     'sitemap_stats_view',
     'logs_view',
     'notifications_list', 'notifications_bulk_clear', 'notifications_bulk_delete',
+    'notification_user_search', 'notification_from_admin_detail', 'notification_send_manual',
     'recent_deleted_content', 'recent_deleted_restore', 'recent_deleted_purge',
     'faq_list', 'faq_create', 'faq_edit', 'faq_delete',
     'about_page_edit', 'contacts_page_edit', 'home_page_edit',

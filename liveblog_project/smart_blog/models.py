@@ -759,17 +759,34 @@ class Notification(models.Model):
     TYPE_REPLY = "reply"
     TYPE_ITEM_LIKE = "item_like"
     TYPE_COMMENT_LIKE = "comment_like"
+    TYPE_FROM_ADMIN = "from_admin"
 
     TYPE_CHOICES = [
         (TYPE_REPLY, "Reply"),
         (TYPE_ITEM_LIKE, "Liked item"),
         (TYPE_COMMENT_LIKE, "Liked comment"),
+        (TYPE_FROM_ADMIN, "From admin"),
     ]
 
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
     actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_notifications")
     notif_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
-    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="notifications")
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        null=True,
+        blank=True,
+    )
+    admin_theme = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Optional subject for from_admin notifications",
+    )
+    admin_body = models.TextField(
+        blank=True,
+        help_text="Message body for from_admin notifications",
+    )
     parent_comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="reply_notifications", null=True, blank=True)
     reply_comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="notifications", null=True, blank=True)
     is_read = models.BooleanField(default=False)
@@ -792,10 +809,14 @@ class Notification(models.Model):
         ]
 
     def __str__(self):
+        if self.notif_type == self.TYPE_FROM_ADMIN:
+            return f"Admin notification for {self.recipient}"
         return f"Notification for {self.recipient} on {self.item}"
 
     @property
     def admin_reason_label(self):
+        if self.notif_type == self.TYPE_FROM_ADMIN:
+            return "From admin"
         if self.notif_type == self.TYPE_REPLY:
             return "Comment reply"
         if self.notif_type == self.TYPE_COMMENT_LIKE:
@@ -817,6 +838,9 @@ class Notification(models.Model):
             return f"{created_at.strftime("%d.%m.%Y")} at {created_at.strftime('%H:%M')}"
 
     def get_absolute_url(self):
+        if self.notif_type == self.TYPE_FROM_ADMIN:
+            return reverse("login_app:notifications", kwargs={"username": self.recipient.username})
+
         def _item_comment_url(path, focus_pk, anchor_pk):
             sep = '&' if '?' in path else '?'
             return f"{path}{sep}focus_comment={focus_pk}#comment-anchor-{anchor_pk}"

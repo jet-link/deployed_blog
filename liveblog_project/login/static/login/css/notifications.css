@@ -108,7 +108,7 @@
 }
 
 .notifications-legend.is-open {
-    max-height: 200px;
+    max-height: 240px;
     opacity: 1;
     margin: 1rem 0 !important;
 }
@@ -145,6 +145,10 @@
     background: #ececec;
 }
 
+.from-admin-marker {
+    background: #e74c3c;
+}
+
 .notification-row.notif-reply {
     border-color: #8e44ad;
     box-shadow: 0 0 8px rgba(142, 68, 173, 0.35);
@@ -160,10 +164,17 @@
     box-shadow: 0 0 8px rgba(243, 156, 18, 0.35);
 }
 
+.notification-row.notif-from_admin {
+    border-color: #e74c3c;
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.4);
+}
+
 .notification-row.is-read {
     border-color: #ececec;
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.06);
 }
+
+/* from_admin: outer card can fade when read, but block-quote keeps blue left border (same as .bordered) */
 
 .notification-row.is-seen {
     border-color: var(--border-default);
@@ -188,6 +199,27 @@
 
 .notification-dot.dot-item_like {
     background: #f39c12;
+}
+
+.notification-dot.dot-from_admin {
+    background: #e74c3c;
+}
+
+/* Admin message box: no inner shadow; left accent matches other notifications (.bordered blue) */
+.notification-row.notif-from_admin .block-quote-from-admin,
+.notification-row.notif-from_admin .block-quote.bordered-from-admin {
+    border-color: #e8ecf3;
+    border-left-color: #2980b9;
+    box-shadow: none;
+}
+
+.block-quote.bordered-from-admin {
+    border-left: 3px solid #2980b9;
+}
+
+.notification-row.notif-from_admin .notification-read-btn {
+    border-color: #e74c3c;
+    color: #e74c3c;
 }
 
 .notification-dot.dot-read {
@@ -325,4 +357,52 @@ html[data-theme="dark"] .notification-post-title-clip::after {
 
 .notification-actions {
     flex-shrink: 0;
+}
+
+/* "Notification from admin" header: stronger than .text-muted, works in light + dark */
+.notification-from-admin-title {
+    color: #153e75;
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.35;
+}
+
+html[data-theme="dark"] .notification-from-admin-title {
+    color: #93c5fd;
+}
+
+/* "Theme: …" on one line — label bold/blue, value default text */
+.notification-from-admin-theme-line {
+    font-size: 0.8rem !important;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.notification-from-admin-theme-label {
+    font-weight: 700;
+    color: #2563eb;
+    margin-right: 0.2em;
+    letter-spacing: 0.01em;
+}
+
+html[data-theme="dark"] .notification-from-admin-theme-label {
+    color: #60a5fa;
+}
+
+.notification-from-admin-theme-value {
+    color: #334155;
+}
+
+html[data-theme="dark"] .notification-from-admin-theme-value {
+    color: #cbd5e1;
+}
+
+.notification-from-admin-message-row {
+    width: 100%;
+}
+
+/* Dark: keep blue left bar on from_admin blockquote (read + unread) */
+html[data-theme="dark"] .notification-row.notif-from_admin .block-quote.bordered-from-admin,
+html[data-theme="dark"] .notification-row.notif-from_admin .block-quote-from-admin {
+    border-left-color: #5dade2;
 }

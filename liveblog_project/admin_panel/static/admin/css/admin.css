@@ -1996,7 +1996,7 @@ a.admin-link {
   font-weight: 500;
   font-family: var(--font-heading);
   color: var(--admin-text);
-  border-bottom: 1px solid #cccccc;
+  /* border-bottom: 1px solid #cccccc; */
 }
 
 .admin-modal-actions {
@@ -2227,6 +2227,7 @@ a.admin-link {
   border-radius: 8px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
   font-weight: 500;
+  line-height: 1.5;
 }
 
 .admin-table td a,
@@ -3229,4 +3230,133 @@ a.admin-link {
     /* Only on wide layout: row height stays stable when Recovery/Delete toggle visibility */
     min-height: var(--admin-bucket-align-height);
   }
+}
+
+/* Manual notification (moderation) — toolbar uses same .admin-toolbar + .admin-search-form as Users; see responsive block @ 1019px */
+/* Long label must stay one line: flex was shrinking the button, forcing "New" / "notification" onto two lines */
+.admin-search-form .admin-notif-new-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Manual notif body: not .admin-textarea (that class enforces 300px min-height for long editors) */
+.admin-manual-notif-textarea {
+  min-height: 120px;
+  resize: none;
+}
+
+.admin-notif-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-notif-view__line,
+.admin-notif-view__body-label-line {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--admin-text);
+  word-wrap: break-word;
+}
+
+/* Theme / Body / Recipient — blue, readable in light + dark (uses theme tokens) */
+.admin-notif-view__field-label {
+  color: var(--admin-accent);
+  font-weight: 600;
+}
+
+.admin-notif-view__line-sep {
+  color: var(--admin-text);
+  font-weight: 400;
+}
+
+.admin-notif-view__body-group {
+  min-width: 0;
+}
+
+.admin-notif-view__body-label-line {
+  margin-bottom: 8px;
+}
+
+/* Same blockquote look as comment previews; compact margins inside the modal */
+.admin-notif-view__body-quote.admin-comment-blockquote {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.admin-modal-dialog--view-notif {
+  max-width: 520px;
+  width: 100%;
+}
+
+.admin-user-combobox {
+  position: relative;
+  width: 100%;
+}
+
+.admin-user-combobox__input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-input-radius);
+  background: var(--admin-bg-elevated);
+  color: var(--admin-text);
+  font-size: 14px;
+}
+
+.admin-user-combobox__input:focus {
+  outline: 2px solid var(--admin-input-focus-ring);
+  border-color: var(--admin-accent);
+}
+
+.admin-user-combobox__list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin: 4px 0 0 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: var(--admin-bg-elevated);
+  box-shadow: var(--admin-shadow);
+  display: none;
+}
+
+.admin-user-combobox__list[aria-hidden="false"] {
+  display: block;
+}
+
+.admin-user-combobox__item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--admin-text);
+  font-size: 14px;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+
+.admin-user-combobox__item:hover,
+.admin-user-combobox__item[aria-selected="true"] {
+  background: var(--admin-bg-hover);
+}
+
+#adminManualNotifErrors {
+  min-height: 1.2em;
+}
+
+.admin-modal-dialog--manual-notif {
+  max-width: 520px;
+  width: 100%;
 }

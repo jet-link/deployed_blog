@@ -97,6 +97,7 @@
         </div>
       </div>
     </div>
+    {% block admin_modals %}{% endblock %}
     <script>
       window.ADMIN_CSRF_TOKEN = "{{ csrf_token }}";
     </script>

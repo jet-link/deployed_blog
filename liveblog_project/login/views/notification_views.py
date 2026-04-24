@@ -16,7 +16,7 @@ def notifications_view(request, username):
         raise PermissionDenied
 
     invalid_q = (
-        Q(item__isnull=True)
+        Q(item__isnull=True) & ~Q(notif_type=Notification.TYPE_FROM_ADMIN)
         | Q(notif_type=Notification.TYPE_REPLY, reply_comment__isnull=True)
         | Q(notif_type=Notification.TYPE_REPLY, parent_comment__isnull=True)
         | Q(notif_type=Notification.TYPE_COMMENT_LIKE, parent_comment__isnull=True, reply_comment__isnull=True)
@@ -26,7 +26,7 @@ def notifications_view(request, username):
     notifications = (
         Notification.objects
         .filter(recipient=request.user, cleared_from_inbox=False)
-        .exclude(item__isnull=True)
+        .filter(Q(item__isnull=False) | Q(notif_type=Notification.TYPE_FROM_ADMIN))
         .exclude(
             Q(notif_type=Notification.TYPE_REPLY, reply_comment__isnull=True)
             | Q(notif_type=Notification.TYPE_REPLY, parent_comment__isnull=True)
@@ -37,7 +37,9 @@ def notifications_view(request, username):
     )
     for notif in notifications:
         notif.actor_name = getattr(notif.actor, "username", "")
-        if notif.notif_type == Notification.TYPE_REPLY:
+        if notif.notif_type == Notification.TYPE_FROM_ADMIN:
+            notif.body_text = (notif.admin_body or "").strip()
+        elif notif.notif_type == Notification.TYPE_REPLY:
             notif.header_text = "replied comment in post"
             notif.body_text = strip_mention_tokens(getattr(notif.reply_comment, "text", ""))
         elif notif.notif_type == Notification.TYPE_COMMENT_LIKE:
@@ -115,6 +117,9 @@ def check_notification_target(request):
         ).get(pk=notif_id, recipient=request.user)
     except Notification.DoesNotExist:
         return JsonResponse({"exists": False})
+
+    if notif.notif_type == Notification.TYPE_FROM_ADMIN:
+        return JsonResponse({"exists": True})
 
     if not notif.item_id:
         return JsonResponse({"exists": False})

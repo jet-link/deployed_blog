@@ -70,6 +70,9 @@ urlpatterns = [
     path('moderation/notifications/', views.notifications_list, name='notifications_list'),
     path('moderation/notifications/bulk-clear/', views.notifications_bulk_clear, name='notifications_bulk_clear'),
     path('moderation/notifications/bulk-delete/', views.notifications_bulk_delete, name='notifications_bulk_delete'),
+    path('moderation/notifications/user-search/', views.notification_user_search, name='notification_user_search'),
+    path('moderation/notifications/<int:pk>/from-admin-detail/', views.notification_from_admin_detail, name='notification_from_admin_detail'),
+    path('moderation/notifications/send-manual/', views.notification_send_manual, name='notification_send_manual'),
 
     # Reports
     path('reports/', views.reports_list, name='reports_list'),

@@ -3414,7 +3414,8 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         flex: 1 1 0;
         min-width: 0;
         box-sizing: border-box;
-        transition: color 0.2s ease, transform 0.2s ease;
+        /* No transitions: avoids Turbo tab-sync “flicker” on the previously active item */
+        transition: none;
     }
 
     .mobile-bottom-nav__nav-cell span {
@@ -3494,9 +3495,7 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         -webkit-tap-highlight-color: transparent;
         transform: translate3d(0, 0, 0);
         position: relative;
-        transition:
-            color 0.2s cubic-bezier(0.25, 0.8, 0.25, 1),
-            transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        transition: none;
     }
 
     .mobile-bottom-nav__link:active,
@@ -3511,7 +3510,7 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         transform: translate3d(0, -2px, 0);
     }
 
-    /* Active tab “chip” (Telegram-style); opacity/transform animate without layout thrash */
+    /* Active tab chip: instant show/hide (no transition) so Turbo class sync does not flash old tab */
     .mobile-bottom-nav__link::before,
     .mobile-bottom-nav__more-btn::before {
         content: '';
@@ -3521,10 +3520,7 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         background: color-mix(in srgb, var(--btn-primary-bg) 16%, rgba(255, 255, 255, 0.55));
         opacity: 0;
         transform: scale(0.94);
-        transition:
-            opacity 0.2s cubic-bezier(0.25, 0.8, 0.25, 1),
-            transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1),
-            background-color 0.2s ease;
+        transition: none;
         pointer-events: none;
         z-index: 0;
     }
@@ -3564,13 +3560,14 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         border: none;
         background: transparent;
         color: inherit;
-        transition: color 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        transition: none;
     }
 
     .mobile-bottom-nav__icon {
         font-size: 1.35rem;
         line-height: 1;
         opacity: 0.94;
+        transition: none;
     }
 
     .mobile-bottom-nav__link--active .mobile-bottom-nav__icon-wrap {

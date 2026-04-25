@@ -5989,6 +5989,12 @@ html[data-theme="dark"] .tags_block {
     padding: 0;
     font-weight: normal;
     color: var(--text-muted-alt);
+    cursor: pointer;
+}
+
+.tags-badge-actions .btn-tag-show-more:hover {
+    color: var(--text-link, #0d6efd);
+    text-decoration: underline;
 }
 
 .comment_likes_badge {

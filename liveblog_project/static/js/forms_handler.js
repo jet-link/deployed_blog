@@ -37,7 +37,7 @@
 
     function createErrorNode(message) {
         const div = document.createElement('div');
-        div.className = CLASS_ERROR_MSG;
+        div.className = `${CLASS_ERROR_MSG} fh-field-error-appear`;
         div.textContent = message;
         return div;
     }
@@ -98,6 +98,56 @@
         return null;
     }
 
+    /** Scroll/focus target: section wrapper or CKEditor root instead of hidden textarea. */
+    function getScrollAnchorForField(field) {
+        if (!field) return null;
+        const pinWrap = field.closest('.item-body-file-import');
+        if (pinWrap) return pinWrap;
+        if (field.classList && field.classList.contains('ckeditor')) {
+            const ed = field.parentElement && field.parentElement.querySelector('.ck-editor');
+            if (ed) return ed;
+        }
+        return field;
+    }
+
+    const TEXT_OR_FILE_ORDER = ['text', 'body_pin_file', 'title'];
+
+    function scrollFirstFormErrorIntoView(form, errorKeys) {
+        const keys = Array.isArray(errorKeys) ? errorKeys : Object.keys(errorKeys || {});
+        if (!keys.length || !form) return;
+        let targetName = null;
+        for (let i = 0; i < TEXT_OR_FILE_ORDER.length; i++) {
+            if (keys.indexOf(TEXT_OR_FILE_ORDER[i]) !== -1) {
+                targetName = TEXT_OR_FILE_ORDER[i];
+                break;
+            }
+        }
+        if (!targetName) {
+            targetName = keys.find(function (k) {
+                return k !== '__all__' && k !== 'non_field_errors';
+            });
+        }
+        if (targetName === '__all__' || targetName === 'non_field_errors') {
+            const box = form.querySelector('.form-errors-global');
+            if (box) {
+                box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+        }
+        const field = targetName ? findField(form, targetName) : null;
+        const anchor = getScrollAnchorForField(field);
+        if (anchor) {
+            anchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (field && typeof field.focus === 'function' && field.type !== 'file') {
+                setTimeout(function () {
+                    try {
+                        field.focus({ preventScroll: true });
+                    } catch (e) { /* ignore */ }
+                }, 350);
+            }
+        }
+    }
+
     // ---------- Summernote sync helper ----------
     function syncSummernoteFields(form) {
         // jQuery + summernote
@@ -132,6 +182,18 @@
             if (tx) {
                 tx.value = editable.innerHTML || '';
             }
+        });
+    }
+
+    /** CKEditor 5 (Classic): copy editor HTML into underlying textarea before validate/submit. */
+    function syncCKEditorFields(form) {
+        form.querySelectorAll('textarea.ckeditor').forEach(function (tx) {
+            try {
+                const ed = tx._publicCKEditorInstance;
+                if (ed && typeof ed.getData === 'function') {
+                    tx.value = ed.getData() || '';
+                }
+            } catch (e) { /* ignore */ }
         });
     }
 
@@ -232,6 +294,44 @@
             }
         });
 
+        const rtf = form.getAttribute('data-require-text-or-file');
+        if (rtf === '1' || rtf === 'true') {
+            const textEl = findField(form, 'text');
+            const pinEl = findField(form, 'body_pin_file');
+            const pinClearEl = findField(form, 'body_pin_clear');
+            let textOk = false;
+            if (textEl) {
+                const raw = textEl.value || '';
+                const plain = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                textOk = plain.length > 0;
+            }
+            let fileOk = !!(pinEl && pinEl.files && pinEl.files.length > 0);
+            if (!fileOk) {
+                const cv = pinClearEl
+                    ? String(
+                          pinClearEl.value ||
+                              pinClearEl.getAttribute('value') ||
+                              ''
+                      )
+                          .trim()
+                          .toLowerCase()
+                    : '';
+                const cleared =
+                    cv === 'on' || cv === '1' || cv === 'true' || cv === 'yes';
+                if (
+                    !cleared &&
+                    form.getAttribute('data-has-pinned-file') === '1'
+                ) {
+                    fileOk = true;
+                }
+            }
+            if (!textOk && !fileOk) {
+                res.valid = false;
+                res.errors.text = res.errors.text || [];
+                res.errors.text.push('Please write the post text or attach a PDF/Word file.');
+            }
+        }
+
         return res;
     }
 
@@ -239,10 +339,14 @@
      * Build FormData for multipart POST. Some browsers (esp. mobile Safari) omit files
      * assigned via DataTransfer on the input when using `new FormData(form)` alone.
      */
+    /** Only these file fields belong to the item form; skip CKEditor / plugin inputs. */
+    const ITEM_FORM_FILE_NAMES = new Set(['images', 'videos', 'body_pin_file']);
+
     function buildFormDataFromForm(form) {
         const fd = new FormData(form);
         form.querySelectorAll('input[type="file"]').forEach(function (inp) {
             if (!inp.name || inp.disabled) return;
+            if (!ITEM_FORM_FILE_NAMES.has(inp.name)) return;
             fd.delete(inp.name);
             if (inp.files && inp.files.length) {
                 for (let i = 0; i < inp.files.length; i++) {
@@ -302,13 +406,11 @@
 
             // success
             if (data && data.success) {
-                // if server asks to redirect:
+                form.dispatchEvent(new CustomEvent('ajax:success', { detail: { data } }));
                 if (data.redirect) {
                     window.location.href = data.redirect;
                     return { ok: true, data };
                 }
-                // if server returns updated html part or message, we can dispatch event
-                form.dispatchEvent(new CustomEvent('ajax:success', { detail: { data } }));
                 return { ok: true, data };
             } else {
                 // maybe server returned errors payload
@@ -342,6 +444,7 @@
                 }
             }
         });
+        scrollFirstFormErrorIntoView(form, Object.keys(errors));
     }
 
     // ---------- main init ----------
@@ -386,9 +489,10 @@
                 clearGlobalErrors(form);
                 Array.from(form.elements).forEach(el => clearFieldErrors(el));
 
-                // --- SYNCHRONIZE WYSIWYG (summernote) -> underlying textarea (if any) ---
+                // --- SYNCHRONIZE WYSIWYG (summernote / CKEditor) -> underlying textarea (if any) ---
                 try {
                     syncSummernoteFields(form);
+                    syncCKEditorFields(form);
                 } catch (e) {
                     // ignore sync failures; validation will still run
                 }
@@ -400,20 +504,7 @@
                         if (fld) showFieldErrors(fld, v.errors[fn]);
                         else showNonFieldErrors(form, v.errors[fn]);
                     });
-
-
-                    // Smooth anchor scroll к первому invalid полю
-                    const firstFieldName = Object.keys(v.errors)[0];
-                    const firstField = findField(form, firstFieldName);
-                    if (firstField) {
-
-                        firstField.scrollIntoView({
-                            behavior: 'auto',
-                            block: 'center'
-                        });
-
-                        setTimeout(() => firstField.focus(), 300);
-                    }
+                    scrollFirstFormErrorIntoView(form, Object.keys(v.errors));
                     return;
                 }
 

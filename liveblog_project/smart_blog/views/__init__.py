@@ -29,6 +29,7 @@ from smart_blog.views.comment_views import (  # noqa: F401
 )
 
 from smart_blog.views.item_crud_views import (  # noqa: F401
+    clear_item_body_pin,
     create_item,
     edit_item,
     delete_item,

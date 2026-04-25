@@ -18,7 +18,8 @@ from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 
 from smart_blog.forms import ItemCreateForm
-from smart_blog.models import Item, ItemImage, ItemVideo
+from smart_blog.models import BodyPinContentType, Item, ItemImage, ItemVideo
+from smart_blog.services.document_converter import process_item_document
 from smart_blog.services.item_write import (
     attach_item_images_from_uploads,
     delete_item_images_by_ids,
@@ -105,14 +106,14 @@ def create_item(request):
         return denied
 
     if request.method != "POST":
-        form = ItemCreateForm()
+        form = ItemCreateForm(is_create=True)
         return render(
             request,
             "smart_blog/create_item.html",
             {"form": form, "selected_tag_ids": []},
         )
 
-    form = ItemCreateForm(request.POST)
+    form = ItemCreateForm(request.POST, request.FILES, is_create=True)
     if not form.is_valid():
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({"success": False, "errors": _json_form_errors(form)}, status=400)
@@ -151,7 +152,23 @@ def create_item(request):
         with transaction.atomic():
             item = form.save(commit=False)
             item.author = request.user
+            item.body_sourced_from_document = getattr(
+                form, "_body_sourced_from_document", False
+            )
+            pin = form.cleaned_data.get("body_pin_file")
+            if pin:
+                item.body_pin_original = pin
+                pn = pin.name.lower()
+                if pn.endswith(".pdf"):
+                    item.body_pin_content_type = BodyPinContentType.PDF
+                elif pn.endswith(".docx"):
+                    item.body_pin_content_type = BodyPinContentType.DOCX
+            item.body_pin_plain_snapshot = getattr(
+                form, "_body_pin_plain_snapshot", ""
+            ) or ""
             item.save()
+            if pin:
+                process_item_document(item)
             item.tags.set(merge_item_tags(form.cleaned_data))
             attach_item_images_from_uploads(item, files)
             attach_item_videos_from_uploads(item, video_files)
@@ -206,7 +223,7 @@ def edit_item(request, slug):
             "selected_tag_ids": selected_tag_ids,
         })
 
-    form = ItemCreateForm(request.POST, item=item)
+    form = ItemCreateForm(request.POST, request.FILES, item=item)
     delete_ids = request.POST.getlist("delete_images")
     delete_video_ids = request.POST.getlist("delete_videos")
 
@@ -268,6 +285,26 @@ def edit_item(request, slug):
             old_tag_ids = frozenset(item.tags.values_list("pk", flat=True))
             new_tag_ids = frozenset(t.pk for t in merged_tags)
 
+            pin_new = form.cleaned_data.get("body_pin_file")
+            body_pin_clear = bool(form.cleaned_data.get("body_pin_clear"))
+
+            if pin_new:
+                if item.body_pin_original:
+                    item.body_pin_original.delete(save=False)
+                item.body_pin_original = pin_new
+                item.body_sourced_from_document = True
+            elif body_pin_clear:
+                if item.body_pin_original:
+                    item.body_pin_original.delete(save=False)
+                item.body_pin_original = None
+                item.body_pin_content_type = BodyPinContentType.TEXT
+                item.body_pin_content_html = ""
+                item.body_pin_plain_snapshot = ""
+                item.body_sourced_from_document = False
+
+            if pin_new or body_pin_clear:
+                item.edited = True
+
             item.title = form.cleaned_data["title"]
             item.text = form.cleaned_data["text"]
 
@@ -292,6 +329,8 @@ def edit_item(request, slug):
             attach_item_videos_from_uploads(item, video_files)
             if chunked_video_ids:
                 attach_chunked_videos(item, chunked_video_ids, request.session)
+            if pin_new:
+                process_item_document(item)
     except Exception:
         logger.exception("edit_item failed for item %s user %s", item.pk, request.user.pk)
         form.add_error(None, "Could not save changes. Please try again.")
@@ -313,6 +352,48 @@ def edit_item(request, slug):
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
         return JsonResponse({"success": True, "redirect": redirect_url})
     return redirect(redirect_url)
+
+
+@login_required
+@require_POST
+def clear_item_body_pin(request, slug):
+    """Remove the post's pinned PDF/DOCX immediately (edit screen)."""
+    slug = (slug or "").strip()
+    item = get_object_or_404(Item, slug=slug)
+
+    if request.user != item.author:
+        return HttpResponseForbidden("You are not allowed to edit this post.")
+
+    if not item.is_editable and not request.user.is_staff:
+        return HttpResponseForbidden("Editing period expired (24 hours after publication).")
+
+    try:
+        with transaction.atomic():
+            if item.body_pin_original:
+                item.body_pin_original.delete(save=False)
+            item.body_pin_original = None
+            item.body_pin_content_type = BodyPinContentType.TEXT
+            item.body_pin_content_html = ""
+            item.body_pin_plain_snapshot = ""
+            item.body_sourced_from_document = False
+            item.edited = True
+            item.save()
+    except Exception:
+        logger.exception(
+            "clear_item_body_pin failed for item %s user %s", item.pk, request.user.pk
+        )
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse(
+                {"success": False, "error": "Could not remove file."}, status=500
+            )
+        messages.error(request, "Could not remove file.")
+        return redirect("smart_blog:edit_post", slug=slug)
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"success": True})
+
+    messages.success(request, "Attached document was removed.")
+    return redirect("smart_blog:edit_post", slug=slug)
 
 
 @require_POST

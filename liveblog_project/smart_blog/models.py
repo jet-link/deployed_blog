@@ -5,6 +5,8 @@ from django.contrib.postgres.search import SearchVectorField
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils.text import slugify
+import html
+import os
 import re
 import string
 import random
@@ -21,6 +23,12 @@ User = get_user_model()
 
 # Stored cap for feed/list excerpts; `item_feed_card` shows 500 chars on small screens, 850 on md+.
 ITEM_LIST_EXCERPT_MAX_CHARS = 850
+
+
+class BodyPinContentType(models.TextChoices):
+    TEXT = "text", "Text"
+    DOCX = "docx", "DOCX"
+    PDF = "pdf", "PDF"
 
 
 class ItemQuerySet(models.QuerySet):
@@ -191,6 +199,33 @@ class Item(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     edited = models.BooleanField(default=False)
+    body_sourced_from_document = models.BooleanField(
+        default=False,
+        help_text="True if post body HTML was first filled from a PDF/DOCX import on create.",
+    )
+    body_pin_original = models.FileField(
+        upload_to="item_body_pins/%Y/%m/",
+        blank=True,
+        null=True,
+        max_length=500,
+        help_text="Original PDF/DOCX attached at create (shown on post detail).",
+    )
+    body_pin_plain_snapshot = models.TextField(
+        blank=True,
+        default="",
+        help_text="Plain-text snapshot of the pinned document for faithful display (esp. DOCX).",
+    )
+    body_pin_content_type = models.CharField(
+        max_length=20,
+        choices=BodyPinContentType.choices,
+        default=BodyPinContentType.TEXT,
+        help_text="How to render pinned document on post detail (hybrid viewer / HTML).",
+    )
+    body_pin_content_html = models.TextField(
+        blank=True,
+        default="",
+        help_text="Sanitized HTML from DOCX (pandoc); empty for PDF/text.",
+    )
     is_published = models.BooleanField(default=True)
     deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
     objects = ItemManager()
@@ -229,9 +264,13 @@ class Item(models.Model):
         if self.excerpt_plain:
             return self.excerpt_plain
         return self.short_text()
-    
 
-   
+    @property
+    def body_pin_original_basename(self) -> str:
+        if not self.body_pin_original or not self.body_pin_original.name:
+            return ""
+        return os.path.basename(self.body_pin_original.name)
+
     def _generate_base_slug(self):
         base = slugify(self.title, allow_unicode=False)
         if not base:
@@ -292,8 +331,16 @@ class Item(models.Model):
                 counter += 1
             self.slug = slug_candidate
 
+        excerpt_src = self.text or ""
+        if not excerpt_src.strip() and self.body_pin_content_type == BodyPinContentType.DOCX:
+            excerpt_src = self.body_pin_content_html or ""
+        if not excerpt_src.strip() and self.body_pin_content_type == BodyPinContentType.PDF and (
+            self.title or ""
+        ).strip():
+            excerpt_src = f"<p>{html.escape((self.title or '').strip())}</p>"
+
         self.excerpt_plain = Item.plain_excerpt_from_html(
-            self.text or "", length=ITEM_LIST_EXCERPT_MAX_CHARS
+            excerpt_src, length=ITEM_LIST_EXCERPT_MAX_CHARS
         )
 
         super().save(*args, **kwargs)

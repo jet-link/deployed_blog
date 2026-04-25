@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Case, Count, IntegerField, Q, When
 from django.utils.translation import gettext_lazy as _
 from .models import Item, Tag, Category, Comment
-from .widgets import MultiFileInput
+from .widgets import MultiFileInput, MultipleFileField
 from .utils import normalize_comment_text
 from .comment_html import expand_bare_domains, sanitize_and_linkify_comment_html
 
@@ -76,18 +76,105 @@ FINAL_ALLOWED_ATTRIBUTES.update({
     re.compile(r'^data-'): True
 })
 
+def sanitize_item_text_html(raw: str) -> str:
+    """
+    Markdown (best-effort), bleach, linkify. Raises ValidationError if no visible text.
+    Expects non-whitespace HTML or text; use after field-level normalization.
+    """
+    raw = raw or ""
+    raw = raw.replace("\x00", "")
+    raw = html.unescape(raw)
+
+    converted = raw
+    try:
+        if markdown_lib and (
+            re.search(r"(^```)|(^#{1,6}\s)", raw, flags=re.M)
+            or re.search(r"\n```", raw)
+        ):
+            exts = ["fenced_code"]
+            try:
+                exts.append("codehilite")
+            except Exception:
+                pass
+            converted = markdown_lib.markdown(raw, extensions=exts)
+            try:
+                converted = re.sub(
+                    r'(<pre[^>]*>)\s*<code[^>]*class="([^"]*language-([a-z0-9_+-]+)[^"]*)"([^>]*)>',
+                    lambda m: f'{m.group(1)}<code data-language="{m.group(3)}"{m.group(4)}>',
+                    converted,
+                    flags=re.I,
+                )
+                converted = re.sub(
+                    r'<code[^>]*class="([^"]*language-([a-z0-9_+-]+)[^"]*)"([^>]*)>',
+                    lambda m: f'<code data-language="{m.group(2)}"{m.group(3)}>',
+                    converted,
+                    flags=re.I,
+                )
+            except Exception:
+                pass
+    except Exception:
+        converted = raw
+
+    try:
+        if CSSSanitizer is not None:
+            css_sanitizer = CSSSanitizer(allowed_css_properties=ALLOWED_STYLES)
+            cleaner = bleach.Cleaner(
+                tags=ALLOWED_TAGS,
+                attributes=FINAL_ALLOWED_ATTRIBUTES,
+                strip=True,
+                css_sanitizer=css_sanitizer,
+            )
+        else:
+            cleaner = bleach.Cleaner(
+                tags=ALLOWED_TAGS,
+                attributes=FINAL_ALLOWED_ATTRIBUTES,
+                strip=True,
+            )
+        cleaned = cleaner.clean(converted)
+    except Exception:
+        cleaned = bleach.clean(
+            converted, tags=ALLOWED_TAGS, attributes=FINAL_ALLOWED_ATTRIBUTES, strip=True
+        )
+
+    try:
+        cleaned = bleach.linkify(cleaned, skip_tags=LINKIFY_SKIP_TAGS, parse_email=False)
+    except Exception:
+        pass
+
+    plain = re.sub(r"<[^>]+>", "", cleaned).strip()
+    if not plain:
+        raise ValidationError(_("Please write the post text *"))
+    return cleaned
+
+
 # ---------- форма ----------
 class ItemCreateForm(forms.ModelForm):
-    images = forms.FileField(
+    images = MultipleFileField(
         required=False,
-        widget=MultiFileInput(),
         help_text="You can upload up to 10 images per post.",
-        label=_('Upload images'),
+        label=_('Upload media'),
     )
 
-    videos = forms.FileField(
+    body_pin_file = forms.FileField(
         required=False,
-        widget=MultiFileInput(),
+        label="",
+        widget=forms.FileInput(
+            attrs={
+                "class": "item-images-file-input",
+                "accept": ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "title": "Choose PDF or Word file",
+            }
+        ),
+    )
+
+    body_pin_clear = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.HiddenInput(attrs={"id": "id_body_pin_clear"}),
+    )
+
+    videos = MultipleFileField(
+        required=False,
         help_text="You can upload up to 3 videos per post.",
         label=_('Upload videos'),
     )
@@ -138,8 +225,15 @@ class ItemCreateForm(forms.ModelForm):
             }),
         }
 
-    def __init__(self, *args, item=None, tags_recent_limit=30, **kwargs):
+    def __init__(
+        self, *args, item=None, tags_recent_limit=30, is_create=False, **kwargs
+    ):
+        self.is_create = bool(is_create)
+        self._item = item
+        self._body_pin_plain_snapshot = ""
         super().__init__(*args, **kwargs)
+        if self.is_create:
+            self.fields["text"].required = False
         if tags_recent_limit is None:
             self.fields["tags"].queryset = Tag.objects.all().order_by("tag_name")
             return
@@ -205,78 +299,101 @@ class ItemCreateForm(forms.ModelForm):
         raw = re.sub(r'(<p(?:\s[^>]*)?>\s*<br\s*/?>\s*</p>\s*){2,}', '<p><br></p>', raw)
         raw = raw.strip()
 
-        # basic validation
         if not raw or not raw.strip():
-            raise ValidationError(_('Please write the post text *'))
+            if self.is_create:
+                return ""
+            pin_upload = None
+            if self.files is not None:
+                pin_upload = self.files.get("body_pin_file")
+            if pin_upload and getattr(pin_upload, "size", 0):
+                return ""
+            clear = str(self.data.get("body_pin_clear") or "").lower() in (
+                "1",
+                "on",
+                "true",
+                "yes",
+            )
+            if (
+                not clear
+                and self._item
+                and getattr(self._item, "body_pin_original", None)
+            ):
+                return ""
+            raise ValidationError(_("Please write the post text *"))
 
-        # normalize
-        raw = raw.replace('\x00', '')
-        raw = html.unescape(raw)
+        return sanitize_item_text_html(raw)
 
-        # 1) Markdown fenced-code conversion (best-effort)
-        converted = raw
+    def clean_body_pin_file(self):
+        f = self.cleaned_data.get("body_pin_file")
+        if not f:
+            return f
+        size = getattr(f, "size", None)
         try:
-            # only try convert when there are fenced code markers or markdown headings
-            if markdown_lib and (re.search(r'(^```)|(^#{1,6}\s)', raw, flags=re.M) or re.search(r'\n```', raw)):
-                exts = ['fenced_code']
-                # try to include codehilite if available (not required)
-                try:
-                    exts.append('codehilite')
-                except Exception:
-                    pass
-                converted = markdown_lib.markdown(raw, extensions=exts)
-                # преобразуем class="language-xxx" -> data-language="xxx" для <pre> и <code>
-                try:
-                    converted = re.sub(
-                        r'(<pre[^>]*>)\s*<code[^>]*class="([^"]*language-([a-z0-9_+-]+)[^"]*)"([^>]*)>',
-                        lambda m: f'{m.group(1)}<code data-language="{m.group(3)}"{m.group(4)}>',
-                        converted,
-                        flags=re.I
-                    )
-                    # также поддержка случая когда markdown уже поместил language в <code class="language-..."> но не в pre
-                    converted = re.sub(
-                        r'<code[^>]*class="([^"]*language-([a-z0-9_+-]+)[^"]*)"([^>]*)>',
-                        lambda m: f'<code data-language="{m.group(2)}"{m.group(3)}>',
-                        converted, flags=re.I
-                    )
-                except Exception:
-                    pass
-        except Exception:
-            converted = raw
+            if size is not None and int(size) == 0:
+                raise ValidationError(_("File is empty"))
+        except ValidationError:
+            raise
+        except (TypeError, ValueError):
+            size = None
+        if size is None:
+            try:
+                head = f.read(1)
+            except Exception:
+                head = b""
+            try:
+                f.seek(0)
+            except Exception:
+                pass
+            if not head:
+                raise ValidationError(_("File is empty"))
+        name = (getattr(f, "name", "") or "").lower()
+        if not (name.endswith(".pdf") or name.endswith(".docx")):
+            raise ValidationError(_("Use a .pdf or .docx file."))
+        max_b = 15 * 1024 * 1024
+        if size is not None and int(size) > max_b:
+            raise ValidationError(_("File too large (max 15 MB)."))
+        return f
 
-        # 2) Sanitize with bleach
-        try:
-            if CSSSanitizer is not None:
-                css_sanitizer = CSSSanitizer(allowed_css_properties=ALLOWED_STYLES)
-                cleaner = bleach.Cleaner(
-                    tags=ALLOWED_TAGS,
-                    attributes=FINAL_ALLOWED_ATTRIBUTES,
-                    strip=True,
-                    css_sanitizer=css_sanitizer
-                )
+    def clean(self):
+        cleaned_data = super().clean()
+        if not self.is_create:
+            return cleaned_data
+
+        pin = cleaned_data.get("body_pin_file")
+        if not pin:
+            self._body_sourced_from_document = False
+            self._body_pin_plain_snapshot = ""
+            editor_part = cleaned_data.get("text") or ""
+            plain = re.sub(r"<[^>]+>", "", editor_part).strip()
+            if not plain:
+                raise ValidationError({"text": [_("Please write the post text *")]})
+            return cleaned_data
+
+        pin_name = (pin.name or "").lower()
+        self._body_pin_plain_snapshot = ""
+        editor_part = cleaned_data.get("text") or ""
+        editor_plain = re.sub(r"<[^>]+>", "", editor_part).strip()
+
+        if pin_name.endswith(".pdf"):
+            if editor_plain:
+                cleaned_data["text"] = sanitize_item_text_html(editor_part)
             else:
-                cleaner = bleach.Cleaner(
-                    tags=ALLOWED_TAGS,
-                    attributes=FINAL_ALLOWED_ATTRIBUTES,
-                    strip=True
-                )
-            cleaned = cleaner.clean(converted)
-        except Exception:
-            # ultimate fallback
-            cleaned = bleach.clean(converted, tags=ALLOWED_TAGS, attributes=FINAL_ALLOWED_ATTRIBUTES, strip=True)
+                cleaned_data["text"] = ""
+            self._body_sourced_from_document = True
+            return cleaned_data
 
-        # 3) linkify but skip pre/code/a so we don't break code blocks or existing anchors
-        try:
-            cleaned = bleach.linkify(cleaned, skip_tags=LINKIFY_SKIP_TAGS, parse_email=False)
-        except Exception:
-            pass
+        if pin_name.endswith(".docx"):
+            if editor_plain:
+                cleaned_data["text"] = sanitize_item_text_html(editor_part)
+            else:
+                cleaned_data["text"] = ""
+            self._body_sourced_from_document = True
+            return cleaned_data
 
-        # 4) ensure there is visible text
-        plain = re.sub(r'<[^>]+>', '', cleaned).strip()
-        if not plain:
-            raise ValidationError(_('Please write the post text *'))
-
-        return cleaned
+        self._body_sourced_from_document = False
+        if not editor_plain:
+            raise ValidationError({"text": [_("Please write the post text *")]})
+        return cleaned_data
 
 
 # simple CommentForm (оставил как есть; при необходимости можно расширить)

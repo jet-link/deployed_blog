@@ -49,8 +49,9 @@ def post_media_gallery(item):
 
     n_images = len(images)
     n_videos = len(videos)
+    has_pin_file = bool(getattr(item, "body_pin_original", None))
 
-    if n_images == 0 and n_videos == 0:
+    if n_images == 0 and n_videos == 0 and not has_pin_file:
         return {"show": False}
 
     slides = _slides_payload(images) if n_images else []
@@ -63,6 +64,7 @@ def post_media_gallery(item):
         "video_slides": video_slides,
         "image_count": n_images,
         "video_count": n_videos,
+        "has_pin_file": has_pin_file,
         "script_id": f"post-media-json-{item.pk}",
         "video_script_id": f"post-video-json-{item.pk}",
     }

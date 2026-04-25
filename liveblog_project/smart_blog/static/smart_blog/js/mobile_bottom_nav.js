@@ -18,6 +18,54 @@
     var panelAccount  = document.getElementById('mobileNavAccountPopover');
     var scrollHost    = nav.querySelector('.mobile-bottom-nav__scroll');
 
+    /* ── Sliding active highlight (Telegram-style pill) ── */
+    function ensureSlideEl(track) {
+        if (!track) return null;
+        var s = track.querySelector('.mobile-bottom-nav__slide');
+        if (!s) {
+            s = document.createElement('span');
+            s.className = 'mobile-bottom-nav__slide';
+            s.setAttribute('aria-hidden', 'true');
+            track.insertBefore(s, track.firstChild);
+        }
+        return s;
+    }
+
+    function positionActiveSlide() {
+        if (nav.classList.contains('mobile-bottom-nav--hidden-on-detail')) {
+            var t0 = nav.querySelector('.mobile-bottom-nav__track');
+            var sl0 = t0 ? t0.querySelector('.mobile-bottom-nav__slide') : null;
+            if (sl0) sl0.style.opacity = '0';
+            return;
+        }
+        var track = nav.querySelector('.mobile-bottom-nav__track');
+        if (!track) return;
+        var slide = ensureSlideEl(track);
+        if (!slide) return;
+        var active = track.querySelector('.mobile-bottom-nav__link--active');
+        if (!active) {
+            slide.style.opacity = '0';
+            return;
+        }
+        var tr = track.getBoundingClientRect();
+        var ar = active.getBoundingClientRect();
+        var left = ar.left - tr.left;
+        var w = ar.width;
+        if (w < 2) {
+            requestAnimationFrame(function () { positionActiveSlide(); });
+            return;
+        }
+        slide.style.opacity = '1';
+        slide.style.left = Math.round(left) + 'px';
+        slide.style.width = Math.round(w) + 'px';
+    }
+
+    function schedulePositionActiveSlide() {
+        requestAnimationFrame(function () {
+            requestAnimationFrame(positionActiveSlide);
+        });
+    }
+
     /* ── Helpers ── */
     function cssEsc(s) {
         if (typeof s !== 'string') return '';
@@ -98,6 +146,7 @@
             }
         }
         syncRows(src.querySelector('#mobileNavAccountPopover'), panelAccount);
+        schedulePositionActiveSlide();
     }
 
     var root = document.documentElement;
@@ -105,6 +154,7 @@
         var d = ev.detail || {};
         if (d.newBody) syncFromNewBody(d.newBody);
     });
+    root.addEventListener('turbo:load', schedulePositionActiveSlide);
     root.addEventListener('turbo:before-visit', function () {
         retreatFocus(panelAccount, btnMore);
         closeAll();
@@ -146,6 +196,10 @@
         window.addEventListener('scroll', reposition, { passive: true, capture: true });
         if (scrollHost) scrollHost.addEventListener('scroll', reposition, { passive: true });
     }
+
+    window.addEventListener('resize', schedulePositionActiveSlide, { passive: true });
+    if (scrollHost) scrollHost.addEventListener('scroll', schedulePositionActiveSlide, { passive: true });
+    schedulePositionActiveSlide();
 
     function unbindReposition() {
         if (!repositionBound) return;
@@ -235,5 +289,5 @@
     /* ── Public API (used by signout_modal.js etc.) ── */
     window.__closeMobileAccountPopover    = function () { if (isOpen(panelAccount)) closeAccount(); };
     window.__closeMobileNavPopovers       = closeAll;
-    window.__runMobileBottomNavTabStripReset = function () {};
+    window.__runMobileBottomNavTabStripReset = schedulePositionActiveSlide;
 })();

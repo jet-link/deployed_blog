@@ -24,6 +24,7 @@ def _default_csp() -> str:
         "media-src 'self' blob: https://cdn.plyr.io https://*.cdn.example.com; "
         "connect-src 'self' https://cdn.ckeditor.com https://cdn.jsdelivr.net "
         "https://cdn.plyr.io https://challenges.cloudflare.com; "
+        "worker-src 'self' blob: https://cdn.jsdelivr.net; "
         "frame-src 'self' https://cdn.ckeditor.com blob: https://challenges.cloudflare.com; "
         "base-uri 'self'; "
         "form-action 'self'; "

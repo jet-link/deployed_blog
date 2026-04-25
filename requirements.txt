@@ -12,6 +12,9 @@ whitenoise
 gunicorn>=22.0
 djangorestframework
 bleach>=6.0
+pypdf>=4.0,<6
+python-docx>=1.1.0
+pypandoc>=1.13
 detoxify
 torch
 transformers

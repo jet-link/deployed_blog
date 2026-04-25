@@ -22,18 +22,10 @@
           <i class="fa fa-heart" aria-hidden="true"></i>
         </div>
       </div>
-      {% if item.category %}
-        <span class="profile-created-post-tile__line profile-created-post-tile__footer text-truncate topic-tile__latest mt-auto" title="{{ item.category.name }}">
-          <span class="text-muted">Topic:</span> <span class="text-muted fw-semibold">{{ item.category.name }}</span>
-        </span>
-      {% elif item.tags.all %}
-        <span class="profile-created-post-tile__line profile-created-post-tile__footer text-truncate topic-tile__latest mt-auto" title="{% for tag in item.tags.all %}{{ tag.tag_name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
-          <span class="text-muted">Tags:</span>
-          {% for tag in item.tags.all|slice:":4" %}
-            <span class="text-muted fw-semibold">{{ tag.tag_name }}{% if not forloop.last %}, {% endif %}</span>
-          {% endfor %}
-        </span>
-      {% endif %}
+      <span class="profile-created-post-tile__line profile-created-post-tile__footer text-truncate topic-tile__latest mt-auto" title="{% if item.category %}{{ item.category.name }}{% else %}No category{% endif %}">
+        <span class="text-muted">Topic:</span>
+        <span class="text-muted fw-semibold">{% if item.category %}{{ item.category.name }}{% else %}No category{% endif %}</span>
+      </span>
     </div>
   </div>
   {% if listing_source == 'profile' and listing_user and listing_section %}

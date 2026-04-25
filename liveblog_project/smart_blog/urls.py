@@ -123,6 +123,11 @@ urlpatterns = [
     path("brainews/", views.items_list, name="items_list"),
     path("post/create/", views.create_item, name="create_post"),
     path("post/<slug:slug>/edit/", views.edit_item, name="edit_post"),
+    path(
+        "post/<slug:slug>/clear-body-pin/",
+        views.clear_item_body_pin,
+        name="clear_body_pin",
+    ),
     path("post/<slug:slug>/comments/", views.item_comments, name="post_comments"),
     path(
         "post/<slug:slug>/comment/<int:pk>/thread/",

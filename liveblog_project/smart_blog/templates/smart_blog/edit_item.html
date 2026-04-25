@@ -18,7 +18,7 @@
 
       </div>
 
-      <form method="post" enctype="multipart/form-data" id="itemEditForm" data-ajax="true" data-validate="true" data-replace-history="{{ item.get_absolute_url }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" novalidate>
+      <form method="post" enctype="multipart/form-data" id="itemEditForm" data-ajax="true" data-validate="true" data-require-text-or-file="true"{% if item.body_pin_original %} data-has-pinned-file="1"{% endif %} data-replace-history="{{ item.get_absolute_url }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" novalidate>
         {% csrf_token %}
         {% if form.non_field_errors %}
           <div class="custom-alert custom-alert-danger mb-2" data-auto-dismiss="3000">
@@ -44,6 +44,38 @@
         {% for err in form.text.errors %}
           <div class="text-danger small mb-2">{{ err }}</div>
         {% endfor %}
+
+        <!-- Or pin File -->
+        <div class="mb-3 item-body-file-import" id="itemBodyPinRow"{% if item.body_pin_original %} data-existing-pin="1"{% endif %}>
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-2 item-body-pin-heading-row">
+            <label for="id_body_pin_file" class="form-label text-muted mb-0 flex-shrink-0">{% trans "Or pin File" %}</label>
+            {% if item.body_pin_original %}
+              <span class="item-body-pin-heading-sep text-muted flex-shrink-0 user-select-none" id="itemBodyPinHeadingSep" aria-hidden="true">|</span>
+              <span class="item-body-pin-existing small text-muted d-inline-flex align-items-center gap-1 flex-wrap min-w-0" id="itemBodyPinExistingName">
+                <span class="text-break">{% trans "Current file" %}: <strong class="text-body">{{ item.body_pin_original_basename }}</strong></span>
+                <button type="button"
+                        class="btn btn-sm btn-danger btn-mark-delete-body-pin flex-shrink-0"
+                        id="itemBodyPinFileClear"
+                        data-item-body-pin-clear
+                        data-title-mark="{% trans 'Mark for deletion' %}"
+                        data-title-unmark="{% trans 'Unmark deletion' %}"
+                        style="font-size:10px;padding:0.2rem 0.4rem;line-height:1"
+                        title="{% trans 'Mark for deletion' %}"
+                        aria-pressed="false"
+                        aria-label="{% trans 'Mark file for deletion' %}">
+                  <i class="fa fa-times" aria-hidden="true"></i>
+                </button>
+              </span>
+            {% endif %}
+          </div>
+          {{ form.body_pin_clear }}
+          <div class="item-images-upload item-images-upload--native">
+            {{ form.body_pin_file }}
+          </div>
+          {% for err in form.body_pin_file.errors %}
+            <div class="text-danger small mt-1 invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
 
         <!-- Category -->
         <div class="mb-3">
@@ -127,7 +159,7 @@
 
 {% block editor_scripts %}
   <script defer src="{% static 'ckeditor/ckeditor_main.js' %}"></script>
-  <script defer src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+  <script defer src="{% static 'smart_blog/js/item_body_file_import.js' %}"></script>
 {% endblock %}
 
 {% block extra_js %}

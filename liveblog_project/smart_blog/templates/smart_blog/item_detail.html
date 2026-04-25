@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 {% load user_status %}
 {% load counters %}
 {% load post_media %}
@@ -129,10 +130,20 @@
         </div>
       {% endif %}
     </div>
-    <!-- ===== Body text ===== -->
-    <div id="itemTextCurtain" class="item-text ck-content my-5">
-      {{ item.text|safe }}
-    </div>
+    <!-- ===== Body: text only inline; PDF/DOCX open from "Pinned file" modal ===== -->
+    {% if item.body_pin_original %}
+      {% if item.text|striptags %}
+        <div id="itemTextCurtain" class="post-content item-text ck-content my-5{% if item.body_sourced_from_document %} item-text--sourced-doc{% endif %}">
+          {{ item.text|safe }}
+        </div>
+      {% else %}
+        <div id="itemTextCurtain" class="my-0" hidden aria-hidden="true"></div>
+      {% endif %}
+    {% else %}
+      <div id="itemTextCurtain" class="item-text ck-content my-5{% if item.body_sourced_from_document %} item-text--sourced-doc{% endif %}">
+        {{ item.text|safe }}
+      </div>
+    {% endif %}
     <div id="itemTextShowMoreWrap" class="item-text-show-more-wrap" style="display:none;">
       <hr class="item-text-show-more-divider" />
       <button type="button" id="itemTextShowMore" class="item-text-show-more-btn">
@@ -288,9 +299,58 @@
   {% include 'includes/share_modal.html' %}
   {% include 'includes/report_modal.html' %}
   {% include 'includes/liked_users_modal.html' %}
+  {% if item.body_pin_original %}
+    <div class="modal fade item-pinned-file-modal" id="itemPinnedFileModal" tabindex="-1" aria-hidden="true" aria-label="{% trans 'Document preview' %}" data-bs-keyboard="true">
+      <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content item-pinned-file-modal__content">
+          <div class="modal-body item-pinned-file-modal__body">
+            <div class="item-pinned-file-modal__viewport">
+              {% if item.body_pin_content_type == "pdf" %}
+                <div class="item-pinned-pdfjs"
+                     data-pdf-url="{{ item.body_pin_original.url }}"
+                     data-pdf-filename="{{ item.body_pin_original_basename }}">
+                  <header class="item-pinned-pdfjs__bar">
+                    <span class="item-pinned-pdfjs__name text-truncate" title="{{ item.body_pin_original_basename }}">{{ item.body_pin_original_basename }}</span>
+                    <div class="item-pinned-pdfjs__controls">
+                      <button type="button" class="item-pinned-pdfjs__btn" data-pdf-prev aria-label="{% trans 'Previous page' %}">‹</button>
+                      <span class="item-pinned-pdfjs__pages" data-pdf-page-label>1 / 1</span>
+                      <button type="button" class="item-pinned-pdfjs__btn" data-pdf-next aria-label="{% trans 'Next page' %}">›</button>
+                      <span class="item-pinned-pdfjs__sep" aria-hidden="true"></span>
+                      <button type="button" class="item-pinned-pdfjs__btn" data-pdf-zoom-out aria-label="{% trans 'Zoom out' %}">−</button>
+                      <span class="item-pinned-pdfjs__zoom" data-pdf-zoom-pct>100%</span>
+                      <button type="button" class="item-pinned-pdfjs__btn" data-pdf-zoom-in aria-label="{% trans 'Zoom in' %}">+</button>
+                      <span class="item-pinned-pdfjs__sep" aria-hidden="true"></span>
+                      <a href="{{ item.body_pin_original.url }}"
+                         class="item-pinned-pdfjs__download"
+                         download
+                         title="{% trans 'Download' %}"
+                         aria-label="{% trans 'Download' %}"><i class="fa fa-download" aria-hidden="true"></i></a>
+                    </div>
+                  </header>
+                  <div class="item-pinned-pdfjs__scroll" data-pdf-scroll>
+                    <div class="item-pinned-pdfjs__pages-inner" data-pdf-pages></div>
+                  </div>
+                </div>
+              {% elif item.body_pin_content_type == "docx" %}
+                {% if item.body_pin_content_html %}
+                  <div class="doc-content item-pinned-file-modal__docx">{{ item.body_pin_content_html|safe }}</div>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 {% endblock %}
 
 {% block extra_js %}
+  {% if item.body_pin_original and item.body_pin_content_type == "pdf" %}
+  <script defer src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  {% endif %}
+  {% if item.body_pin_original %}
+  <script defer src="{% static 'smart_blog/js/item_pinned_file_modal.js' %}"></script>
+  {% endif %}
   <script defer src="{% static 'smart_blog/js/comment_restore_ui.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/comment_operate.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/liked_users_overlay.js' %}"></script>

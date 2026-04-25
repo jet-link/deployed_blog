@@ -17,7 +17,7 @@
         <h5 class="text-muted text-uppercase m-0">Create post</h5>
       </div>
 
-      <form method="post" enctype="multipart/form-data" id="itemForm" data-ajax="true" data-validate="true" novalidate>
+      <form method="post" enctype="multipart/form-data" id="itemForm" data-ajax="true" data-validate="true" data-require-text-or-file="true" novalidate>
         {% csrf_token %}
         {% if form.non_field_errors %}
           <div class="custom-alert custom-alert-danger mb-2" data-auto-dismiss="3000">
@@ -41,6 +41,18 @@
           {{ form.text }}
           {% for err in form.text.errors %}
             <div class="text-danger small mb-2">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <!-- Or pin File: PDF/DOCX merged into body on server -->
+        <div class="mb-3 item-body-file-import" id="itemBodyPinRow">
+          <label for="id_body_pin_file" class="form-label text-muted mb-2">{% trans "Or pin File" %}</label>
+          {{ form.body_pin_clear }}
+          <div class="item-images-upload item-images-upload--native">
+            {{ form.body_pin_file }}
+          </div>
+          {% for err in form.body_pin_file.errors %}
+            <div class="text-danger small mt-1 invalid-feedback d-block">{{ err }}</div>
           {% endfor %}
         </div>
 
@@ -96,8 +108,9 @@
 {% endblock %}
 
 {% block editor_scripts %}
+  {# classic/ckeditor.js is injected once by ckeditor_main.js (avoids ckeditor-duplicated-modules) #}
   <script defer src="{% static 'ckeditor/ckeditor_main.js' %}"></script>
-  <script defer src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+  <script defer src="{% static 'smart_blog/js/item_body_file_import.js' %}"></script>
 {% endblock %}
 
 {% block extra_js %}
@@ -116,21 +129,32 @@
 
       const form = document.getElementById('itemForm');
       if (form) {
+        var preloaderTimer = null;
         form.addEventListener('submit', clearListing);
         form.addEventListener('ajax:start', function () {
-          var pre = document.getElementById('brainPreloader');
-          if (!pre) return;
-          var lbl = pre.querySelector('.brain-preloader__label');
-          if (lbl) lbl.textContent = 'Posting...';
-          pre.classList.remove('hidden');
-          pre.setAttribute('aria-busy', 'true');
-          document.documentElement.classList.add('brain-preloader-active');
+          if (preloaderTimer) clearTimeout(preloaderTimer);
+          preloaderTimer = setTimeout(function () {
+            preloaderTimer = null;
+            var pre = document.getElementById('brainPreloader');
+            if (!pre) return;
+            var lbl = pre.querySelector('.brain-preloader__label');
+            if (lbl) lbl.textContent = 'Posting...';
+            pre.classList.remove('hidden');
+            pre.setAttribute('aria-busy', 'true');
+            document.documentElement.classList.add('brain-preloader-active');
+          }, 220);
         });
-        form.addEventListener('ajax:error', function () {
+        function hidePreloader() {
+          if (preloaderTimer) {
+            clearTimeout(preloaderTimer);
+            preloaderTimer = null;
+          }
           var pre = document.getElementById('brainPreloader');
           if (pre) { pre.classList.add('hidden'); pre.removeAttribute('aria-busy'); }
           document.documentElement.classList.remove('brain-preloader-active');
-        });
+        }
+        form.addEventListener('ajax:error', hidePreloader);
+        form.addEventListener('ajax:success', hidePreloader);
       }
 
       const trustStatusUrl = "{% url 'login_app:api_trust_status' %}";

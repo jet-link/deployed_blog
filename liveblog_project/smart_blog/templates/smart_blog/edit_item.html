@@ -51,7 +51,7 @@
             <label for="id_body_pin_file" class="form-label text-muted mb-0 flex-shrink-0">{% trans "Or pin File" %}</label>
             {% if item.body_pin_original %}
               <span class="item-body-pin-heading-sep text-muted flex-shrink-0 user-select-none" id="itemBodyPinHeadingSep" aria-hidden="true">|</span>
-              <span class="item-body-pin-existing small text-muted d-inline-flex align-items-center gap-1 flex-wrap min-w-0" id="itemBodyPinExistingName">
+              <span class="item-body-pin-existing small text-muted d-inline-flex align-items-center gap-2 flex-wrap min-w-0" id="itemBodyPinExistingName">
                 <span class="text-break">{% trans "Current file" %}: <strong class="text-body">{{ item.body_pin_original_basename }}</strong></span>
                 <button type="button"
                         class="btn btn-sm btn-danger btn-mark-delete-body-pin flex-shrink-0"
@@ -59,7 +59,7 @@
                         data-item-body-pin-clear
                         data-title-mark="{% trans 'Mark for deletion' %}"
                         data-title-unmark="{% trans 'Unmark deletion' %}"
-                        style="font-size:10px;padding:0.2rem 0.4rem;line-height:1"
+                        style="font-size:10px;padding:0.4rem 0.4rem;line-height:1"
                         title="{% trans 'Mark for deletion' %}"
                         aria-pressed="false"
                         aria-label="{% trans 'Mark file for deletion' %}">

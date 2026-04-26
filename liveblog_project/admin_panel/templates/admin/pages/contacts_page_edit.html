@@ -1,7 +1,7 @@
 {% extends 'admin/layout/base.html' %}
 {% block title %}Contacts page{% endblock %}
-{% block breadcrumbs %}<nav class="admin-breadcrumbs" aria-label="Breadcrumb"><ol class="admin-breadcrumbs-list"><li class="admin-breadcrumbs-item"><a href="{% url 'admin_panel:dashboard' %}">Dashboard</a></li><li class="admin-breadcrumbs-item">Contacts page</li></ol></nav>{% endblock %}
-{% block page_title %}Contacts page{% endblock %}
+{% block breadcrumbs %}<nav class="admin-breadcrumbs" aria-label="Breadcrumb"><ol class="admin-breadcrumbs-list"><li class="admin-breadcrumbs-item"><a href="{% url 'admin_panel:dashboard' %}">Dashboard</a></li><li class="admin-breadcrumbs-item">Contacts</li></ol></nav>{% endblock %}
+{% block page_title %}Contacts{% endblock %}
 {% block content %}
 <div class="admin-card">
     <p class="text-muted small mb-3">Public URL: <a href="{% url 'pages:page' 'contacts' %}" target="_blank" rel="noopener">/contacts/</a></p>

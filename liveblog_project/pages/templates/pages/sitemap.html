@@ -23,7 +23,7 @@
       <!-- <hr class="text-muted"/> -->
       <div class="sitemap-html-grid">
         <section class="sitemap-html-block" id="sitemap-main-pages" aria-labelledby="sitemap-heading-main">
-          <h3 id="sitemap-heading-main" class="sitemap-html-block-title">Main pages</h3>
+          <h4 id="sitemap-heading-main" class="sitemap-html-block-title">Main pages</h4>
           <ul class="sitemap-html-list list-unstyled mb-0">
             {% for row in static_links %}
               <li><a href="{{ row.url }}" class="sitemap-html-link text-decoration-none text-muted">{{ row.label }}</a></li>
@@ -32,7 +32,7 @@
         </section>
 
         <section class="sitemap-html-block" id="sitemap-topics" aria-labelledby="sitemap-heading-topics">
-          <h3 id="sitemap-heading-topics" class="sitemap-html-block-title">Topic hubs</h3>
+          <h4 id="sitemap-heading-topics" class="sitemap-html-block-title">Topic hubs</h4>
           {% if topic_links %}
             <ul class="sitemap-html-list list-unstyled mb-0">
               {% for row in topic_links %}
@@ -58,7 +58,7 @@
         </section> {% endcomment %}
 
         <section class="sitemap-html-block" id="sitemap-tags" aria-labelledby="sitemap-heading-tags">
-          <h3 id="sitemap-heading-tags" class="sitemap-html-block-title">Tags</h3>
+          <h4 id="sitemap-heading-tags" class="sitemap-html-block-title">Tags</h4>
           {% if tag_links %}
             <ul class="sitemap-html-list sitemap-html-list--tags list-unstyled mb-0">
               {% for row in tag_links %}
@@ -71,7 +71,7 @@
         </section>
 
         {% comment %} <section class="sitemap-html-block sitemap-html-block--wide" id="sitemap-recent-posts" aria-labelledby="sitemap-heading-recent">
-          <h3 id="sitemap-heading-recent" class="sitemap-html-block-title">Recent posts</h3>
+          <h4 id="sitemap-heading-recent" class="sitemap-html-block-title">Recent posts</h4>
           <p class="small text-muted mb-3">Latest {{ recent_total_shown }} published posts. All post URLs are included in the XML sitemap.</p>
           {% if recent_links %}
             <ul class="sitemap-html-list list-unstyled mb-0">

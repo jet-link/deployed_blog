@@ -259,17 +259,29 @@
 }
 
 .user-tooltip {
+    --user-tooltip-caret-x: calc(var(--header-icon-size, 38px) / 2);
     position: absolute;
-    top: calc(100% + 21px);
+    top: calc(100% + 15px);
     right: -18px;
     min-width: 170px;
     background: var(--card-bg);
-    box-shadow: 3px 12px 25px rgba(0, 0, 0, .2);
+    border: 1px solid var(--border-subtle, #e8e8ec);
+    border-radius: 6px;
+    box-shadow:
+        0 14px 40px rgba(0, 0, 0, 0.14),
+        0 4px 12px rgba(0, 0, 0, 0.06);
     opacity: 0;
     transform: translateY(-6px);
     pointer-events: none;
     transition: opacity .18s ease, transform .18s ease;
     z-index: 2000;
+    overflow: visible;
+    padding: 8px 0;
+}
+
+html[data-theme="dark"] .user-tooltip {
+    border-color: var(--border-strong, #484f58);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .user-menu .user-tooltip {
@@ -285,13 +297,56 @@
     pointer-events: auto;
 }
 
+/* Caret points up at avatar; --user-tooltip-caret-x is set in profile_opener.js (px from tooltip left) */
+.user-menu.open .user-tooltip::before {
+    content: '';
+    position: absolute;
+    left: var(--user-tooltip-caret-x);
+    top: 0;
+    transform: translate(-50%, -100%);
+    width: 0;
+    height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-bottom: 9px solid var(--card-bg);
+    filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.08));
+    pointer-events: none;
+    z-index: 1;
+}
+
+html[data-theme="dark"] .user-menu.open .user-tooltip::before {
+    border-bottom-color: var(--border-strong, #484f58);
+    filter: none;
+}
+
+html[data-theme="dark"] .user-menu.open .user-tooltip::after {
+    content: '';
+    position: absolute;
+    left: var(--user-tooltip-caret-x);
+    top: 0;
+    transform: translate(-50%, -100%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid var(--card-bg, #1c2128);
+    pointer-events: none;
+    z-index: 2;
+}
+
 .user-tooltip a {
     display: block;
     padding: 15px 25px;
     font-size: .85rem;
-    color: #111;
+    font-weight: 500;
+    color: var(--text-primary, #111);
     text-decoration: none;
-    transition: background .15s ease;
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.user-tooltip a:hover {
+    background: #273c75;
+    color: var(--btn-primary-fg, #ffffff) !important;
 }
 
 .user-tooltip a.user-tooltip-profile-row {
@@ -308,12 +363,13 @@
     max-width: 220px;
 }
 
-.user-tooltip a:hover {
-    background: #f1f2f6;
-}
-
 .user-tooltip .danger {
     color: #e74c3c;
+}
+
+.user-tooltip .danger:hover {
+    color: var(--btn-primary-fg, #ffffff) !important;
+    background: rgba(192, 57, 43, 0.88);
 }
 
 @media (max-width: 768px) {

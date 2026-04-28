@@ -3,7 +3,7 @@
 {% load user_status %}
 <span class="item-anchor" id="item-anchor-{{ item.pk }}"></span>
 <article id="item-{{ item.pk }}"
-  class="trending-card trending-card--feed item_block item-feed-card {% if item.has_photos or item.has_videos %}item-feed-card--has-media{% else %}item-feed-card--no-media{% endif %} position-relative"
+  class="trending-card trending-card--feed item_block item-feed-card {% if item.has_photos or item.has_videos or item.body_pin_original %}item-feed-card--has-media{% else %}item-feed-card--no-media{% endif %} position-relative"
   data-item-id="{{ item.pk }}">
   <div class="row g-0 h-100">
     {% comment %}
@@ -54,8 +54,9 @@
             <i class="fa fa-calendar-o" aria-hidden="true"></i>
             <small class="fw-semibold">{{ item.human_published }}</small>
           </div>
-          {% if item.has_photos or item.has_videos %}
+          {% if item.has_photos or item.has_videos or item.body_pin_original %}
             <div class="item-feed-card__media-preview">
+              {% comment %} Thumbnail stack — restore when item-feed-card__image-stack is needed again.
               {% if item.has_photos %}
                 <div class="item-feed-card__image-stack" aria-hidden="true">
                   {% for img in item.images.all %}
@@ -81,10 +82,16 @@
                   {% endif %}
                 {% endwith %}
               {% endif %}
+              {% endcomment %}
               <div class="feed-card-pin">
                 <i class="fa fa-thumb-tack" aria-hidden="true"></i>
                 <span class="feed-card-pin__labels">
-                  {% if item.has_photos %}photos{% endif %}{% if item.has_photos and item.has_videos %} + {% endif %}{% if item.has_videos %}videos{% endif %}
+                  {% if item.has_photos %}photos{% endif %}
+                  {% if item.has_photos and item.has_videos %} + {% endif %}
+                  {% if item.has_videos %}videos{% endif %}
+                  {% if item.body_pin_original %}
+                    {% if item.has_photos or item.has_videos %} + {% endif %}file
+                  {% endif %}
                 </span>
               </div>
             </div>

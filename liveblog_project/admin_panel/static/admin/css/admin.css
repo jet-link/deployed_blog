@@ -1045,6 +1045,23 @@ html:not([data-theme="light"]) .admin-body .admin-header-overflow-menu .comment-
   border-radius: 6px;
 }
 
+/* Assistant: Clear history unavailable while analysis runs (gray, no not-allowed cursor) */
+#assistantClearHistoryBtn:disabled,
+#assistantClearHistoryBtn[disabled] {
+  background: var(--admin-bg-elevated, #f8fafc);
+  border-color: var(--admin-border);
+  color: var(--admin-text-muted);
+  opacity: 0.85;
+  cursor: default;
+  pointer-events: none;
+}
+
+#assistantClearHistoryBtn:disabled:hover,
+#assistantClearHistoryBtn[disabled]:hover {
+  background: var(--admin-bg-elevated, #f8fafc);
+  border-color: var(--admin-border);
+}
+
 /* On small screens, flex height constraints don't apply — add max-height so logs scroll */
 @media (max-width: 992px) {
   #assistantLogsContent {

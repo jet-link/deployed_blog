@@ -277,6 +277,24 @@ class ItemCreateForm(forms.ModelForm):
             for fw in forbidden:
                 if fw.is_active and fw.word.lower() in token:
                     raise forms.ValidationError('Sorry, forbidden tag.')
+
+        # Best-effort OpenAI moderation on tags. Tags are short, so latency is
+        # acceptable. ANY error from the AI layer is non-fatal — we log and
+        # accept the tag, so an outage of OpenAI cannot break tag submission.
+        try:
+            from django.conf import settings
+            if getattr(settings, 'OPENAI_API_KEY', '').strip():
+                from admin_panel.services.openai_moderator import openai_moderate
+                found, _reason, _detected = openai_moderate(value)
+                if found:
+                    raise forms.ValidationError('Sorry, forbidden tag.')
+        except forms.ValidationError:
+            raise
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning(
+                'OpenAI tag moderation skipped due to transient error.', exc_info=True,
+            )
         return value
 
     def clean_text(self):

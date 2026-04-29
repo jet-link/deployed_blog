@@ -18,3 +18,4 @@ pypandoc>=1.13
 detoxify
 torch
 transformers
+openai>=1.40,<2

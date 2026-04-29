@@ -48,9 +48,11 @@ def calculate_user_score(user):
     now = timezone.now()
     seven_days_ago = now - timedelta(days=7)
 
+    # "Checked" status means: admin reviewed and decided NOT to penalize the author.
     violations = ContentViolation.objects.filter(
-        Q(item__author=user) | Q(comment__author=user)
-    ).order_by("created_at")
+        Q(item__author=user) | Q(comment__author=user) | Q(snapshot_author=user),
+        deleted_at__isnull=True,
+    ).exclude(status=ContentViolation.STATUS_CHECKED).distinct().order_by("created_at")
 
     recent_count = violations.filter(created_at__gte=seven_days_ago).count()
     repeat = repeat_multiplier(recent_count)

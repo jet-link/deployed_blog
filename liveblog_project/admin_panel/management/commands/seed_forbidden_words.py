@@ -9,16 +9,27 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         defaults = [
-            # Obscenity
+            # Obscenity (EN)
             ('shit', 'obscenity'),
             ('fuck', 'obscenity'),
+            ('fucking', 'obscenity'),
             ('asshole', 'obscenity'),
             ('damn', 'obscenity'),
             ('bitch', 'obscenity'),
             ('crap', 'obscenity'),
+            ('bastard', 'obscenity'),
+            ('dick', 'obscenity'),
+            ('idiot', 'obscenity'),
+            ('stupid', 'obscenity'),
+            ('moron', 'obscenity'),
+            ('dumbass', 'obscenity'),
+            ('pig', 'harassment'),
+            # Obscenity (RU)
             ('идиот', 'obscenity'),
             ('дурак', 'obscenity'),
             ('сука', 'obscenity'),
+            ('мразь', 'harassment'),
+            ('скотина', 'harassment'),
             # Spam
             ('spam', 'spam'),
             ('viagra', 'spam'),

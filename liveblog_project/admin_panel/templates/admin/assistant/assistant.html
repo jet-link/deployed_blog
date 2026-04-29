@@ -22,7 +22,7 @@
     <div class="admin-assistant-page">
     <div class="admin-card admin-assistant-card">
       <h3>Content Moderation Analysis</h3>
-      <p>Run AI-powered analysis to detect violations in posts and comments (banned words, regex patterns, Detoxify).</p>
+      <p>Run AI-powered analysis to detect violations in posts and comments (banned words, regex patterns, OpenAI Moderation + GPT classifier).</p>
       <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
         <button type="button" id="assistantAnalyzeBtn" class="admin-button admin-button-primary assistant-analyze-btn" aria-label="Run analysis">
           <span id="assistantAnalyzeFill" class="assistant-analyze-btn__fill" aria-hidden="true"></span>
@@ -60,19 +60,29 @@
         </div>
       </div>
     </div>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block admin_modals %}
+  {% if not access_denied %}
     <div id="assistantClearHistoryModal" class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="assistantClearHistoryModalTitle" aria-hidden="true" hidden>
-        <div class="admin-modal-backdrop" id="assistantClearHistoryModalBackdrop"></div>
-        <div class="admin-modal-dialog">
-          <div class="admin-modal-content">
-            <h2 class="admin-modal-title" id="assistantClearHistoryModalTitle">Delete all analysis history?</h2>
-            <div class="admin-modal-actions">
-              <button type="button" class="admin-button admin-button-danger" id="assistantClearHistoryConfirmBtn">Clear</button>
-              <button type="button" class="admin-button admin-button-outline" id="assistantClearHistoryCancelBtn">Cancel</button>
-            </div>
+      <div class="admin-modal-backdrop" id="assistantClearHistoryModalBackdrop"></div>
+      <div class="admin-modal-dialog">
+        <div class="admin-modal-content">
+          <h2 class="admin-modal-title" id="assistantClearHistoryModalTitle">Delete all analysis history?</h2>
+          <div class="admin-modal-actions">
+            <button type="button" class="admin-button admin-button-danger" id="assistantClearHistoryConfirmBtn">Clear</button>
+            <button type="button" class="admin-button admin-button-outline" id="assistantClearHistoryCancelBtn">Cancel</button>
           </div>
         </div>
       </div>
     </div>
+  {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+  {% if not access_denied %}
     <script>
       ;(function () {
         function getCsrf() {
@@ -100,6 +110,16 @@
           }
         }
 
+        function setClearHistoryLocked(locked) {
+          if (!clearHistoryBtn) return
+          clearHistoryBtn.disabled = locked
+          if (locked) {
+            clearHistoryBtn.setAttribute('aria-disabled', 'true')
+          } else {
+            clearHistoryBtn.removeAttribute('aria-disabled')
+          }
+        }
+
         function resetAnalyzeButton() {
           clearAnalyzeResetTimeout()
           if (analyzeFill) {
@@ -112,6 +132,7 @@
           }
           analyzeBtn.classList.remove('is-failed')
           setAnalyzeBusy(false)
+          setClearHistoryLocked(false)
           analyzeBtn.removeAttribute('aria-valuenow')
         }
 
@@ -239,6 +260,7 @@
                 analyzeBtn.setAttribute('aria-valuenow', '100')
                 finishRunBlock(currentAnalysisId)
                 stopPolling()
+                setClearHistoryLocked(false)
                 scheduleAnalyzeButtonReset()
                 if (data.violations_count > 0) {
                   newViolationsBtn.href = "{% url 'admin_panel:content_violations_list' %}"
@@ -252,6 +274,7 @@
                 analyzeBtn.removeAttribute('aria-busy')
                 finishRunBlock(currentAnalysisId)
                 stopPolling()
+                setClearHistoryLocked(false)
                 scheduleAnalyzeButtonReset()
               } else {
                 if (analyzeLabel) analyzeLabel.textContent = pct + '%'
@@ -266,6 +289,7 @@
         var clearHistoryCancelBtn = document.getElementById('assistantClearHistoryCancelBtn')
 
         function openClearHistoryModal() {
+          if (clearHistoryBtn && clearHistoryBtn.disabled) return
           if (!clearHistoryModal) return
           clearHistoryModal.removeAttribute('hidden')
           clearHistoryModal.classList.add('is-open')
@@ -331,6 +355,7 @@
           analyzeBtn.classList.remove('is-failed')
           analyzeBtn.setAttribute('aria-valuenow', '0')
           setAnalyzeBusy(true)
+          setClearHistoryLocked(true)
           newViolationsBtn.style.display = 'none'
 
           var formData = new URLSearchParams()
@@ -384,6 +409,7 @@
               if (data.success && data.running && data.analysis_id) {
                 currentAnalysisId = data.analysis_id
                 setAnalyzeBusy(true)
+                setClearHistoryLocked(true)
                 if (analyzeLabel) analyzeLabel.textContent = '0%'
                 if (analyzeFill) analyzeFill.style.width = '0%'
                 pollInterval = setInterval(pollStatus, 1000)

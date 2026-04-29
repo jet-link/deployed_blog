@@ -61,11 +61,10 @@ urlpatterns = [
     path('content-violations/', views.content_violations_list, name='content_violations_list'),
     path('content-violations/<int:pk>/check/', views.content_violation_check, name='content_violation_check'),
     path('content-violations/<int:pk>/ignore/', views.content_violation_ignore, name='content_violation_ignore'),
-    path('content-violations/<int:pk>/clear/', views.content_violation_clear, name='content_violation_clear'),
     path('content-violations/<int:pk>/confirm-delete/', views.content_violation_confirm_delete, name='content_violation_confirm_delete'),
     path('content-violations/<int:pk>/delete-content/', views.content_violation_delete_content, name='content_violation_delete_content'),
-    path('content-violations/bulk-clear/', views.content_violations_bulk_clear, name='content_violations_bulk_clear'),
     path('content-violations/bulk-delete-content/', views.content_violations_bulk_delete_content, name='content_violations_bulk_delete_content'),
+    path('content-violations/bulk-clear/', views.content_violations_bulk_clear, name='content_violations_bulk_clear'),
 
     path('moderation/notifications/', views.notifications_list, name='notifications_list'),
     path('moderation/notifications/bulk-clear/', views.notifications_bulk_clear, name='notifications_bulk_clear'),

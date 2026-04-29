@@ -133,6 +133,9 @@ class ContentViolation(models.Model):
     STATUS_PENDING = 'pending'
     STATUS_CHECKED = 'checked'
     STATUS_IGNORED = 'ignored'
+    # "Cleared" = admin visually hid the row from the default Violations list. Persisted in DB
+    # so it survives page reloads. The record is NOT deleted; viewable under ?status=cleared.
+    STATUS_CLEARED = 'cleared'
 
     REASON_OBSCENITY = 'obscenity'
     REASON_SPAM = 'spam'
@@ -153,14 +156,14 @@ class ContentViolation(models.Model):
         'smart_blog.Item',
         null=True,
         blank=True,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name='content_violations',
     )
     comment = models.ForeignKey(
         'smart_blog.Comment',
         null=True,
         blank=True,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name='content_violations',
     )
     status = models.CharField(max_length=20, default=STATUS_PENDING)
@@ -170,6 +173,15 @@ class ContentViolation(models.Model):
     detected_word = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    # Filled when post/comment is deleted from Violations UI: preserves author + preview in Bucket
+    snapshot_author = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='violation_snapshots',
+    )
+    target_preview = models.CharField(max_length=500, blank=True, default='')
     analysis_run = models.ForeignKey(
         AnalysisRun,
         null=True,

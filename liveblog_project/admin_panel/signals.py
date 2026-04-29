@@ -41,12 +41,11 @@ def clear_violation_on_comment_edit(sender, instance, **kwargs):
 
 @receiver(post_delete, sender=ContentViolation)
 def recalc_trust_on_violation_deleted(sender, instance, **kwargs):
-    """When a ContentViolation is deleted, recalculate the author's trust score.
-    Note: When content (Item/Comment) is deleted, CASCADE removes ContentViolation first
-    and the author cannot be fetched here. Use explicit recalc in moderation views.
-    """
+    """When a ContentViolation is deleted, recalculate the author's trust score."""
     user = None
-    if instance.item_id:
+    if instance.snapshot_author_id:
+        user = instance.snapshot_author
+    if not user and instance.item_id:
         try:
             item = Item.objects.filter(pk=instance.item_id).select_related('author').first()
             if item:

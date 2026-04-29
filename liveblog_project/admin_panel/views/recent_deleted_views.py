@@ -7,7 +7,6 @@ from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from admin_panel.decorators import admin_required
-from admin_panel.models import ContentViolation
 from admin_panel.views.bulk_views import _get_ids
 from backups.models import Backup
 from smart_blog.models import Category, Comment, ContentReport, Item, Tag
@@ -18,7 +17,6 @@ TAB_COMMENTS = "comments"
 TAB_TAGS = "tags"
 TAB_CATEGORIES = "categories"
 TAB_REPORTS = "reports"
-TAB_VIOLATIONS = "violations"
 TAB_BACKUPS = "backups"
 TABS = (
     TAB_POSTS,
@@ -26,7 +24,6 @@ TABS = (
     TAB_TAGS,
     TAB_CATEGORIES,
     TAB_REPORTS,
-    TAB_VIOLATIONS,
     TAB_BACKUPS,
 )
 
@@ -47,7 +44,7 @@ def recent_deleted_content(request):
         tab = TAB_POSTS
 
     partial = request.GET.get("partial") == "1"
-    if tab in (TAB_VIOLATIONS, TAB_BACKUPS) and not request.user.is_superuser:
+    if tab == TAB_BACKUPS and not request.user.is_superuser:
         if partial:
             return HttpResponse(status=403)
         return redirect("admin_panel:dashboard")
@@ -70,11 +67,6 @@ def recent_deleted_content(request):
     elif tab == TAB_REPORTS:
         qs = ContentReport.objects.filter(deleted_at__isnull=False).select_related(
             "item", "comment", "reporter"
-        ).order_by("-deleted_at")
-        ctx["rows"] = _paginate(qs, request)
-    elif tab == TAB_VIOLATIONS:
-        qs = ContentViolation.objects.filter(deleted_at__isnull=False).select_related(
-            "item", "comment"
         ).order_by("-deleted_at")
         ctx["rows"] = _paginate(qs, request)
     elif tab == TAB_BACKUPS:
@@ -140,10 +132,6 @@ def recent_deleted_restore(request):
                     item.save(update_fields=["category"])
     elif kind == TAB_REPORTS:
         n = ContentReport.objects.filter(pk__in=id_ints, deleted_at__isnull=False).update(deleted_at=None)
-    elif kind == TAB_VIOLATIONS:
-        if not request.user.is_superuser:
-            return redirect("admin_panel:dashboard")
-        n = ContentViolation.objects.filter(pk__in=id_ints, deleted_at__isnull=False).update(deleted_at=None)
     elif kind == TAB_BACKUPS:
         if not request.user.is_superuser:
             return redirect("admin_panel:dashboard")
@@ -190,10 +178,6 @@ def recent_deleted_purge(request):
             n += 1
     elif kind == TAB_REPORTS:
         n, _ = ContentReport.objects.filter(pk__in=id_ints, deleted_at__isnull=False).delete()
-    elif kind == TAB_VIOLATIONS:
-        if not request.user.is_superuser:
-            return redirect("admin_panel:dashboard")
-        n, _ = ContentViolation.objects.filter(pk__in=id_ints, deleted_at__isnull=False).delete()
     elif kind == TAB_BACKUPS:
         if not request.user.is_superuser:
             return redirect("admin_panel:dashboard")

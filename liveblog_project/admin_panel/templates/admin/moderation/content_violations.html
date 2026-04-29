@@ -17,13 +17,14 @@
             <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>Pending</option>
             <option value="checked" {% if current_status == 'checked' %}selected{% endif %}>Checked</option>
             <option value="ignored" {% if current_status == 'ignored' %}selected{% endif %}>Ignored</option>
+            <option value="cleared" {% if current_status == 'cleared' %}selected{% endif %}>Cleared</option>
         </select>
         <button type="submit" class="admin-button">Search</button>
     </form>
 </div>
 <div class="admin-card">
     <div class="admin-table-wrapper">
-        <table class="admin-table admin-content-violations-table" data-bulk-clear-url="{% url 'admin_panel:content_violations_bulk_clear' %}" data-bulk-delete-content-url="{% url 'admin_panel:content_violations_bulk_delete_content' %}">
+        <table class="admin-table admin-content-violations-table" data-bulk-delete-content-url="{% url 'admin_panel:content_violations_bulk_delete_content' %}" data-bulk-clear-url="{% url 'admin_panel:content_violations_bulk_clear' %}" data-bulk-ajax="1">
             <thead>
                 <tr>
                     <th><input type="checkbox" class="admin-bulk-select-all" aria-label="Select all on page"></th>
@@ -49,6 +50,8 @@
                             <span class="admin-badge admin-badge-success">Checked</span>
                         {% elif v.status == 'ignored' %}
                             <span class="admin-badge admin-badge-warning">Ignored</span>
+                        {% elif v.status == 'cleared' %}
+                            <span class="admin-badge admin-badge-warning">Cleared</span>
                         {% else %}
                             <span class="admin-badge admin-badge-pending">Pending</span>
                         {% endif %}
@@ -57,50 +60,66 @@
                     <td>{{ v.reason }}</td>
                     <td>{{ v.get_rating_display }}</td>
                     <td class="admin-violation-preview-cell">
-                        {% if v.item %}
-                            {% if v.item.is_published %}
-                                <a href="{% url 'smart_blog:post_detail' v.item.slug %}" class="admin-link">{{ v.item.title|truncatechars:50 }}</a>
+                        {% if v.resolved_item %}
+                            {% if v.resolved_item.deleted_at %}
+                                <a href="{% url 'smart_blog:post_detail' v.resolved_item.slug %}" class="admin-link admin-link-draft" style="text-decoration:line-through">{{ v.resolved_item.title|striptags|truncatewords:10 }}</a>
+                            {% elif v.resolved_item.is_published %}
+                                <a href="{% url 'smart_blog:post_detail' v.resolved_item.slug %}" class="admin-link">{{ v.resolved_item.title|striptags|truncatewords:10 }}</a>
                             {% else %}
-                                <span class="admin-link admin-link-draft" style="text-decoration:line-through">{{ v.item.title|truncatechars:50 }}</span>
+                                <a href="{% url 'smart_blog:post_detail' v.resolved_item.slug %}" class="admin-link admin-link-draft" style="text-decoration:line-through">{{ v.resolved_item.title|striptags|truncatewords:10 }}</a>
                             {% endif %}
-                        {% endif %}
-                        {% if v.comment %}
-                            <a href="{{ v.comment.get_comment_url }}" class="admin-link">{{ v.comment.text|strip_mentions|truncatechars:50 }}</a>
-                            {% if v.comment.is_draft %}<span class="admin-badge admin-badge-warning">Draft</span>{% endif %}
-                        {% endif %}
-                        {% if not v.item and not v.comment %}
+                        {% elif v.resolved_comment %}
+                            <a href="{{ v.resolved_comment.get_comment_url }}" class="admin-link{% if v.resolved_comment.deleted_at %} admin-link-draft{% endif %}"{% if v.resolved_comment.deleted_at %} style="text-decoration:line-through"{% endif %}>{{ v.resolved_comment.text|strip_mentions|truncatewords:12 }}</a>
+                            {% if v.resolved_comment.is_draft %}<span class="admin-badge admin-badge-warning">Draft</span>{% endif %}
+                        {% elif v.target_preview %}
+                            {% if v.content_type == 'post' %}
+                                <span class="admin-muted" title="Original content was removed">{{ v.target_preview|striptags|truncatewords:10 }}</span>
+                            {% else %}
+                                <span class="admin-muted" title="Original content was removed">{{ v.target_preview|strip_mentions|truncatewords:12 }}</span>
+                            {% endif %}
+                        {% else %}
                             <span style="text-decoration:line-through; color:var(--admin-muted)">Deleted</span>
                         {% endif %}
                     </td>
                     <td class="admin-violation-author-cell">
-                        {% if v.item %}
-                            {% if v.item.author %}
-                                {% if v.item.author.is_active %}
-                                    <a href="{% url 'admin_panel:user_profile' v.item.author.pk %}" class="admin-link">{{ v.item.author.username }}</a>
-                                {% else %}
-                                    <span style="text-decoration:line-through; color:var(--admin-muted)">{{ v.item.author.username }}</span>
-                                {% endif %}
+                        {% if v.resolved_item and v.resolved_item.author %}
+                            {% if v.resolved_item.author.is_active %}
+                                <a href="{% url 'admin_panel:user_profile' v.resolved_item.author.pk %}" class="admin-link">{{ v.resolved_item.author.username }}</a>
                             {% else %}
-                                <span style="text-decoration:line-through; color:var(--admin-muted)">Deleted</span>
+                                <span style="text-decoration:line-through; color:var(--admin-muted)">{{ v.resolved_item.author.username }}</span>
                             {% endif %}
-                        {% endif %}
-                        {% if v.comment %}
-                            {% if v.comment.author %}
-                                {% if v.comment.author.is_active %}
-                                    <a href="{% url 'admin_panel:user_profile' v.comment.author.pk %}" class="admin-link">{{ v.comment.author.username }}</a>
-                                {% else %}
-                                    <span style="text-decoration:line-through; color:var(--admin-muted)">{{ v.comment.author.username }}</span>
-                                {% endif %}
+                        {% elif v.resolved_comment and v.resolved_comment.author %}
+                            {% if v.resolved_comment.author.is_active %}
+                                <a href="{% url 'admin_panel:user_profile' v.resolved_comment.author.pk %}" class="admin-link">{{ v.resolved_comment.author.username }}</a>
                             {% else %}
-                                <span style="text-decoration:line-through; color:var(--admin-muted)">Deleted</span>
+                                <span style="text-decoration:line-through; color:var(--admin-muted)">{{ v.resolved_comment.author.username }}</span>
                             {% endif %}
+                        {% elif v.snapshot_author %}
+                            {% if v.snapshot_author.is_active %}
+                                <a href="{% url 'admin_panel:user_profile' v.snapshot_author.pk %}" class="admin-link">{{ v.snapshot_author.username }}</a>
+                            {% else %}
+                                <span style="text-decoration:line-through; color:var(--admin-muted)">{{ v.snapshot_author.username }}</span>
+                            {% endif %}
+                        {% else %}
+                            —
                         {% endif %}
-                        {% if not v.item and not v.comment %}—{% endif %}
                     </td>
                     <td class="admin-actions-cell">
-                        {% if v.item or v.comment %}
-                        {% if v.item %}
-                        {% with v.item.author as author_obj %}
+                        {% if v.resolved_item %}
+                        {% with v.resolved_item.author as author_obj %}
+                        <div class="admin-dropdown" {% if author_obj and not author_obj.is_active %}style="opacity:0.6; pointer-events:none"{% endif %}>
+                            <button type="button" class="admin-dropdown-trigger admin-button">Actions <i class="fa-solid fa-chevron-down"></i></button>
+                            <div class="admin-dropdown-menu">
+                                {% if v.status == 'pending' %}
+                                    <form method="post" class="admin-violation-ajax-form" data-action="check" action="{% url 'admin_panel:content_violation_check' v.pk %}{% if filter_qs %}?{{ filter_qs }}{% endif %}" style="margin:0">{% csrf_token %}<button type="submit" class="admin-dropdown-btn admin-action-resolve">Checked</button></form>
+                                    <form method="post" class="admin-violation-ajax-form" data-action="ignore" action="{% url 'admin_panel:content_violation_ignore' v.pk %}{% if filter_qs %}?{{ filter_qs }}{% endif %}" style="margin:0">{% csrf_token %}<button type="submit" class="admin-dropdown-btn admin-action-dismiss">Ignore</button></form>
+                                {% endif %}
+                                <a href="{% url 'admin_panel:content_violation_confirm_delete' v.pk %}{% if filter_qs %}?{{ filter_qs }}{% endif %}" class="admin-dropdown-btn admin-action-delete admin-button-danger">Delete</a>
+                            </div>
+                        </div>
+                        {% endwith %}
+                        {% elif v.resolved_comment %}
+                        {% with v.resolved_comment.author as author_obj %}
                         <div class="admin-dropdown" {% if author_obj and not author_obj.is_active %}style="opacity:0.6; pointer-events:none"{% endif %}>
                             <button type="button" class="admin-dropdown-trigger admin-button">Actions <i class="fa-solid fa-chevron-down"></i></button>
                             <div class="admin-dropdown-menu">
@@ -113,7 +132,7 @@
                         </div>
                         {% endwith %}
                         {% else %}
-                        {% with v.comment.author as author_obj %}
+                        {% with v.snapshot_author as author_obj %}
                         <div class="admin-dropdown" {% if author_obj and not author_obj.is_active %}style="opacity:0.6; pointer-events:none"{% endif %}>
                             <button type="button" class="admin-dropdown-trigger admin-button">Actions <i class="fa-solid fa-chevron-down"></i></button>
                             <div class="admin-dropdown-menu">
@@ -121,13 +140,10 @@
                                     <form method="post" class="admin-violation-ajax-form" data-action="check" action="{% url 'admin_panel:content_violation_check' v.pk %}{% if filter_qs %}?{{ filter_qs }}{% endif %}" style="margin:0">{% csrf_token %}<button type="submit" class="admin-dropdown-btn admin-action-resolve">Checked</button></form>
                                     <form method="post" class="admin-violation-ajax-form" data-action="ignore" action="{% url 'admin_panel:content_violation_ignore' v.pk %}{% if filter_qs %}?{{ filter_qs }}{% endif %}" style="margin:0">{% csrf_token %}<button type="submit" class="admin-dropdown-btn admin-action-dismiss">Ignore</button></form>
                                 {% endif %}
-                                <a href="{% url 'admin_panel:content_violation_confirm_delete' v.pk %}{% if filter_qs %}?{{ filter_qs }}{% endif %}" class="admin-dropdown-btn admin-action-delete admin-button-danger">Delete</a>
+                                <form method="post" class="admin-violation-ajax-form" data-action="delete-content" action="{% url 'admin_panel:content_violation_delete_content' v.pk %}{% if filter_qs %}?{{ filter_qs }}{% endif %}" style="margin:0">{% csrf_token %}<button type="submit" class="admin-dropdown-btn admin-action-delete admin-button-danger">Delete</button></form>
                             </div>
                         </div>
                         {% endwith %}
-                        {% endif %}
-                        {% else %}
-                        <span style="color:var(--admin-muted)">—</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -194,39 +210,54 @@
     return document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || (window.ADMIN_CSRF_TOKEN || '');
   }
 
+  function getEmptyColspan() {
+    var head = table.querySelector('thead tr');
+    return head ? head.children.length : 9;
+  }
+
+  function injectEmptyStateIfNeeded() {
+    var tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    var dataRows = tbody.querySelectorAll('tr[data-violation-id]').length;
+    if (dataRows === 0) {
+      tbody.innerHTML = '<tr><td colspan="' + getEmptyColspan() + '" class="admin-empty">No content violations.</td></tr>';
+      var card = table.closest('.admin-card');
+      var total = card && card.querySelector('.admin-table-total');
+      if (total) total.textContent = 'Total: 0';
+      var pagination = card && card.querySelector('.admin-pagination');
+      if (pagination) pagination.style.display = 'none';
+    }
+  }
+
+  table.addEventListener('admin-bulk-rows-removed', injectEmptyStateIfNeeded);
+
+  /* Actions-dropdown commands work silently: send the request, close the dropdown,
+     do NOT mutate the table (no badge swap, no item removal). Admin sees the new
+     state on next page refresh — clicking an action no longer "redraws" the row. */
   table.addEventListener('submit', function(e) {
     var form = e.target;
     if (!form || !form.classList.contains('admin-violation-ajax-form')) return;
     e.preventDefault();
     var btn = form.querySelector('button[type="submit"]');
     if (btn) btn.disabled = true;
-    var row = form.closest('tr') || (window.adminFormAnchorRow && window.adminFormAnchorRow(form));
+    var dropdownEl = form.closest('.admin-dropdown') || (function() {
+      var menu = form.closest('.admin-dropdown-menu');
+      var portalOf = menu && menu.getAttribute('data-admin-dropdown-portal-of');
+      return portalOf ? document.getElementById(portalOf) : null;
+    })();
     fetch(form.action, {
       method: 'POST',
       headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(new FormData(form)),
       credentials: 'same-origin'
     })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.success && data.new_status && row) {
-        removeNewBadgeFromRow(row);
-        var statusTd = row.querySelector('.admin-violation-status-cell');
-        if (statusTd) {
-          statusTd.innerHTML = data.new_status === 'checked'
-            ? '<span class="admin-badge admin-badge-success">Checked</span>'
-            : '<span class="admin-badge admin-badge-warning">Ignored</span>';
-        }
-        row.dataset.status = data.new_status;
-        var ddMenu = row.querySelector('.admin-dropdown');
-        var menu = window.adminFindDropdownMenu ? window.adminFindDropdownMenu(ddMenu) : row.querySelector('.admin-dropdown-menu');
-        if (menu) {
-          var forms = menu.querySelectorAll('.admin-violation-ajax-form');
-          forms.forEach(function(f) { f.remove(); });
-        }
+    .catch(function() { /* swallow — UI stays as-is */ })
+    .finally(function() {
+      if (btn) btn.disabled = false;
+      if (dropdownEl && typeof window.adminCloseDropdown === 'function') {
+        window.adminCloseDropdown(dropdownEl);
       }
-    })
-    .finally(function() { if (btn) btn.disabled = false; });
+    });
   });
 
 })();

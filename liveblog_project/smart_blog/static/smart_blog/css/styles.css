@@ -806,7 +806,7 @@ textarea.form-control.auto-grow {
 .form-select:disabled {
     background-color: var(--bg-subtle);
     color: var(--text-muted);
-    cursor: not-allowed;
+    /* cursor: not-allowed; */
     opacity: 0.92;
 }
 

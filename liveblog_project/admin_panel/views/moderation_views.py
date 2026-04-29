@@ -13,6 +13,54 @@ from django.views.decorators.http import require_GET, require_POST
 from admin_panel.decorators import admin_required
 from admin_panel.models import ContentViolation
 from smart_blog.models import Item, Comment
+from smart_blog.public_listing_cache import invalidate_public_listing_caches
+
+
+def _attach_resolved_targets(violations):
+    """
+    FK `v.item` / `v.comment` use default managers which hide soft-deleted rows,
+    so attach `resolved_item` / `resolved_comment` from all_objects for the template.
+    """
+    item_ids = {v.item_id for v in violations if v.item_id}
+    comment_ids = {v.comment_id for v in violations if v.comment_id}
+    items_map = {}
+    if item_ids:
+        items_map = {
+            it.pk: it
+            for it in Item.all_objects.filter(pk__in=item_ids).select_related('author')
+        }
+    comments_map = {}
+    if comment_ids:
+        comments_map = {
+            c.pk: c
+            for c in Comment.all_objects.filter(pk__in=comment_ids).select_related('author', 'item')
+        }
+    for v in violations:
+        v.resolved_item = items_map.get(v.item_id) if v.item_id else None
+        v.resolved_comment = comments_map.get(v.comment_id) if v.comment_id else None
+
+
+def _schedule_trust_recalc(user_or_id):
+    """Recompute user's trust score on commit; accepts user pk or instance."""
+    if not user_or_id:
+        return
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    if hasattr(user_or_id, 'pk'):
+        user = user_or_id
+    else:
+        user = User.objects.filter(pk=int(user_or_id)).first()
+    if not user:
+        return
+
+    def _recalc():
+        try:
+            from admin_panel.services.trust_score_service import update_user_trust_score
+            update_user_trust_score(user)
+        except Exception:
+            pass
+
+    transaction.on_commit(_recalc)
 
 
 @admin_required
@@ -56,10 +104,13 @@ def content_violations_list(request):
     elif content_type == 'comment':
         qs = qs.filter(content_type=ContentViolation.TYPE_COMMENT)
 
-    # Status filter
+    # Status filter. "cleared" is a soft-hide bucket (server-side Clear action);
+    # by default we exclude it from the list, but allow opt-in via ?status=cleared.
     status_filter = request.GET.get('status')
-    if status_filter and status_filter in ('pending', 'checked', 'ignored'):
+    if status_filter and status_filter in ('pending', 'checked', 'ignored', 'cleared'):
         qs = qs.filter(status=status_filter)
+    else:
+        qs = qs.exclude(status=ContentViolation.STATUS_CLEARED)
 
     # Analysis run filter
     analysis_id = request.GET.get('analysis_id')
@@ -69,11 +120,11 @@ def content_violations_list(request):
         except (ValueError, TypeError):
             pass
 
-    qs = qs.filter(deleted_at__isnull=True)
     qs = qs.order_by('-created_at')
     paginator = Paginator(qs, 30)
     page = request.GET.get('page', 1)
     violations = paginator.get_page(page)
+    _attach_resolved_targets(list(violations.object_list))
 
     filter_params = {}
     if search:
@@ -104,15 +155,29 @@ def content_violations_list(request):
     return render(request, 'admin/moderation/content_violations.html', context)
 
 
+def _violation_author_id(v):
+    """Resolve author id behind a violation (post or comment), tolerant to soft-delete."""
+    if v.item_id:
+        item = Item.all_objects.filter(pk=v.item_id).only('author_id').first()
+        if item:
+            return item.author_id
+    if v.comment_id:
+        comment = Comment.all_objects.filter(pk=v.comment_id).only('author_id').first()
+        if comment:
+            return comment.author_id
+    return v.snapshot_author_id
+
+
 @admin_required
 @require_POST
 def content_violation_check(request, pk):
-    """Mark violation as checked."""
+    """Mark violation as checked. Checked = admin acquits author (no trust penalty)."""
     if not request.user.is_superuser:
         return JsonResponse({'success': False}, status=403)
     v = get_object_or_404(ContentViolation, pk=pk)
     v.status = ContentViolation.STATUS_CHECKED
     v.save(update_fields=['status'])
+    _schedule_trust_recalc(_violation_author_id(v))
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
             'success': True,
@@ -128,12 +193,15 @@ def content_violation_check(request, pk):
 @admin_required
 @require_POST
 def content_violation_ignore(request, pk):
-    """Mark violation as ignored."""
+    """Mark violation as ignored (still counts toward trust score)."""
     if not request.user.is_superuser:
         return JsonResponse({'success': False}, status=403)
     v = get_object_or_404(ContentViolation, pk=pk)
+    previous_status = v.status
     v.status = ContentViolation.STATUS_IGNORED
     v.save(update_fields=['status'])
+    if previous_status == ContentViolation.STATUS_CHECKED:
+        _schedule_trust_recalc(_violation_author_id(v))
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
             'success': True,
@@ -147,39 +215,25 @@ def content_violation_ignore(request, pk):
 
 
 @admin_required
-@require_POST
-def content_violation_clear(request, pk):
-    """Move violation to Recent deleted (soft), do NOT delete post/comment."""
-    if not request.user.is_superuser:
-        return JsonResponse({'success': False}, status=403)
-    v = get_object_or_404(ContentViolation, pk=pk)
-    v.deleted_at = timezone.now()
-    v.save(update_fields=['deleted_at'])
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'success': True, 'removed': True})
-    messages.success(request, 'Violation moved to Recent deleted.')
-    filter_qs = request.GET.urlencode()
-    url = reverse('admin_panel:content_violations_list')
-    if filter_qs:
-        url += '?' + filter_qs
-    return redirect(url)
-
-
-@admin_required
 @require_GET
 def content_violation_confirm_delete(request, pk):
-    """Show confirmation page before deleting post/comment."""
+    """Show confirmation page before deleting violation (and soft-deleting content)."""
     if not request.user.is_superuser:
         return redirect('admin_panel:dashboard')
     v = get_object_or_404(ContentViolation, pk=pk)
     target_name = ''
     target_type = ''
-    if v.item:
-        target_name = v.item.title or '(no title)'
+    item = Item.all_objects.filter(pk=v.item_id).first() if v.item_id else None
+    comment = Comment.all_objects.filter(pk=v.comment_id).first() if v.comment_id else None
+    if item:
+        target_name = item.title or '(no title)'
         target_type = 'post'
-    elif v.comment:
-        target_name = (v.comment.text or '')[:80]
+    elif comment:
+        target_name = (comment.text or '')[:80]
         target_type = 'comment'
+    else:
+        target_name = v.target_preview or v.detected_word or 'orphan violation'
+        target_type = v.content_type or 'violation'
     filter_qs = request.GET.urlencode()
     return render(request, 'admin/moderation/content_violation_confirm_delete.html', {
         'violation': v,
@@ -189,69 +243,42 @@ def content_violation_confirm_delete(request, pk):
     })
 
 
+def _delete_violation_and_content(v):
+    """Soft-delete the linked post/comment (if live) and permanently remove the violation row."""
+    author_id = None
+    post_was_deleted = False
+    if v.item_id:
+        item = Item.all_objects.filter(pk=v.item_id).first()
+        if item and item.deleted_at is None:
+            author_id = item.author_id
+            item.deleted_at = timezone.now()
+            item.is_published = False
+            item.save(update_fields=['deleted_at', 'is_published'])
+            post_was_deleted = True
+    elif v.comment_id:
+        comment = Comment.all_objects.filter(pk=v.comment_id).first()
+        if comment and comment.deleted_at is None:
+            author_id = comment.author_id
+            comment.deleted_at = timezone.now()
+            comment.save(update_fields=['deleted_at'])
+    v.delete()
+    return author_id, post_was_deleted
+
+
 @admin_required
 @require_POST
 def content_violation_delete_content(request, pk):
-    """Delete the actual post or comment (with confirmation, usually from modal)."""
+    """Permanently delete violation + soft-delete linked post/comment."""
     if not request.user.is_superuser:
         return JsonResponse({'success': False}, status=403)
     v = get_object_or_404(ContentViolation, pk=pk)
-    # Get author BEFORE deletion; Comment/Item are removed on delete, so post_delete signal cannot fetch them
-    author = None
-    if v.item_id and v.item:
-        author = v.item.author
-    elif v.comment_id and v.comment:
-        author = v.comment.author
-    if v.item_id:
-        item = v.item
-        if item:
-            title = (item.title or '')[:50]
-            item.delete()
-            messages.success(request, f'Post "{title}..." deleted.')
-    elif v.comment_id:
-        comment = v.comment
-        if comment:
-            comment.delete()
-            messages.success(request, 'Comment deleted.')
-    else:
-        v.delete()
-    # Recalculate trust score after CASCADE; signal cannot get author when content is deleted
-    if author:
-        def _recalc():
-            try:
-                from admin_panel.services.trust_score_service import update_user_trust_score
-                update_user_trust_score(author)
-            except Exception:
-                pass
-        transaction.on_commit(_recalc)
-
+    author_id, post_was_deleted = _delete_violation_and_content(v)
+    if post_was_deleted:
+        invalidate_public_listing_caches(bump_home=True)
+    _schedule_trust_recalc(author_id)
+    messages.success(request, 'Violation removed.')
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': True, 'removed': True})
-    filter_qs = request.GET.urlencode()
-    url = reverse('admin_panel:content_violations_list')
-    if filter_qs:
-        url += '?' + filter_qs
-    return redirect(url)
-
-
-@admin_required
-@require_POST
-def content_violations_bulk_clear(request):
-    """Bulk clear selected violations (remove from table, not delete content)."""
-    if not request.user.is_superuser:
-        return JsonResponse({'success': False}, status=403)
-    ids = request.POST.getlist('ids[]') or request.POST.getlist('ids')
-    valid_ids = []
-    for x in ids:
-        try:
-            valid_ids.append(int(x))
-        except (ValueError, TypeError):
-            pass
-    if valid_ids:
-        n = ContentViolation.objects.filter(pk__in=valid_ids).update(deleted_at=timezone.now())
-        messages.success(request, f'{n} violation(s) moved to Recent deleted.')
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'success': True})
     filter_qs = request.GET.urlencode()
     url = reverse('admin_panel:content_violations_list')
     if filter_qs:
@@ -262,7 +289,7 @@ def content_violations_bulk_clear(request):
 @admin_required
 @require_POST
 def content_violations_bulk_delete_content(request):
-    """Bulk delete actual posts/comments for selected violations."""
+    """Bulk permanently delete violations + soft-delete linked posts/comments."""
     if not request.user.is_superuser:
         return JsonResponse({'success': False}, status=403)
     ids = request.POST.getlist('ids[]') or request.POST.getlist('ids')
@@ -273,41 +300,58 @@ def content_violations_bulk_delete_content(request):
         except (ValueError, TypeError):
             pass
     if valid_ids:
-        viols = ContentViolation.objects.filter(pk__in=valid_ids).select_related('item', 'comment')
+        viols = list(ContentViolation.objects.filter(pk__in=valid_ids))
         authors_to_recalc = set()
         deleted_count = 0
+        any_post_deleted = False
         for v in viols:
-            author = None
-            if v.item_id and v.item:
-                author = v.item.author_id
-                v.item.delete()
-                deleted_count += 1
-            elif v.comment_id and v.comment:
-                author = v.comment.author_id
-                v.comment.delete()
-                deleted_count += 1
-            if author:
-                authors_to_recalc.add(author)
+            author_id, post_was_deleted = _delete_violation_and_content(v)
+            if author_id:
+                authors_to_recalc.add(author_id)
+            if post_was_deleted:
+                any_post_deleted = True
+            deleted_count += 1
+        if any_post_deleted:
+            invalidate_public_listing_caches(bump_home=True)
         for uid in authors_to_recalc:
-            if not uid:
-                continue
-            try:
-                from django.contrib.auth import get_user_model
-                User = get_user_model()
-                u = User.objects.filter(pk=uid).first()
-                if u:
-                    def _recalc(usr=u):
-                        try:
-                            from admin_panel.services.trust_score_service import update_user_trust_score
-                            update_user_trust_score(usr)
-                        except Exception:
-                            pass
-                    transaction.on_commit(_recalc)
-            except Exception:
-                pass
-        messages.success(request, f'{deleted_count} post(s)/comment(s) deleted.')
+            _schedule_trust_recalc(uid)
+        messages.success(request, f'{deleted_count} violation(s) removed.')
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': True})
+    filter_qs = request.GET.urlencode()
+    url = reverse('admin_panel:content_violations_list')
+    if filter_qs:
+        url += '?' + filter_qs
+    return redirect(url)
+
+
+@admin_required
+@require_POST
+def content_violations_bulk_clear(request):
+    """Bulk soft-clear: mark violations as 'cleared' (hidden from default list, kept in DB).
+
+    Cleared rows can later be reviewed via ?status=cleared. Linked content (posts/comments)
+    is NOT touched, and trust score still reflects these violations until they are
+    explicitly Checked or Deleted.
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False}, status=403)
+    ids = request.POST.getlist('ids[]') or request.POST.getlist('ids')
+    valid_ids = []
+    for x in ids:
+        try:
+            valid_ids.append(int(x))
+        except (ValueError, TypeError):
+            pass
+    cleared = 0
+    if valid_ids:
+        cleared = ContentViolation.objects.filter(pk__in=valid_ids).exclude(
+            status=ContentViolation.STATUS_CLEARED
+        ).update(status=ContentViolation.STATUS_CLEARED)
+        if cleared:
+            messages.success(request, f'{cleared} violation(s) cleared.')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'cleared': cleared})
     filter_qs = request.GET.urlencode()
     url = reverse('admin_panel:content_violations_list')
     if filter_qs:

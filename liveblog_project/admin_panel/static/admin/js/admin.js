@@ -449,6 +449,39 @@
     closeAdminHeaderOverflowMenu();
   }, true);
 
+  /* Drop stale wiring before Turbo snapshots the page (so cached HTML doesn't carry
+     a "data-admin-dd-inited" flag with no live listeners) and before BFCache restore. */
+  function resetAdminDropdownsForCache() {
+    document.querySelectorAll('.admin-dropdown.is-open').forEach(closeAdminDropdown);
+    /* Any portaled menus still in <body> get pulled back into their owners. */
+    document.querySelectorAll('.admin-dropdown-menu[data-admin-dropdown-portal-of]').forEach(function(menu) {
+      var ownerId = menu.getAttribute('data-admin-dropdown-portal-of');
+      var owner = ownerId ? document.getElementById(ownerId) : null;
+      if (owner) restoreAdminDropdownMenu(owner, menu);
+    });
+    document.querySelectorAll('.admin-dropdown[data-admin-dd-inited]').forEach(function(dd) {
+      dd.removeAttribute('data-admin-dd-inited');
+      dd.classList.remove('is-open');
+    });
+    /* Reset bulk-table init flag so listeners are reattached on next bind. */
+    document.querySelectorAll('.admin-table[data-admin-bulk-inited]').forEach(function(t) {
+      t.removeAttribute('data-admin-bulk-inited');
+    });
+  }
+
+  document.documentElement.addEventListener('turbo:before-cache', resetAdminDropdownsForCache);
+
+  /* Native back/forward (BFCache) restore — re-init when JS state isn't fresh. */
+  window.addEventListener('pageshow', function(e) {
+    if (e.persisted) {
+      resetAdminDropdownsForCache();
+      bindAdminDropdowns(document);
+      if (typeof window.adminBulkReinitTables === 'function') {
+        window.adminBulkReinitTables();
+      }
+    }
+  });
+
   document.documentElement.addEventListener('turbo:load', function() {
     syncAdminThemeIcon();
     bindInstantSearch(document);

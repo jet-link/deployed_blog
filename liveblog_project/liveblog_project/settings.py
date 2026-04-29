@@ -396,6 +396,40 @@ LOGIN_REDIRECT_URL = '/'
 # Spellcheck language (ru/en) - used by spellcheck.js via data-spellcheck-lang
 SPELLCHECK_LANG = os.environ.get('SPELLCHECK_LANG', 'en')
 
+# OpenAI moderation (admin Assistant analyzer + tag validation)
+# Empty key -> openai_moderator becomes a no-op (deterministic checks still run)
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '').strip()
+OPENAI_MODERATION_MODEL = os.environ.get('OPENAI_MODERATION_MODEL', 'omni-moderation-latest')
+OPENAI_CLASSIFY_MODEL = os.environ.get('OPENAI_CLASSIFY_MODEL', 'gpt-4o-mini')
+try:
+    OPENAI_CONFIDENCE_THRESHOLD = float(os.environ.get('OPENAI_CONFIDENCE_THRESHOLD', '0.5'))
+except ValueError:
+    OPENAI_CONFIDENCE_THRESHOLD = 0.5
+try:
+    OPENAI_MAX_INPUT_CHARS = int(os.environ.get('OPENAI_MAX_INPUT_CHARS', '8000'))
+except ValueError:
+    OPENAI_MAX_INPUT_CHARS = 8000
+try:
+    OPENAI_REQUEST_TIMEOUT = float(os.environ.get('OPENAI_REQUEST_TIMEOUT', '20'))
+except ValueError:
+    OPENAI_REQUEST_TIMEOUT = 20.0
+# Bulk-analyze tuning: batch size for moderation API (single request handles
+# many inputs) and thread count for the per-text classifier fallback.
+try:
+    OPENAI_BATCH_SIZE = int(os.environ.get('OPENAI_BATCH_SIZE', '32'))
+except ValueError:
+    OPENAI_BATCH_SIZE = 32
+try:
+    OPENAI_PARALLELISM = int(os.environ.get('OPENAI_PARALLELISM', '8'))
+except ValueError:
+    OPENAI_PARALLELISM = 8
+# Classifier (gpt-4o-mini JSON) catches obfuscated forbidden words but
+# costs an extra request per item. Disable for speed when the deterministic
+# blocklist + Moderation API are sufficient.
+OPENAI_USE_CLASSIFIER = os.environ.get('OPENAI_USE_CLASSIFIER', 'true').lower() in (
+    '1', 'true', 'yes', 'on',
+)
+
 # Logging
 LOGGING = {
     'version': 1,

@@ -101,9 +101,20 @@
     { attr: 'data-bulk-delete-content-url', formClass: 'admin-bulk-delete-content-form', btnClass: 'admin-bulk-delete-content-btn', btnText: 'Delete', btnStyle: 'admin-button-danger', modalTitle: function(n) { return n === 1 ? 'Are you sure you want to delete this content (post/comment)?' : 'Are you sure you want to delete ' + n + ' selected posts/comments?'; }, confirmText: 'Delete' }
   ];
 
+  /* Visual-only "Clear" action: hides selected rows from the DOM without contacting the server.
+     Wired via the table attribute data-bulk-clear-visual="1" (no URL needed). */
+  var VISUAL_CLEAR_ACTION = {
+    formClass: 'admin-bulk-clear-visual-form',
+    btnClass: 'admin-bulk-clear-visual-btn',
+    btnText: 'Clear',
+    btnStyle: 'admin-button-warning',
+    modalTitle: function(n) { return n === 1 ? 'Visually clear this row from the table?' : 'Visually clear ' + n + ' rows from the table?'; },
+    confirmText: 'Clear'
+  };
+
   function initBulkTablesIn(root) {
     var scope = root || document;
-    var tables = scope.querySelectorAll('.admin-table[data-bulk-delete-url], .admin-table[data-bulk-clear-url], .admin-table[data-bulk-delete-content-url], .admin-table[data-bulk-unban-url], .admin-table[data-bulk-ban-url], .admin-table[data-bulk-restore-url]');
+    var tables = scope.querySelectorAll('.admin-table[data-bulk-delete-url], .admin-table[data-bulk-clear-url], .admin-table[data-bulk-delete-content-url], .admin-table[data-bulk-unban-url], .admin-table[data-bulk-ban-url], .admin-table[data-bulk-restore-url], .admin-table[data-bulk-clear-visual]');
     tables.forEach(function(table) {
       setupTable(table);
     });
@@ -161,13 +172,55 @@
           if (row && row.getAttribute('data-is-active') !== '1') allSelectedActive = false;
         });
       }
-      toolbar.querySelectorAll('.admin-bulk-unban-btn, .admin-bulk-delete-btn, .admin-bulk-clear-btn, .admin-bulk-delete-content-btn, .admin-bulk-recover-btn').forEach(function(btn) {
+      toolbar.querySelectorAll('.admin-bulk-unban-btn, .admin-bulk-delete-btn, .admin-bulk-clear-btn, .admin-bulk-clear-visual-btn, .admin-bulk-delete-content-btn, .admin-bulk-recover-btn').forEach(function(btn) {
         btn.style.display = ids.length > 0 ? '' : 'none';
       });
       var banBtn = toolbar.querySelector('.admin-bulk-ban-btn');
       if (banBtn) {
         banBtn.style.display = (ids.length > 0 && (!banActiveOnly || allSelectedActive)) ? '' : 'none';
       }
+    }
+
+    var ajaxMode = table.getAttribute('data-bulk-ajax') === '1';
+
+    function removeRowsByIds(ids) {
+      ids.forEach(function(id) {
+        var row = table.querySelector('tbody tr .admin-bulk-row-check[value="' + id + '"]');
+        var tr = row && row.closest('tr');
+        if (tr) tr.remove();
+      });
+      var selectAllCb = table.querySelector('.admin-bulk-select-all');
+      if (selectAllCb) selectAllCb.checked = false;
+      updateAllButtons();
+      try {
+        table.dispatchEvent(new CustomEvent('admin-bulk-rows-removed', {
+          detail: { ids: ids, remaining: table.querySelectorAll('tbody tr[data-violation-id], tbody tr[data-id]').length }
+        }));
+      } catch (_e) {}
+    }
+
+    function ajaxSubmit(url, ids, onDone) {
+      var fd = new FormData();
+      fd.append('csrfmiddlewaretoken', getCsrfToken());
+      if (recentDeletedKind) fd.append('kind', recentDeletedKind);
+      ids.forEach(function(id) { fd.append('ids', id); });
+      fetch(url, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd,
+        credentials: 'same-origin'
+      })
+      .then(function(r) {
+        return r.json().catch(function() { return null; });
+      })
+      .then(function(data) {
+        if (data && data.success === false) return;
+        if (typeof onDone === 'function') onDone(data || {});
+      })
+      .catch(function() {
+        /* fall back to full page reload to keep UX consistent */
+        window.location.reload();
+      });
     }
 
     BULK_ACTIONS.forEach(function(action) {
@@ -199,6 +252,14 @@
           var ids = getSelectedIds(table);
           if (ids.length === 0) return;
           openBulkModal(ids.length, function() {
+            if (ajaxMode) {
+              btn.disabled = true;
+              ajaxSubmit(bulkUrl, ids, function() {
+                removeRowsByIds(ids);
+                btn.disabled = false;
+              });
+              return;
+            }
             var prevKind = form.querySelector('input.admin-bulk-kind-field');
             if (prevKind) prevKind.remove();
             if (recentDeletedKind) {
@@ -228,6 +289,34 @@
       }
 
     });
+
+    /* Visual-only Clear: hides selected rows without server roundtrip */
+    if (table.getAttribute('data-bulk-clear-visual') === '1') {
+      var vc = VISUAL_CLEAR_ACTION;
+      var vcForm = toolbar.querySelector('form.' + vc.formClass);
+      if (!vcForm) {
+        vcForm = document.createElement('form');
+        vcForm.method = 'post';
+        vcForm.action = '#';
+        vcForm.className = vc.formClass;
+        vcForm.addEventListener('submit', function(e) { e.preventDefault(); });
+        var vcBtn = document.createElement('button');
+        vcBtn.type = 'button';
+        vcBtn.className = 'admin-button ' + vc.btnStyle + ' ' + vc.btnClass;
+        vcBtn.style.display = 'none';
+        vcBtn.textContent = vc.btnText;
+        vcForm.appendChild(vcBtn);
+        (bulkAppendParent || toolbar).appendChild(vcForm);
+
+        vcBtn.addEventListener('click', function() {
+          var ids = getSelectedIds(table);
+          if (ids.length === 0) return;
+          openBulkModal(ids.length, function() {
+            removeRowsByIds(ids);
+          }, { title: vc.modalTitle(ids.length), confirmText: vc.confirmText, buttonClass: vc.btnStyle, trigger: vcBtn });
+        });
+      }
+    }
 
     if (selectAll) {
       selectAll.addEventListener('change', function() {

@@ -2,13 +2,42 @@
 from django.core.cache import cache
 from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.dispatch import receiver
-from django.db.models import F
+from django.db.models import F, Q
 from django.db.models.functions import Greatest
 
-from .models import Category, Like, Item, ItemView, Bookmark, PostRepost, Comment
+from .models import Category, Like, Item, ItemView, Bookmark, PostRepost, Comment, Notification
 from .public_listing_cache import invalidate_public_listing_caches
 from .search_utils import schedule_search_vector_refresh
 from smart_blog.services.trending_service import TRENDING_API_CACHE_KEY
+
+
+def _drop_notifications_for_item(item_id):
+    """Remove notifications tied to a post that is no longer visible to users."""
+    if not item_id:
+        return
+    recipient_ids = list(
+        Notification.objects.filter(item_id=item_id).values_list("recipient_id", flat=True)
+    )
+    deleted, _ = Notification.objects.filter(item_id=item_id).delete()
+    if deleted:
+        from smart_blog.context_processors import invalidate_notifications_cache
+        for uid in set(recipient_ids):
+            invalidate_notifications_cache(uid)
+
+
+def _drop_notifications_for_comment(comment_id):
+    """Remove notifications tied to a comment (as parent or reply) that is gone."""
+    if not comment_id:
+        return
+    qs = Notification.objects.filter(
+        Q(parent_comment_id=comment_id) | Q(reply_comment_id=comment_id)
+    )
+    recipient_ids = list(qs.values_list("recipient_id", flat=True))
+    deleted, _ = qs.delete()
+    if deleted:
+        from smart_blog.context_processors import invalidate_notifications_cache
+        for uid in set(recipient_ids):
+            invalidate_notifications_cache(uid)
 
 
 def _invalidate_trending_api_cache():
@@ -69,11 +98,21 @@ def repost_created(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Comment)
 def comment_changed_trending_cache(sender, instance, **kwargs):
     _invalidate_trending_api_cache()
+    if getattr(instance, "deleted_at", None) is not None:
+        _drop_notifications_for_comment(instance.pk)
 
 
 @receiver(post_delete, sender=Comment)
 def comment_deleted_trending_cache(sender, instance, **kwargs):
     _invalidate_trending_api_cache()
+    _drop_notifications_for_comment(instance.pk)
+
+
+@receiver(post_save, sender=Item)
+def item_soft_delete_drop_notifications(sender, instance, **kwargs):
+    """When a post is soft-deleted (deleted_at set), drop related notifications."""
+    if getattr(instance, "deleted_at", None) is not None:
+        _drop_notifications_for_item(instance.pk)
 
 
 _ITEM_LISTING_FIELDS = frozenset(

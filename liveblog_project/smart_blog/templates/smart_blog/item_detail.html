@@ -313,7 +313,7 @@
                     <span class="item-pinned-pdfjs__name text-truncate" title="{{ item.body_pin_original_basename }}">{{ item.body_pin_original_basename }}</span>
                     <div class="item-pinned-pdfjs__controls">
                       <button type="button" class="item-pinned-pdfjs__btn" data-pdf-prev aria-label="{% trans 'Previous page' %}">‹</button>
-                      <span class="item-pinned-pdfjs__pages" data-pdf-page-label>1 / 1</span>
+                      <span class="item-pinned-pdfjs__pages" data-pdf-page-label aria-live="polite">1 / 1</span>
                       <button type="button" class="item-pinned-pdfjs__btn" data-pdf-next aria-label="{% trans 'Next page' %}">›</button>
                       <span class="item-pinned-pdfjs__sep" aria-hidden="true"></span>
                       <button type="button" class="item-pinned-pdfjs__btn" data-pdf-zoom-out aria-label="{% trans 'Zoom out' %}">−</button>
@@ -325,6 +325,14 @@
                          download
                          title="{% trans 'Download' %}"
                          aria-label="{% trans 'Download' %}"><i class="fa fa-download" aria-hidden="true"></i></a>
+                      <button type="button"
+                              class="item-pinned-pdfjs__btn item-pinned-pdfjs__close"
+                              data-pdf-close
+                              data-bs-dismiss="modal"
+                              aria-label="{% trans 'Close' %}"
+                              title="{% trans 'Close' %}">
+                        <i class="fa fa-times" aria-hidden="true"></i>
+                      </button>
                     </div>
                   </header>
                   <div class="item-pinned-pdfjs__scroll" data-pdf-scroll>

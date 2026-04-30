@@ -292,6 +292,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function formatMeta(item) {
+        /* Hidden for now: result count + search date in recent list (restore when uncommenting metaHtml below)
         var parts = [];
         if (item.results_count != null) parts.push(item.results_count + ' found');
         if (item.created_at) {
@@ -304,6 +305,8 @@ document.addEventListener('DOMContentLoaded', function () {
             else parts.push(d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }));
         }
         return parts.join(' · ');
+        */
+        return '';
     }
 
     function renderOverlayHistory() {
@@ -340,7 +343,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 row.dataset.searchQuery = item.search_query || '';
                 row.dataset.searchFilters = JSON.stringify(item.search_filters || {});
                 row.dataset.isGuest = isAuth ? '0' : '1';
-                var metaHtml = isAuth ? '<span class="search-history-item-meta">' + escapeHtml(formatMeta(item)) + '</span>' : '';
+                /* var metaHtml = isAuth ? '<span class="search-history-item-meta">' + escapeHtml(formatMeta(item)) + '</span>' : ''; */
+                var metaHtml = '';
                 var removeHtml = isAuth && deletePattern
                     ? '<button type="button" class="search-history-item-remove" data-id="' + escapeHtml(String(item.id)) + '" aria-label="Remove from history">×</button>'
                     : '';

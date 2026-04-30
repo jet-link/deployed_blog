@@ -64,7 +64,11 @@
         var clearHidden = queryPinClearHidden(wrap);
         var existingName = document.getElementById('itemBodyPinExistingName');
         var headingSep = document.getElementById('itemBodyPinHeadingSep');
-        if (!inp || !existingName) {
+        if (!inp) {
+            updatePinMarkUi(wrap);
+            return;
+        }
+        if (!existingName) {
             return;
         }
         var hasLocal = !!(inp.files && inp.files.length);
@@ -112,20 +116,22 @@
             return;
         }
         var inp = queryPinFileInput(wrap);
-        if (!inp) {
+        var btn = document.getElementById('itemBodyPinFileClear');
+        if (!inp && !btn) {
             return;
         }
 
-        inp.addEventListener('change', function () {
-            var clearHidden = queryPinClearHidden(wrap);
-            if (clearHidden) {
-                clearHidden.value = '';
-                clearHidden.removeAttribute('value');
-            }
-            sync(wrap);
-        });
+        if (inp) {
+            inp.addEventListener('change', function () {
+                var clearHidden = queryPinClearHidden(wrap);
+                if (clearHidden) {
+                    clearHidden.value = '';
+                    clearHidden.removeAttribute('value');
+                }
+                sync(wrap);
+            });
+        }
 
-        var btn = document.getElementById('itemBodyPinFileClear');
         if (btn) {
             btn.addEventListener('click', function (ev) {
                 ev.preventDefault();

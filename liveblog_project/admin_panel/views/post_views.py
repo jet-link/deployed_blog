@@ -108,12 +108,21 @@ def post_edit(request, pk):
         delete_video_ids = request.POST.getlist('delete_videos')
         form = ItemAdminEditForm(request.POST, instance=item)
         if form.is_valid():
+            body_pin_clear = bool(form.cleaned_data.get('body_pin_clear'))
             with transaction.atomic():
                 if delete_ids or delete_video_ids:
                     delete_item_images_by_ids(item, delete_ids)
                     delete_item_videos_by_ids(item, delete_video_ids)
                 instance = form.save(commit=False)
-                if delete_ids or delete_video_ids:
+                if body_pin_clear:
+                    if instance.body_pin_original:
+                        instance.body_pin_original.delete(save=False)
+                    instance.body_pin_original = None
+                    instance.body_pin_content_type = 'text'
+                    instance.body_pin_content_html = ''
+                    instance.body_pin_plain_snapshot = ''
+                    instance.body_sourced_from_document = False
+                if delete_ids or delete_video_ids or body_pin_clear:
                     instance.edited = True
                 instance.save()
                 form.save_m2m()

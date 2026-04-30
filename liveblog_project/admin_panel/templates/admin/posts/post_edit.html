@@ -27,6 +27,28 @@
             {{ form.text.errors }}
         </div>
 
+        {% if item.body_pin_original %}
+        <div class="admin-form-group admin-pin-file" id="itemBodyPinRow" data-existing-pin="1">
+            <div class="admin-pin-file__heading">
+                <span class="admin-pin-file__current" id="itemBodyPinExistingName">
+                    <span class="admin-pin-file__current-text">Current file: <span class="admin-pin-file__filename">{{ item.body_pin_original_basename }}</span></span>
+                    <button type="button"
+                            class="admin-button admin-button-danger admin-button-sm admin-pin-file__mark-btn"
+                            id="itemBodyPinFileClear"
+                            data-item-body-pin-clear
+                            data-title-mark="Mark for deletion"
+                            data-title-unmark="Unmark deletion"
+                            title="Mark for deletion"
+                            aria-pressed="false"
+                            aria-label="Mark file for deletion">
+                        <i class="fa fa-times" aria-hidden="true"></i>
+                    </button>
+                </span>
+            </div>
+            {{ form.body_pin_clear }}
+        </div>
+        {% endif %}
+
         {% if existing_images %}
         <div class="admin-form-group">
             <span class="admin-label-static">Photos</span>
@@ -84,5 +106,8 @@
 <script src="{% static 'admin/js/admin_ckeditor.js' %}"></script>
 {% if existing_images or existing_videos %}
 <script src="{% static 'smart_blog/js/image_manage.js' %}"></script>
+{% endif %}
+{% if item.body_pin_original %}
+<script src="{% static 'smart_blog/js/item_body_file_import.js' %}"></script>
 {% endif %}
 {% endblock %}

@@ -368,15 +368,27 @@ html[data-theme="dark"] .tag-badge-option:hover {
 }
 
 .tag-badge-option.tag-badge-selected {
-    color: var(--text-default) !important;
-    border-color: color-mix(in srgb, #495057 55%, var(--border-default)) !important;
-    background: color-mix(in srgb, #495057 18%, var(--card-bg)) !important;
+    color: #0d1117 !important;
+    border-color: color-mix(in srgb, #212529 70%, var(--border-default)) !important;
+    background: color-mix(in srgb, #495057 38%, var(--card-bg)) !important;
+}
+
+.tag-badge-option.tag-badge-selected:hover {
+    color: #0d1117 !important;
+    border-color: color-mix(in srgb, #212529 78%, var(--border-default)) !important;
+    background: color-mix(in srgb, #495057 45%, var(--card-bg)) !important;
 }
 
 html[data-theme="dark"] .tag-badge-option.tag-badge-selected {
-    color: #f0f6fc !important;
-    border-color: color-mix(in srgb, #c9d1d9 42%, var(--border-default)) !important;
-    background: color-mix(in srgb, #8b949e 24%, var(--card-bg)) !important;
+    color: #0d1117 !important;
+    border-color: #e6edf3 !important;
+    background: #d0d7de !important;
+}
+
+html[data-theme="dark"] .tag-badge-option.tag-badge-selected:hover {
+    color: #0d1117 !important;
+    border-color: #f0f6fc !important;
+    background: #e6edf3 !important;
 }
 
 .btn-tag-select-all {
@@ -8078,6 +8090,18 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
     color: #fff;
 }
 
+/* Close button — hidden on wide screens (modal has its own dismiss); visible on narrow ones */
+.item-pinned-pdfjs__close {
+    display: none;
+    color: #ececec;
+    font-size: 1rem;
+}
+
+.item-pinned-pdfjs__close:hover {
+    background: rgba(255, 0, 0, 0.5);
+    color: #fff;
+}
+
 .item-pinned-pdfjs__scroll {
     flex: 1 1 auto;
     min-height: 0;
@@ -8088,6 +8112,7 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
 }
 
 .item-pinned-pdfjs__pages-inner {
+    position: relative;
     padding: 16px 8px 28px;
     box-sizing: border-box;
     min-width: min-content;
@@ -8156,8 +8181,34 @@ body:has(#itemPinnedFileModal.show) .modal-backdrop:last-of-type {
 
     .item-pinned-pdfjs__bar {
         padding-top: max(0, env(safe-area-inset-top, 0px));
-        padding-left: max(1rem, env(safe-area-inset-left, 0px));
-        padding-right: max(0.65rem, env(safe-area-inset-right, 0px));
+        padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+        padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+    }
+
+    .item-pinned-pdfjs__name {
+        font-size: 0.8rem;
+    }
+
+    .item-pinned-pdfjs__controls {
+        gap: 0.15rem;
+    }
+
+    .item-pinned-pdfjs__btn,
+    .item-pinned-pdfjs__download {
+        min-width: 1.85rem;
+        height: 1.85rem;
+    }
+
+    .item-pinned-pdfjs__pages,
+    .item-pinned-pdfjs__zoom {
+        font-size: 0.75rem;
+        min-width: 2.6rem;
+    }
+
+    .item-pinned-pdfjs__close {
+        display: inline-flex;
     }
 }
 

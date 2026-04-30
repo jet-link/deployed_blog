@@ -37,6 +37,11 @@ class ItemAdminEditForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'admin-select'}),
         label='Status',
     )
+    body_pin_clear = forms.BooleanField(
+        required=False,
+        label='',
+        widget=forms.HiddenInput(attrs={'id': 'id_body_pin_clear'}),
+    )
 
     class Meta:
         model = Item

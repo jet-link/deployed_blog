@@ -110,6 +110,18 @@ class HomePageContent(models.Model):
     )
     hero_h1 = models.CharField(max_length=200, default="brainstorm.news")
     hero_lede = models.TextField(blank=True)
+    hero_background = models.ImageField(
+        upload_to="home/hero/",
+        blank=True,
+        null=True,
+        help_text="Hero background image. Auto-converted to WebP at 1920px wide.",
+    )
+    hero_background_thumb = models.ImageField(
+        upload_to="home/hero/",
+        blank=True,
+        null=True,
+        help_text="Smaller WebP variant (~960px) for fast LCP/preload.",
+    )
     cta_primary_label = models.CharField(max_length=120, blank=True)
     cta_primary_url = models.CharField(max_length=500, blank=True)
     cta_secondary_label = models.CharField(max_length=120, blank=True)

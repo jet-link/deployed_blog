@@ -112,6 +112,8 @@
 
 /* Edit profile: visibility toggles */
 .profile-info-edit-table {
+    --profile-edit-input-h: calc(3.5rem + 2px);
+    --profile-edit-toggle-h: 2.25rem;
     border-collapse: separate;
     border-spacing: 0 0.5rem;
     margin-bottom: 0.25rem;
@@ -119,17 +121,19 @@
 
 .profile-info-edit-table .profile-toggle-cell {
     width: 2.75rem;
-    vertical-align: middle;
+    vertical-align: top;
+    /* Keep the eye aligned with the input, not the whole row (errors grow the row). */
+    padding-top: calc((var(--profile-edit-input-h) - var(--profile-edit-toggle-h)) / 2);
     padding-right: 0.35rem;
     white-space: nowrap;
 }
 
 .profile-info-edit-table .profile-toggle-cell .profile-field-visibility-btn {
-    vertical-align: middle;
+    vertical-align: top;
 }
 
 .profile-info-edit-table td:not(.profile-toggle-cell) {
-    vertical-align: middle;
+    vertical-align: top;
 }
 
 .profile-info-edit-table .profile-edit-field-errors {
@@ -145,11 +149,6 @@
 .avatar-url-row-table .form-floating {
     flex: 1 1 auto;
     min-width: 0;
-}
-
-.avatar-url-row-table .avatar-file-trigger {
-    flex: 0 0 auto;
-    align-self: stretch;
 }
 
 .profile-field-visibility-btn {
@@ -261,7 +260,7 @@
 .user-tooltip {
     --user-tooltip-caret-x: calc(var(--header-icon-size, 38px) / 2);
     position: absolute;
-    top: calc(100% + 10px);
+    top: calc(100% + 15px);
     right: -18px;
     min-width: 170px;
     background: var(--card-bg);
@@ -297,8 +296,10 @@ html[data-theme="dark"] .user-tooltip {
     pointer-events: auto;
 }
 
-/* Caret points up at avatar; --user-tooltip-caret-x is set in profile_opener.js (px from tooltip left) */
-/* .user-menu.open .user-tooltip::before {
+/* Caret points up at avatar; --user-tooltip-caret-x is set in profile_opener.js (px from tooltip left).
+   Pseudo-elements must exist whenever the tooltip exists (not only when .open), so opacity/transform
+   on .user-tooltip fades the arrow together with the panel — same pattern as .comment-actions::before. */
+.user-menu .user-tooltip::before {
     content: '';
     position: absolute;
     left: var(--user-tooltip-caret-x);
@@ -312,14 +313,14 @@ html[data-theme="dark"] .user-tooltip {
     filter: drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.08));
     pointer-events: none;
     z-index: 1;
-} */
+}
 
-/* html[data-theme="dark"] .user-menu.open .user-tooltip::before {
+html[data-theme="dark"] .user-menu .user-tooltip::before {
     border-bottom-color: var(--border-strong, #484f58);
     filter: none;
-} */
+}
 
-/* html[data-theme="dark"] .user-menu.open .user-tooltip::after {
+html[data-theme="dark"] .user-menu .user-tooltip::after {
     content: '';
     position: absolute;
     left: var(--user-tooltip-caret-x);
@@ -332,7 +333,18 @@ html[data-theme="dark"] .user-tooltip {
     border-bottom: 8px solid var(--card-bg, #1c2128);
     pointer-events: none;
     z-index: 2;
-} */
+}
+
+/* Header search+theme capsule: dropdowns escape the faux “shell”; base .filter-segment-shell uses overflow:hidden */
+.header-utility-segment {
+    overflow: visible;
+}
+
+.header-utility-segment__bar.filter-segment-bar {
+    overflow: visible;
+}
+
+/* Legacy header theme dropdown removed — theme cycles via #themeToggle / data-theme-cycle */
 
 .user-tooltip a {
     display: block;
@@ -348,6 +360,32 @@ html[data-theme="dark"] .user-tooltip {
 .user-tooltip a:hover {
     background: #273c75;
     color: var(--btn-primary-fg, #ffffff) !important;
+}
+
+/* Current page highlight in user menu */
+.user-tooltip a.is-active {
+    font-weight: 600;
+    background: rgba(39, 60, 117, 0.14);
+    color: var(--text-primary, #111) !important;
+}
+
+html[data-theme="dark"] .user-tooltip a.is-active {
+    background: rgba(88, 166, 255, 0.18);
+    color: var(--text-primary, #e6edf3) !important;
+}
+
+.user-tooltip a.is-active:hover {
+    background: #1e3260 !important;
+    color: #ffffff !important;
+}
+
+html[data-theme="dark"] .user-tooltip a.is-active:hover {
+    background: rgba(88, 166, 255, 0.42) !important;
+    color: #ffffff !important;
+}
+
+.user-tooltip a.notification-btn.is-active.has-unread .fa-bell {
+    color: inherit;
 }
 
 .user-tooltip a.user-tooltip-profile-row {
@@ -403,5 +441,87 @@ html[data-theme="dark"] .user-tooltip {
         width: 100%;
         text-align: center;
         box-sizing: border-box;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Mindset profile (/profile/<user>/themes/) — Themes / Reposts / Replies pills.
+   Scoped to `.profile-reposts-page` only: same chip metrics + press feedback
+   as BraiNews / Topics rails, without changing global `.filter-segment-*` rules.
+   -------------------------------------------------------------------------- */
+.profile-reposts-page .profile-mindset-tabs.filter-segment-bar .filter-reason-btn,
+.profile-reposts-page .profile-mindset-tabs.filter-segment-bar a.filter-reason-btn {
+    /* Override generic `.filter-reason-btn { padding: 10px 20px }` for this rail only */
+    padding: 10px 20px;
+    line-height: 1.28;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    box-sizing: border-box;
+    text-decoration: none;
+    transition:
+        background 0.22s ease,
+        background-color 0.22s ease,
+        color 0.22s ease,
+        transform 0.14s cubic-bezier(0.33, 0.86, 0.36, 1);
+}
+
+.profile-reposts-page .profile-mindset-tabs.filter-segment-bar .filter-reason-btn:active:not(:disabled),
+.profile-reposts-page .profile-mindset-tabs.filter-segment-bar a.filter-reason-btn:active {
+    transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .profile-reposts-page .profile-mindset-tabs.filter-segment-bar .filter-reason-btn,
+    .profile-reposts-page .profile-mindset-tabs.filter-segment-bar a.filter-reason-btn {
+        transition:
+            background 0.22s ease,
+            background-color 0.22s ease,
+            color 0.22s ease;
+    }
+
+    .profile-reposts-page .profile-mindset-tabs.filter-segment-bar .filter-reason-btn:active:not(:disabled),
+    .profile-reposts-page .profile-mindset-tabs.filter-segment-bar a.filter-reason-btn:active {
+        transform: none;
+    }
+}
+
+/* Mindset profile tab panel: soft fade while fetching (no full-page flash) */
+.profile-reposts-page .profile-mindset-swap {
+    transition: opacity 0.18s ease-out;
+}
+
+.profile-reposts-page .profile-mindset-swap.profile-mindset-swap--loading {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .profile-reposts-page .profile-mindset-swap {
+        transition: none;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Reposts feed: instant animated removal of a repost block once the user
+   un-reposts the entry inside it (Reposted -> Repost).
+   -------------------------------------------------------------------------- */
+.profile-reposts-page .profile-mindset-repost-block {
+    transition:
+        height 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+        margin 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.22s ease-out,
+        transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-reposts-page .profile-mindset-repost-block--removing {
+    pointer-events: none;
+    will-change: height, opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .profile-reposts-page .profile-mindset-repost-block {
+        transition: none;
     }
 }

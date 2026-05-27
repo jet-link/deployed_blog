@@ -76,6 +76,13 @@
 
     /* Form fields — focus ring (color-mix with link accent) */
     --input-focus-ring: color-mix(in srgb, var(--text-link) 28%, transparent);
+
+    /* Home page v3 — section stripes match page background */
+    --home-stripe-light: var(--bg-default);
+    --home-stripe-accent: var(--bg-default);
+    --home-stripe-light-fg: var(--text-default);
+    --home-stripe-accent-fg: var(--text-default);
+    --home-section-divider: transparent;
 }
 
 /* GitHub-style dark theme */
@@ -123,4 +130,12 @@ html[data-theme="dark"] {
     --toggle-thumb: var(--toggle-thumb-dark);
 
     --input-focus-ring: color-mix(in srgb, var(--text-link) 32%, transparent);
+
+    /* Home v3 — both stripes collapse to the page bg in dark mode; visual
+       separation is provided by --home-section-divider (a hairline). */
+    --home-stripe-light: var(--bg-default);
+    --home-stripe-accent: var(--bg-default);
+    --home-stripe-light-fg: var(--text-default);
+    --home-stripe-accent-fg: var(--text-default);
+    --home-section-divider: rgba(255, 255, 255, 0.10);
 }

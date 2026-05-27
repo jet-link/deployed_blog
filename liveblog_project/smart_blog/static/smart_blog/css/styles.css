@@ -368,16 +368,16 @@ html[data-theme="dark"] .tag-badge-option:hover {
 }
 
 .tag-badge-option.tag-badge-selected {
-    color: #0d1117 !important;
+    color: #ffffff !important;
     border-color: color-mix(in srgb, #212529 70%, var(--border-default)) !important;
-    background: color-mix(in srgb, #495057 38%, var(--card-bg)) !important;
+    background: color-mix(in srgb, #212529 70%, var(--border-default)) !important;
 }
 
-.tag-badge-option.tag-badge-selected:hover {
+/* .tag-badge-option.tag-badge-selected:hover {
     color: #0d1117 !important;
     border-color: color-mix(in srgb, #212529 78%, var(--border-default)) !important;
     background: color-mix(in srgb, #495057 45%, var(--card-bg)) !important;
-}
+} */
 
 html[data-theme="dark"] .tag-badge-option.tag-badge-selected {
     color: #0d1117 !important;
@@ -2080,7 +2080,9 @@ html[data-theme="dark"] .feed-cards-masonry .item_block.trending-card {
 
 .footer {
     position: relative;
-    z-index: 0;
+    /* Above home v3 `.home-section-stripe--accent` (z-index: 1) while `.main` uses
+       `isolation: auto` — otherwise the Subscribe popover paints under trending. */
+    z-index: 2;
     flex-shrink: 0;
     border-top: 1px solid var(--border-subtle);
     background: var(--bg-default);
@@ -4826,8 +4828,8 @@ html[data-theme="dark"] .comment-menu--actions-bar .comment-actions .comment-men
     gap: 0.35rem;
     padding: 0.32rem 0.55rem;
     border-radius: var(--radius-md);
-    border: 1px solid color-mix(in srgb, #14b8a6 45%, var(--border-default));
-    background: color-mix(in srgb, #14b8a6 14%, var(--card-bg));
+    border: 1.5px solid color-mix(in srgb, #14b8a6 45%, var(--border-default));
+    /* background: color-mix(in srgb, #14b8a6 14%, var(--card-bg)); */
     color: #0f766e;
     font-size: 0.8rem;
     font-weight: 600;
@@ -4837,7 +4839,7 @@ html[data-theme="dark"] .comment-menu--actions-bar .comment-actions .comment-men
 html[data-theme="dark"] .comment-actions-bar__likes[role="group"] {
     color: #5eead4;
     border-color: color-mix(in srgb, #2dd4bf 38%, var(--border-default));
-    background: color-mix(in srgb, #2dd4bf 14%, var(--card-bg));
+    /* background: color-mix(in srgb, #2dd4bf 14%, var(--card-bg)); */
 }
 
 .comment-actions-bar__like-btn {

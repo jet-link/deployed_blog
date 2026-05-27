@@ -115,12 +115,12 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.apple',
     # Third-party
-    'compressor',
     'rest_framework',
     # Local apps
     'admin_panel',
     'smart_blog.apps.SmartBlogConfig',
     'login',
+    'mindset.apps.MindsetConfig',
     'pages.apps.PagesConfig',
     'backups',
 ]
@@ -171,6 +171,7 @@ TEMPLATES = [
                 'smart_blog.context_processors.notifications_context',
                 'smart_blog.context_processors.spellcheck_context',
                 'smart_blog.context_processors.nav_categories_context',
+                'smart_blog.context_processors.post_publish_limit_context',
                 'admin_panel.context_processors.admin_online_count',
             ],
             'loaders': [
@@ -306,13 +307,24 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-    'compressor.finders.CompressorFinder',
 ]
 
-COMPRESS_ENABLED = True
-COMPRESS_OFFLINE = True
-COMPRESS_CSS_FILTERS = ['compressor.filters.cssmin.rCSSMinFilter']
-COMPRESS_JS_FILTERS = ['compressor.filters.jsmin.rJSMinFilter']
+# django-compressor подключаем только если пакет установлен — на проде он есть,
+# локально его может не быть (отсутствует в requirements*.txt). В DEBUG также
+# отключаем offline-компрессию: иначе шаблоны с {% compress %} падают
+# без предварительного `manage.py compress`.
+try:
+    import compressor  # noqa: F401
+except ImportError:
+    COMPRESS_ENABLED = False
+    COMPRESS_OFFLINE = False
+else:
+    INSTALLED_APPS.append('compressor')
+    STATICFILES_FINDERS.append('compressor.finders.CompressorFinder')
+    COMPRESS_ENABLED = not DEBUG
+    COMPRESS_OFFLINE = not DEBUG
+    COMPRESS_CSS_FILTERS = ['compressor.filters.cssmin.rCSSMinFilter']
+    COMPRESS_JS_FILTERS = ['compressor.filters.jsmin.rJSMinFilter']
 
 
 # Media files
@@ -388,6 +400,8 @@ except ImportError:
 
 # Trending JSON cache TTL (seconds); 300–600 matches “5–10 min” refresh window
 TRENDING_API_CACHE_SECONDS = int(os.environ.get("TRENDING_API_CACHE_SECONDS", "420"))
+# Posts with publish anchor older than this many days are excluded from In trend scoring
+TRENDING_ACTIVE_DAYS = int(os.environ.get("TRENDING_ACTIVE_DAYS", "7"))
 
 # Admin panel login redirect
 LOGIN_URL = '/login/'
@@ -465,6 +479,11 @@ LOGGING = {
 }
 
 if DEBUG:
-    INSTALLED_APPS += ['debug_toolbar']
-    MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
-    INTERNAL_IPS = ['127.0.0.1']
+    try:
+        import debug_toolbar  # noqa: F401
+    except ImportError:
+        pass
+    else:
+        INSTALLED_APPS += ['debug_toolbar']
+        MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+        INTERNAL_IPS = ['127.0.0.1']

@@ -130,249 +130,342 @@
 
 
 
-// avatar_preview.js
+// avatar_preview.js — profile edit + register (forms with data-avatar-picker)
 (function () {
     'use strict';
 
-    const form = document.getElementById('profileForm');
-    if (!form) return;
-
-    const saveBtn = form.querySelector('button[type="submit"]');
-
-    const urlInput = document.getElementById('floatingAvatarProfile');
-    const fileInput = document.getElementById('avatarFileInput');
-    const fileTrigger = document.querySelector('.avatar-file-trigger');
-
-    const urlPreview = document.getElementById('avatarUrlPreview');
-    const filePreview = document.getElementById('avatarFilePreview');
-
-    const urlImg = urlPreview.querySelector('img');
-    const fileImg = filePreview.querySelector('img');
-    const urlDeleteBtn = urlPreview.querySelector('.avatar-preview-delete');
-    const fileDeleteBtn = filePreview.querySelector('.avatar-preview-delete');
-
-    const fileNameBox = document.getElementById('avatarFileName');
-    const clearFlag = document.getElementById('avatarClearFlag');
-
     const NOT_FOUND = '/static/img/image_not_found.webp';
     const ALLOWED_EXT = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+    const REGISTER_AVATAR_DRAFT_KEY = 'brainstorm:registerAvatarDraft';
 
-    /* ================== helpers ================== */
-
-    function disableSave() {
-        if (!saveBtn) return;
-        if (!saveBtn.dataset.origText) {
-            saveBtn.dataset.origText = saveBtn.textContent || '';
+    function readRegisterAvatarDraft() {
+        try {
+            const raw = sessionStorage.getItem(REGISTER_AVATAR_DRAFT_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch (_) {
+            return null;
         }
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Blocked';
-        saveBtn.classList.remove('custom-primary-btn');
-        saveBtn.classList.add('custom-danger-btn');
     }
 
-    function enableSave() {
-        if (!saveBtn) return;
-        saveBtn.disabled = false;
-        if (saveBtn.dataset.origText) {
-            saveBtn.textContent = saveBtn.dataset.origText;
-        }
-        saveBtn.classList.remove('custom-danger-btn');
-        saveBtn.classList.add('custom-primary-btn');
-    }
-
-    function extractName(url) {
-        return url ? url.split('/').pop().split('?')[0] : '';
-    }
-
-    function showFileName(name, isError = false) {
-        if (!fileNameBox || !name) return;
-        fileNameBox.textContent = name;
-        fileNameBox.classList.remove('d-none');
-        fileNameBox.classList.toggle('text-danger', isError);
-    }
-
-    function hideFileName() {
-        if (!fileNameBox) return;
-        fileNameBox.textContent = '';
-        fileNameBox.classList.add('d-none');
-    }
-
-    function setClearFlag(val) {
-        if (!clearFlag) return;
-        clearFlag.value = val ? '1' : '0';
-    }
-
-    function clearAvatarSelection() {
-        urlInput.value = '';
-        if (fileInput) fileInput.value = '';
-        urlPreview.classList.add('d-none');
-        filePreview.classList.add('d-none');
-        hideFileName();
-        urlInput.classList.remove('is-invalid');
-        setClearFlag(true);
-        enableSave();
-    }
-
-    function showFile(src, name = null) {
-        fileImg.src = src;
-        filePreview.classList.remove('d-none');
-        urlPreview.classList.add('d-none');
-        showFileName(name || extractName(src));
-        if (fileDeleteBtn) fileDeleteBtn.classList.remove('d-none');
-        setClearFlag(false);
-    }
-
-    function showUrl(src) {
-        urlImg.src = src;
-        urlPreview.classList.remove('d-none');
-        filePreview.classList.add('d-none');
-        showFileName(extractName(src));
-        if (urlDeleteBtn) urlDeleteBtn.classList.remove('d-none');
-        setClearFlag(false);
-    }
-
-    function showInvalidUrl() {
-        urlImg.src = NOT_FOUND;
-        urlPreview.classList.remove('d-none');
-        filePreview.classList.add('d-none');
-        urlInput.classList.add('is-invalid');
-        showFileName('Image not found', true);
-        if (urlDeleteBtn) urlDeleteBtn.classList.add('d-none');
-        // hideFileName();
-        disableSave();
-    }
-
-    /* ================== initial avatar ================== */
-
-    const initialAvatar = {
-        type: null,   // 'file' | 'url'
-        value: null,
-        name: null
-    };
-
-    if (window.CURRENT_AVATAR?.file) {
-        initialAvatar.type = 'file';
-        initialAvatar.value = window.CURRENT_AVATAR.file;
-        initialAvatar.name = extractName(window.CURRENT_AVATAR.file);
-        showFile(initialAvatar.value, initialAvatar.name);
-    }
-
-    if (window.CURRENT_AVATAR?.url) {
-        initialAvatar.type = 'url';
-        initialAvatar.value = window.CURRENT_AVATAR.url;
-        initialAvatar.name = extractName(window.CURRENT_AVATAR.url);
-        showUrl(initialAvatar.value);
-    }
-
-
-    /* ================== reset ================== */
-
-    function restoreInitialAvatar() {
-        urlInput.classList.remove('is-invalid');
-        urlPreview.classList.add('d-none');
-
-        if (!initialAvatar.type) {
-            hideFileName();
-            enableSave();
+    function writeRegisterAvatarDraft(payload) {
+        if (!payload || !payload.type) {
+            try { sessionStorage.removeItem(REGISTER_AVATAR_DRAFT_KEY); } catch (_) { /* ignore */ }
             return;
         }
+        try {
+            sessionStorage.setItem(REGISTER_AVATAR_DRAFT_KEY, JSON.stringify(payload));
+        } catch (_) { /* quota / private mode */ }
+    }
 
-        if (initialAvatar.type === 'file') {
-            showFile(initialAvatar.value, initialAvatar.name);
-        } else {
+    function currentRegisterUsername(formEl) {
+        const input = formEl.querySelector('input[name="username"]');
+        return input ? String(input.value || '').trim().toLowerCase() : '';
+    }
+
+    function registerAvatarDraftPayload(formEl, extra) {
+        return Object.assign({ username: currentRegisterUsername(formEl) }, extra || {});
+    }
+
+    function dataUrlToFile(dataUrl, filename, mime) {
+        const parts = String(dataUrl || '').split(',');
+        if (parts.length < 2) return null;
+        const match = parts[0].match(/:(.*?);/);
+        const type = mime || (match && match[1]) || 'image/png';
+        const bin = atob(parts[1]);
+        const len = bin.length;
+        const u8 = new Uint8Array(len);
+        for (let i = 0; i < len; i++) u8[i] = bin.charCodeAt(i);
+        return new File([u8], filename || 'avatar.png', { type: type });
+    }
+
+    function assignFileToInput(fileInput, file) {
+        if (!fileInput || !file) return;
+        try {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+        } catch (_) { /* ignore */ }
+    }
+
+    function initAvatarPicker(form) {
+        const saveBtn = form.querySelector('button[type="submit"]');
+        const urlInput = form.querySelector('input[name="avatar_url"]');
+        const fileInput = form.querySelector('input[type="file"][name="avatar_file"]');
+        const fileTrigger = form.querySelector('.avatar-file-trigger');
+
+        const urlPreview = form.querySelector('#avatarUrlPreview');
+        const filePreview = form.querySelector('#avatarFilePreview');
+
+        const urlImg = urlPreview ? urlPreview.querySelector('img') : null;
+        const fileImg = filePreview ? filePreview.querySelector('img') : null;
+        const urlDeleteBtn = urlPreview ? urlPreview.querySelector('.avatar-preview-delete') : null;
+        const fileDeleteBtn = filePreview ? filePreview.querySelector('.avatar-preview-delete') : null;
+
+        const clearFlag = form.querySelector('#avatarClearFlag');
+
+        if (!urlInput || !fileInput) return;
+
+        function disableSave() {
+            if (!saveBtn) return;
+            if (!saveBtn.dataset.origText) {
+                saveBtn.dataset.origText = saveBtn.textContent || '';
+            }
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Blocked';
+            saveBtn.classList.remove('custom-primary-btn');
+            saveBtn.classList.add('custom-danger-btn');
+        }
+
+        function enableSave() {
+            if (!saveBtn) return;
+            saveBtn.disabled = false;
+            if (saveBtn.dataset.origText) {
+                saveBtn.textContent = saveBtn.dataset.origText;
+            }
+            saveBtn.classList.remove('custom-danger-btn');
+            saveBtn.classList.add('custom-primary-btn');
+        }
+
+        function extractName(url) {
+            return url ? url.split('/').pop().split('?')[0] : '';
+        }
+
+        function setClearFlag(val) {
+            if (!clearFlag) return;
+            clearFlag.value = val ? '1' : '0';
+        }
+
+        function clearAvatarSelection() {
+            urlInput.value = '';
+            fileInput.value = '';
+            urlPreview?.classList.add('d-none');
+            filePreview?.classList.add('d-none');
+            urlInput.classList.remove('is-invalid');
+            setClearFlag(true);
+            if (urlDeleteBtn) urlDeleteBtn.classList.add('d-none');
+            if (fileDeleteBtn) fileDeleteBtn.classList.add('d-none');
+            if (form.id === 'registerForm') {
+                writeRegisterAvatarDraft(null);
+            }
+            enableSave();
+        }
+
+        function showFile(src) {
+            if (fileImg) fileImg.src = src;
+            filePreview?.classList.remove('d-none');
+            urlPreview?.classList.add('d-none');
+            if (fileDeleteBtn) fileDeleteBtn.classList.remove('d-none');
+            setClearFlag(false);
+        }
+
+        function showUrl(src) {
+            if (urlImg) urlImg.src = src;
+            urlPreview?.classList.remove('d-none');
+            filePreview?.classList.add('d-none');
+            if (urlDeleteBtn) urlDeleteBtn.classList.remove('d-none');
+            setClearFlag(false);
+        }
+
+        function showInvalidUrl() {
+            if (urlImg) urlImg.src = NOT_FOUND;
+            urlPreview?.classList.remove('d-none');
+            filePreview?.classList.add('d-none');
+            urlInput.classList.add('is-invalid');
+            if (urlDeleteBtn) urlDeleteBtn.classList.add('d-none');
+            disableSave();
+        }
+
+        const initialAvatar = {
+            type: null,
+            value: null,
+            name: null,
+        };
+
+        function restoreRegisterAvatarDraft() {
+            const currentUser = currentRegisterUsername(form);
+            let draft = readRegisterAvatarDraft();
+            if (draft && draft.username && currentUser && draft.username !== currentUser) {
+                writeRegisterAvatarDraft(null);
+                draft = null;
+            }
+            if (draft && draft.type === 'file' && draft.dataUrl) {
+                initialAvatar.type = 'file';
+                initialAvatar.value = draft.dataUrl;
+                initialAvatar.name = draft.name || 'avatar.png';
+                showFile(draft.dataUrl);
+                const file = dataUrlToFile(draft.dataUrl, draft.name, draft.mime);
+                assignFileToInput(fileInput, file);
+                return true;
+            }
+            if (draft && draft.type === 'url' && draft.url) {
+                urlInput.value = draft.url;
+                initialAvatar.type = 'url';
+                initialAvatar.value = draft.url;
+                initialAvatar.name = extractName(draft.url);
+                showUrl(draft.url);
+                return true;
+            }
+            const urlVal = (urlInput.value || '').trim();
+            if (urlVal) {
+                try { new URL(urlVal); } catch (_) { return false; }
+                if (!ALLOWED_EXT.test(urlVal)) return false;
+                initialAvatar.type = 'url';
+                initialAvatar.value = urlVal;
+                initialAvatar.name = extractName(urlVal);
+                showUrl(urlVal);
+                return true;
+            }
+            return false;
+        }
+
+        if (form.id === 'registerForm') {
+            if (form.getAttribute('data-register-redisplay') === '1') {
+                restoreRegisterAvatarDraft();
+            } else {
+                writeRegisterAvatarDraft(null);
+            }
+        } else if (window.CURRENT_AVATAR && window.CURRENT_AVATAR.file) {
+            initialAvatar.type = 'file';
+            initialAvatar.value = window.CURRENT_AVATAR.file;
+            initialAvatar.name = extractName(window.CURRENT_AVATAR.file);
+            showFile(initialAvatar.value);
+        } else if (window.CURRENT_AVATAR && window.CURRENT_AVATAR.url) {
+            initialAvatar.type = 'url';
+            initialAvatar.value = window.CURRENT_AVATAR.url;
+            initialAvatar.name = extractName(window.CURRENT_AVATAR.url);
             showUrl(initialAvatar.value);
         }
 
-        enableSave();
-    }
+        function restoreInitialAvatar() {
+            urlInput.classList.remove('is-invalid');
+            urlPreview?.classList.add('d-none');
 
-    /* ================== URL input ================== */
+            if (!initialAvatar.type) {
+                enableSave();
+                return;
+            }
 
-    let lastUrlValue = urlInput.value || '';
-    urlInput.addEventListener('input', () => {
-        const val = urlInput.value.trim();
-
-        if (!val) {
-            const hasFile = fileInput?.files?.length;
-            if (!hasFile && lastUrlValue) {
-                clearAvatarSelection();
+            if (initialAvatar.type === 'file') {
+                showFile(initialAvatar.value);
             } else {
-                urlPreview.classList.add('d-none');
-                if (!hasFile) hideFileName();
-                setClearFlag(!hasFile);
+                showUrl(initialAvatar.value);
+            }
+
+            enableSave();
+        }
+
+        let lastUrlValue = urlInput.value || '';
+        urlInput.addEventListener('input', function () {
+            const val = urlInput.value.trim();
+
+            if (!val) {
+                const hasFile = fileInput.files && fileInput.files.length;
+                if (!hasFile && lastUrlValue) {
+                    clearAvatarSelection();
+                } else {
+                    urlPreview?.classList.add('d-none');
+                    setClearFlag(!hasFile);
+                    urlInput.classList.remove('is-invalid');
+                    enableSave();
+                }
+                lastUrlValue = val;
+                if (initialAvatar.type) {
+                    restoreInitialAvatar();
+                }
+                return;
+            }
+
+            try {
+                new URL(val);
+            } catch (e) {
+                showInvalidUrl();
+                return;
+            }
+
+            if (!ALLOWED_EXT.test(val)) {
+                showInvalidUrl();
+                return;
+            }
+
+            const img = new Image();
+            img.onload = function () {
+                urlInput.classList.remove('is-invalid');
+                showUrl(val);
+                enableSave();
+                lastUrlValue = val;
+                if (form.id === 'registerForm') {
+                    writeRegisterAvatarDraft(registerAvatarDraftPayload(form, {
+                        type: 'url',
+                        url: val,
+                        name: extractName(val),
+                    }));
+                }
+            };
+            img.onerror = showInvalidUrl;
+            img.src = val;
+        });
+
+        if (fileTrigger && fileInput) {
+            fileTrigger.addEventListener('click', function () {
+                fileInput.click();
+            });
+        }
+
+        fileInput.addEventListener('change', function () {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                initialAvatar.type = 'file';
+                initialAvatar.value = e.target.result;
+                initialAvatar.name = file.name;
+
+                showFile(initialAvatar.value);
+                urlInput.value = '';
                 urlInput.classList.remove('is-invalid');
                 enableSave();
+                lastUrlValue = '';
+                if (form.id === 'registerForm') {
+                    writeRegisterAvatarDraft(registerAvatarDraftPayload(form, {
+                        type: 'file',
+                        dataUrl: e.target.result,
+                        name: file.name,
+                        mime: file.type || 'image/png',
+                    }));
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        form.querySelectorAll('.avatar-preview-delete').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                clearAvatarSelection();
+            });
+        });
+
+        form.addEventListener('submit', function (e) {
+            if (urlInput.classList.contains('is-invalid')) {
+                e.preventDefault();
+                disableSave();
+                return;
             }
-            lastUrlValue = val;
-            if (initialAvatar.type) {
-                restoreInitialAvatar();
+            if (form.id === 'registerForm') {
+                const draft = readRegisterAvatarDraft();
+                if (draft && draft.type) {
+                    writeRegisterAvatarDraft(registerAvatarDraftPayload(form, draft));
+                }
             }
-            return;
-        }
-
-        try {
-            new URL(val);
-        } catch {
-            showInvalidUrl();
-            return;
-        }
-
-        if (!ALLOWED_EXT.test(val)) {
-            showInvalidUrl();
-            return;
-        }
-
-        const img = new Image();
-        img.onload = () => {
-            urlInput.classList.remove('is-invalid');
-            showUrl(val);
-            enableSave();
-            lastUrlValue = val;
-        };
-        img.onerror = showInvalidUrl;
-        img.src = val;
-    });
-
-    /* ================== File input ================== */
-
-    if (fileTrigger && fileInput) {
-        fileTrigger.addEventListener('click', () => fileInput.click());
+        });
     }
 
-    fileInput?.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        if (!file) return;
+    document.querySelectorAll('form[data-avatar-picker]').forEach(initAvatarPicker);
 
-        const reader = new FileReader();
-        reader.onload = e => {
-            initialAvatar.type = 'file';
-            initialAvatar.value = e.target.result;
-            initialAvatar.name = file.name;
-
-            showFile(initialAvatar.value, initialAvatar.name);
-            urlInput.value = '';
-            urlInput.classList.remove('is-invalid');
-            enableSave();
-            lastUrlValue = '';
-        };
-        reader.readAsDataURL(file);
-    });
-
-    document.querySelectorAll('.avatar-preview-delete').forEach(btn => {
-        btn.addEventListener('click', () => {
-            clearAvatarSelection();
-        });
-    });
-
-    /* ================== submit guard ================== */
-
-    form.addEventListener('submit', e => {
-        if (urlInput.classList.contains('is-invalid')) {
-            e.preventDefault();
-            disableSave();
+    try {
+        if (new URLSearchParams(window.location.search).get('registered') === '1') {
+            sessionStorage.removeItem(REGISTER_AVATAR_DRAFT_KEY);
         }
-    });
-
+    } catch (_) { /* ignore */ }
 })();
 
 

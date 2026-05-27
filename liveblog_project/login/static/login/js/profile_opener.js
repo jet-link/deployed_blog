@@ -26,6 +26,7 @@
         // 🖥 DESKTOP → tooltip
         e.preventDefault();
         e.stopPropagation();
+
         menu.classList.toggle('open');
         if (menu.classList.contains('open')) {
             requestAnimationFrame(() => requestAnimationFrame(updateTooltipCaret));

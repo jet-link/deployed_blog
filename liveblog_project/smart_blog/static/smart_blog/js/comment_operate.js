@@ -577,6 +577,13 @@
             const form = btn.closest('form');
             const textarea = form?.querySelector('textarea[name="text"]');
             clearFieldError(textarea);
+            try {
+              window.dispatchEvent(
+                new CustomEvent('comment-cooldown-ended', {
+                  detail: { itemId: String(itemId), userId: userId == null ? null : String(userId) },
+                })
+              );
+            } catch (e) { /* ignore */ }
             return;
           }
           btn.textContent = `Blocked ${left}s`;
@@ -605,7 +612,21 @@
     localStorage.setItem(key, String(until));
     const targetBtn = btn || document.getElementById('submitCommentBtn');
     updateCommentButtonCooldown(targetBtn, itemId, userId);
+    try {
+      window.dispatchEvent(
+        new CustomEvent('comment-cooldown-started', {
+          detail: { itemId: String(itemId), userId: userId == null ? null : String(userId), seconds },
+        })
+      );
+    } catch (e) { /* ignore */ }
   }
+
+  // Exposed for the mobile composer dock (and other components that want to
+  // honour or trigger the per-user/per-item comment cooldown).
+  window.getCommentCooldownRemaining = getCooldownRemaining;
+  window.startCommentCooldown = startCommentCooldown;
+  window.parseCommentCooldownSeconds = parseCooldownSeconds;
+  window.COMMENT_COOLDOWN_SEC = COMMENT_COOLDOWN_SEC;
 
   /* ===============================
      REPLY COOLDOWN (30s per comment ID)
@@ -729,6 +750,9 @@
       textarea.style.removeProperty('height');
       clearFieldError(textarea);
       toggle();
+      try {
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch (e) { /* ignore */ }
       textarea.focus();
     });
 
@@ -823,6 +847,9 @@
 
           // 🔥 ВАЖНО: скрываем кнопку Clear после отправки
           clearBtn?.classList.add('hidden');
+          try {
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          } catch (e) { /* ignore */ }
 
           syncItemDetailCommentsShell(count);
           updateDetailCounter(count);
@@ -1200,9 +1227,127 @@
       return s.trim();
     }
     const d = document.createElement('div');
-    d.innerHTML = s;
+    d.innerHTML = s.replace(/<br\s*\/?>/gi, '\n');
     return (d.textContent || d.innerText || '').replace(/\r\n/g, '\n').trim();
   }
+
+  /**
+   * Replace edited comment markup without touching reply subtree (likes + open panel).
+   */
+  function swapEditedCommentNode(commentNode, commentHtml) {
+    if (!commentNode || !commentHtml) return null;
+
+    const tail = [];
+    const main = commentNode.querySelector('.comment-main');
+    const bar = main?.querySelector('.comment-actions-bar');
+    if (bar) {
+      let sib = bar.nextElementSibling;
+      while (sib) {
+        tail.push(sib);
+        sib = sib.nextElementSibling;
+      }
+    }
+
+    const wasRepliesOpen = !!commentNode.querySelector('.comment-replies-outer.is-expanded');
+    const commentId = (commentNode.id || '').replace(/^comment-/, '');
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = commentHtml;
+    const newNode = wrapper.firstElementChild;
+    if (!newNode) return null;
+
+    const newMain = newNode.querySelector('.comment-main');
+    const newBar = newMain?.querySelector('.comment-actions-bar');
+    if (newBar) {
+      let sib = newBar.nextElementSibling;
+      while (sib) {
+        const next = sib.nextElementSibling;
+        sib.remove();
+        sib = next;
+      }
+    }
+
+    commentNode.replaceWith(newNode);
+
+    if (newMain && newBar && tail.length) {
+      tail.forEach((el) => newMain.appendChild(el));
+    }
+
+    if (wasRepliesOpen && commentId) {
+      window.expandRepliesBucketForParent?.(newNode, commentId);
+    }
+
+    return newNode;
+  }
+  window.swapEditedCommentNode = swapEditedCommentNode;
+
+  /**
+   * Extract plain edit text + mention info from a rendered comment node.
+   * Reused by both inline editor (mobile inline form is hidden via CSS) and
+   * the mobile YouTube-style comment dock.
+   */
+  function extractCommentEditPayload(commentNode) {
+    if (!commentNode) return { text: '', mention: '', mentionId: '' };
+    const body = commentNode.querySelector('.comment-body');
+    const textDiv = body ? body.querySelector('.comment-text') : null;
+    const rawHtml = commentNode.getAttribute('data-raw-html') || '';
+    const editAttr = commentNode.getAttribute('data-edit-text');
+
+    const decodeHtml = (value) => {
+      if (!value) return '';
+      const temp = document.createElement('textarea');
+      temp.innerHTML = value;
+      return temp.value;
+    };
+
+    const displayHtml = (textDiv && (textDiv.dataset.fullHtml || textDiv.innerHTML)) || '';
+    const rawDecoded = decodeHtml(rawHtml);
+
+    let mentionId = (commentNode.dataset.mentionId || '').trim();
+    if (!mentionId) {
+      mentionId = extractMentionUserIdFromRaw(rawDecoded);
+    }
+
+    let primaryPlain = '';
+    if (editAttr != null && String(editAttr).trim() !== '') {
+      primaryPlain = decodeHtml(editAttr).replace(/\r\n/g, '\n').trim();
+    }
+    if (!primaryPlain) {
+      primaryPlain = htmlToPlainText(rawDecoded) || htmlToPlainText(displayHtml) || '';
+    }
+
+    let originalText = '';
+    let mention = '';
+    const bodyPlain = primaryPlain;
+
+    if (bodyPlain.startsWith('@')) {
+      const comma = bodyPlain.indexOf(', ');
+      if (comma === -1) {
+        mention = bodyPlain.slice(1).trim();
+        originalText = '';
+      } else {
+        mention = bodyPlain.slice(1, comma).trim();
+        originalText = bodyPlain.slice(comma + 2).trim();
+      }
+    } else {
+      originalText = bodyPlain.replace(/^\s*@\[user:\d+\]\s*,?\s*/i, '').trim();
+      const legacy = originalText.match(/^@([\w.-]+)\s*,?\s*/);
+      if (legacy) {
+        mention = legacy[1];
+        originalText = originalText.replace(/^@[\w.-]+\s*,?\s*/, '');
+      }
+    }
+
+    if (!originalText && rawDecoded) {
+      const fallback = htmlToPlainText(rawDecoded)
+        .replace(/^\s*@\[user:\d+\]\s*,?\s*/i, '')
+        .trim();
+      if (fallback) originalText = fallback;
+    }
+
+    return { text: originalText, mention, mentionId };
+  }
+  window.extractCommentEditPayload = extractCommentEditPayload;
 
   function openEditor(commentNode, commentId, editUrl) {
     if (window.closeAllReplyForms) {
@@ -1289,7 +1434,7 @@
     =============================== */
 
     const form = document.createElement('form');
-    form.className = 'comment-edit-form pb-4';
+    form.className = 'comment-edit-form pb-2';
     form.noValidate = true;
 
     const errSlot = document.createElement('div');
@@ -1363,17 +1508,16 @@
     btnCancel.addEventListener('click', () => {
       body.innerHTML = originalHtml;
 
-      // сбросить toggle, чтобы Show more/less снова работал
-      const textEl = commentNode.querySelector('.comment-text');
+      const textEl = body.querySelector('.comment-text');
       if (textEl) {
         const cached = commentNode.dataset.fullHtmlCache || textEl.innerHTML;
         textEl.innerHTML = cached;
         textEl.dataset.fullHtml = cached;
         delete textEl.dataset.toggleInit;
+        textEl.querySelector('.comment-toggle-btn')?.remove();
       }
-      commentNode.querySelectorAll('.comment-toggle-btn').forEach(btn => btn.remove());
 
-      restoreCommentUI(commentNode);
+      restoreCommentUI(body);
     });
 
     /* ===============================
@@ -1445,14 +1589,9 @@
 
         const data = await resp.json().catch(() => null);
         if (resp.ok && data?.success) {
-          const wrapper = document.createElement('div');
-          wrapper.innerHTML = data.comment_html;
-
-          const newNode = wrapper.firstElementChild;
-          commentNode.replaceWith(newNode);
-          if (window.initCommentToggles) {
-            restoreCommentUI(newNode);
-          }
+          const newNode = swapEditedCommentNode(commentNode, data.comment_html);
+          if (!newNode) return;
+          restoreCommentUI(newNode);
           window.initCommentLikes?.();
           if (window.initAutoDismiss) window.initAutoDismiss(newNode);
           initEditButtons();
@@ -1493,6 +1632,14 @@
     if (!commentNode) return;
 
     window.closeAllCommentMenus?.();
+
+    const dock = document.getElementById('mobileCommentDock');
+    if (dock && window.matchMedia('(max-width: 767.98px)').matches &&
+        typeof window.openMobileDockEdit === 'function') {
+      window.openMobileDockEdit(commentNode, commentId, editUrl);
+      return;
+    }
+
     openEditor(commentNode, commentId, editUrl);
   }
 
@@ -1801,11 +1948,22 @@
     });
   }
 
+  function isMobileComposerActive() {
+    const dock = document.getElementById('mobileCommentDock');
+    if (!dock) return false;
+    return window.matchMedia('(max-width: 767.98px)').matches;
+  }
+
   function openReplyForm(commentId, mentionId) {
+    if (window.getReplyCooldownRemaining?.(commentId) > 0) return;
+
+    if (isMobileComposerActive() && typeof window.openMobileDockReply === 'function') {
+      window.openMobileDockReply(commentId, mentionId);
+      return;
+    }
+
     const container = document.getElementById(`reply-form-${commentId}`);
     if (!container) return;
-
-    if (window.getReplyCooldownRemaining?.(commentId) > 0) return;
 
     if (window.closeAllCommentEditForms) {
       window.closeAllCommentEditForms();
@@ -1866,23 +2024,6 @@
     },
     { passive: true, capture: true }
   );
-
-  /* ===============================
-     CLOSE FORMS ON OUTSIDE CLICK
-  =============================== */
-  document.addEventListener('click', (e) => {
-    const clickedReplyForm = e.target.closest?.('.reply-form');
-    const clickedEditForm = e.target.closest?.('.comment-edit-form');
-    const replyTrigger = e.target.closest?.('.btn-reply, .comment-menu-action[data-action="reply"]');
-    const editTrigger = e.target.closest?.('.btn-edit-comment');
-
-    if (!clickedReplyForm && !replyTrigger) {
-      closeAllReplyForms();
-    }
-    if (!clickedEditForm && !editTrigger) {
-      closeAllCommentEditForms();
-    }
-  });
 
   function buildCommentShareUrl(commentId) {
     const base = window.location.href.split('#')[0];
@@ -2353,9 +2494,12 @@ function buildShortHTML(fullHTML, maxLen = 400) {
     }
 
     if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.nodeName === 'BR') {
+        return;
+      }
       Array.from(node.childNodes).forEach(walk);
 
-      // если элемент стал пустым — удалить
+      // если элемент стал пустым — удалить (но <br> выше уже сохранены)
       if (!node.textContent.trim()) {
         node.remove();
       }
@@ -2369,24 +2513,44 @@ function buildShortHTML(fullHTML, maxLen = 400) {
 
 // comments-toggle.js (MENTION-SAFE)
 (function () {
+  function ensureCommentTextContent(textEl) {
+    var contentEl = textEl.querySelector('.comment-text-content');
+    if (contentEl) return contentEl;
+    contentEl = document.createElement('div');
+    contentEl.className = 'comment-text-content';
+    while (textEl.firstChild) {
+      contentEl.appendChild(textEl.firstChild);
+    }
+    textEl.appendChild(contentEl);
+    return contentEl;
+  }
+
   function initCommentToggles(root = document) {
     root.querySelectorAll('.comment-text').forEach(textEl => {
       if (textEl.dataset.toggleInit) return;
 
-      if (textEl.textContent.trim().length <= 350) return;
+      var contentEl = ensureCommentTextContent(textEl);
+      var plainLen = (textEl.textContent || '').trim().length;
 
-      textEl.dataset.fullHtml ||= textEl.innerHTML;
+      if (plainLen <= 350) {
+        textEl.dataset.toggleInit = '1';
+        return;
+      }
+
+      contentEl.dataset.fullHtml ||= contentEl.innerHTML;
+      textEl.dataset.fullHtml = contentEl.dataset.fullHtml;
 
       const btn = document.createElement('button');
-      btn.className = 'comment-toggle-btn';
+      btn.type = 'button';
+      btn.className = 'comment-toggle-btn cstm-btn cstm-btn-sm custom-primary-btn';
       btn.textContent = 'Show more';
 
       let expanded = false;
 
       function render() {
-        textEl.innerHTML = expanded
-          ? textEl.dataset.fullHtml
-          : buildShortHTML(textEl.dataset.fullHtml, 350);
+        contentEl.innerHTML = expanded
+          ? contentEl.dataset.fullHtml
+          : buildShortHTML(contentEl.dataset.fullHtml, 350);
 
         btn.textContent = expanded ? 'Show less' : 'Show more';
         textEl.classList.toggle('comment-text--truncated', !expanded);
@@ -2398,7 +2562,7 @@ function buildShortHTML(fullHTML, maxLen = 400) {
       });
 
       render();
-      textEl.after(btn);
+      textEl.appendChild(btn);
       textEl.dataset.toggleInit = '1';
     });
   }

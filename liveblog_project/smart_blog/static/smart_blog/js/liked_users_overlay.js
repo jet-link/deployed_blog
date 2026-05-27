@@ -21,6 +21,83 @@
   const SEARCH_MIN_USERS = 6;
   let initialOrder = [];
   let searchActiveWithMany = false; /* true when search open and count >= 6 */
+
+  function defaultNoAvatarUrl() {
+    const sample = document.querySelector('.liked-users-stack img.no_avatar');
+    const src = sample?.getAttribute('src');
+    return (src && src.trim()) || '/static/img/no_avatar.svg';
+  }
+
+  function bindAvatarImgHandlers(img) {
+    if (!img) return;
+    img.onerror = function () {
+      this.onerror = null;
+      this.classList.add('avatar-load-failed');
+    };
+  }
+
+  function createStackAvatarImg(src, alt, extraClass) {
+    const img = document.createElement('img');
+    const url = (src || '').trim();
+    img.src = url || defaultNoAvatarUrl();
+    img.alt = alt || '';
+    img.className = 'user-avatar' + (extraClass ? ' ' + extraClass : '');
+    img.width = 30;
+    img.height = 30;
+    img.loading = 'eager';
+    img.decoding = 'async';
+    bindAvatarImgHandlers(img);
+    return img;
+  }
+
+  /** Clone a loaded overlay img when possible — avoids grey placeholders after rebuild. */
+  function buildStackAvatarSpan(row) {
+    const username = row?.dataset?.likeUser || '';
+    const title = row?.getAttribute('title') || username;
+    const sourceImg = row?.querySelector?.('img.user-avatar');
+    const span = document.createElement('span');
+    span.className = 'liked-user-avatar little-avatar';
+    span.title = title;
+
+    if (sourceImg && !sourceImg.classList.contains('avatar-load-failed')) {
+      const img = sourceImg.cloneNode(true);
+      img.loading = 'eager';
+      img.width = 30;
+      img.height = 30;
+      bindAvatarImgHandlers(img);
+      span.appendChild(img);
+    } else {
+      span.appendChild(
+        createStackAvatarImg(
+          sourceImg?.getAttribute('src'),
+          sourceImg?.alt || username,
+          sourceImg?.classList?.contains('no_avatar') ? 'no_avatar' : ''
+        )
+      );
+    }
+    return span;
+  }
+
+  /** SSR stack: eager load + no enter animation so avatars show on first paint. */
+  function initStackAvatars() {
+    if (!stack) return;
+    stack.classList.remove('is-refreshing-out', 'liked-users-stack--animate');
+    stack.querySelectorAll('.liked-user-avatar img').forEach((img) => {
+      img.loading = 'eager';
+      const parent = img.closest('.liked-user-avatar');
+      if (parent) {
+        parent.style.opacity = '';
+        parent.style.transform = '';
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initStackAvatars, { once: true });
+  } else {
+    initStackAvatars();
+  }
+
   if (!overlay) return;
 
   function getLikedCount() {
@@ -103,16 +180,34 @@
     searchWrap.style.display = count > 50 ? '' : 'none';
   }
 
+  function syncLikedOverlayViewport() {
+    if (!overlay || overlay.classList.contains('hidden')) return;
+    const vv = window.visualViewport;
+    const top = vv ? Math.round(vv.offsetTop) : 0;
+    const height = vv ? Math.round(vv.height) : Math.round(window.innerHeight || 0);
+    document.documentElement.style.setProperty('--liked-overlay-top', top + 'px');
+    document.documentElement.style.setProperty('--liked-overlay-height', height + 'px');
+  }
+
+  function clearLikedOverlayViewport() {
+    document.documentElement.classList.remove('liked-users-overlay-open');
+    document.documentElement.style.removeProperty('--liked-overlay-top');
+    document.documentElement.style.removeProperty('--liked-overlay-height');
+  }
+
   function openOverlay() {
     captureInitialOrder();
     const count = getLikedCount();
     updateSearchWrapVisibility(count);
     filterLikedUsers(searchInput?.value || '');
     searchActiveWithMany = false;
+    document.documentElement.classList.add('liked-users-overlay-open');
     overlay.classList.remove('hidden');
     overlay.setAttribute('aria-hidden', 'false');
+    syncLikedOverlayViewport();
     lockScroll();
     requestAnimationFrame(function () {
+      syncLikedOverlayViewport();
       requestAnimationFrame(function () {
         updateModalHeight(count, false);
       });
@@ -134,6 +229,7 @@
     }
     overlay.classList.add('hidden');
     overlay.setAttribute('aria-hidden', 'true');
+    clearLikedOverlayViewport();
     unlockScroll();
     requestAnimationFrame(function () {
       try {
@@ -199,8 +295,8 @@
     items.forEach(function (item) {
       const rawUsername = item.getAttribute('data-like-user') || '';
       const username = rawUsername.toLowerCase().trim().replace(/\s+/g, ' ');
-      const badge = item.querySelector('.custom_badge');
-      const rawLabel = badge ? badge.textContent : '';
+      const nameEl = item.querySelector('.comment-author-name') || item.querySelector('.custom_badge');
+      const rawLabel = nameEl ? nameEl.textContent : '';
       const label = rawLabel.trim().toLowerCase().replace(/\s+/g, ' ');
       const exact = q && (username === q || label === q);
       const partial = !q || username.indexOf(q) !== -1 || label.indexOf(q) !== -1;
@@ -294,14 +390,14 @@
     img.width = 30;
     img.height = 30;
     img.decoding = 'async';
-    img.loading = 'lazy';
-    img.onerror = function () { this.onerror = null; this.classList.add('avatar-load-failed'); };
+    img.loading = 'eager';
+    bindAvatarImgHandlers(img);
     avatarWrap.appendChild(img);
-    const badge = document.createElement('span');
-    badge.className = 'custom_badge badge_primary';
-    badge.textContent = username;
+    const nameEl = document.createElement('span');
+    nameEl.className = 'comment-author-name fw-semibold';
+    nameEl.textContent = username;
     row.appendChild(avatarWrap);
-    row.appendChild(badge);
+    row.appendChild(nameEl);
     list.prepend(row);
     initialOrder.unshift(row);
   }
@@ -317,39 +413,26 @@
 
   function syncStackFromList() {
     if (!stack || !list) return;
-    const items = Array.from(list.querySelectorAll('[data-like-user]')).slice(0, 5);
+    const items = Array.from(list.querySelectorAll('.liked-users-item')).slice(0, 5);
 
     function rebuild() {
       stack.classList.remove('is-refreshing-out');
       stack.innerHTML = '';
       items.forEach((row) => {
-        const username = row.dataset.likeUser;
-        const sourceImg = row.querySelector('img');
-        const span = document.createElement('span');
-        span.className = 'liked-user-avatar little-avatar';
-        span.title = username;
-        const img = document.createElement('img');
-        if (sourceImg && sourceImg.classList.contains('avatar-load-failed')) {
-          img.classList.add('avatar-load-failed');
-          img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>';
-        } else {
-          img.src = (sourceImg && sourceImg.getAttribute('src')) || '/static/img/no_avatar.svg';
-        }
-        img.alt = username;
-        img.className = 'user-avatar';
-        img.width = 30;
-        img.height = 30;
-        img.decoding = 'async';
-        img.loading = 'lazy';
-        img.onerror = function () { this.onerror = null; this.classList.add('avatar-load-failed'); };
-        span.appendChild(img);
-        stack.appendChild(span);
+        stack.appendChild(buildStackAvatarSpan(row));
       });
     }
 
-    if (stack.querySelector('.liked-user-avatar')) {
+    const hadAvatars = !!stack.querySelector('.liked-user-avatar');
+    if (hadAvatars) {
       stack.classList.add('is-refreshing-out');
-      window.setTimeout(rebuild, 150);
+      window.setTimeout(() => {
+        rebuild();
+        stack.classList.add('liked-users-stack--animate');
+        window.setTimeout(() => {
+          stack.classList.remove('liked-users-stack--animate');
+        }, 450);
+      }, 150);
     } else {
       rebuild();
     }
@@ -370,10 +453,12 @@
 
   window.updateLikedUsersUI = function (data) {
     if (!current || !data) return;
-    const username = current.dataset.username;
-    const avatar = current.dataset.avatar;
-    const profileUrl = current.dataset.profileUrl;
+    const username = (current.dataset.username || '').trim();
+    // dataset may contain template whitespace/newlines around the URL — strip them
+    let avatar = (current.dataset.avatar || '').trim();
+    const profileUrl = (current.dataset.profileUrl || '').trim();
     if (!username) return;
+    if (!avatar) avatar = defaultNoAvatarUrl();
 
     if (data.liked) {
       upsertListItem(username, avatar, profileUrl);
@@ -396,4 +481,10 @@
     }
     updateModalHeight(count, searchActiveWithMany);
   };
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncLikedOverlayViewport);
+    window.visualViewport.addEventListener('scroll', syncLikedOverlayViewport);
+  }
+  window.addEventListener('resize', syncLikedOverlayViewport);
 })();

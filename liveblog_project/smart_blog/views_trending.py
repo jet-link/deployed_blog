@@ -8,7 +8,10 @@ from django.shortcuts import render
 from django.urls import reverse
 
 from smart_blog.models import TrendingItem
-from smart_blog.services.trending_service import TRENDING_API_CACHE_KEY
+from smart_blog.services.trending_service import (
+    TRENDING_API_CACHE_KEY,
+    calculate_trending,
+)
 from smart_blog.utils import count_convert
 
 HOT_LIMIT = 5
@@ -22,6 +25,13 @@ def _preview_from_list_excerpt(item, max_len=220):
     if len(s) <= max_len:
         return s
     return s[:max_len].rsplit(" ", 1)[0] + " …"
+
+
+def _ensure_trending_snapshot():
+    """Populate TrendingItem when empty (e.g. Celery beat / update_trending not running yet)."""
+    if _base_qs().exists():
+        return
+    calculate_trending()
 
 
 def _base_qs():
@@ -41,14 +51,26 @@ def _base_qs():
 
 
 def _get_trending_page_data(page=1):
-    """Returns (hot_rows, rising_rows, feed_page) from a single base queryset."""
+    """Returns (hot_rows, rising_rows, feed_page) from a single base queryset.
+
+    Hot: posts with current-hour views, padded with top-by-score if needed.
+    Rising: top by growth_rate (engagement velocity).
+    Feed: paginated all-by-score.
+    """
     all_by_score = list(_base_qs().order_by("-trend_score")[:200])
 
     hot_rows = [t for t in all_by_score if t.views_last_hour >= 1][:HOT_LIMIT]
     if len(hot_rows) < HOT_LIMIT:
-        hot_rows = all_by_score[:HOT_LIMIT]
+        seen = {t.pk for t in hot_rows}
+        for t in all_by_score:
+            if len(hot_rows) >= HOT_LIMIT:
+                break
+            if t.pk not in seen:
+                hot_rows.append(t)
 
-    rising_rows = sorted(all_by_score, key=lambda t: t.growth_rate, reverse=True)[:RISING_LIMIT]
+    rising_rows = sorted(
+        all_by_score, key=lambda t: t.growth_rate, reverse=True
+    )[:RISING_LIMIT]
 
     paginator = Paginator(all_by_score, FEED_PER_PAGE)
     feed_page = paginator.get_page(page)
@@ -121,6 +143,7 @@ def trending_list(request):
         page = 1
     page = max(1, page)
 
+    _ensure_trending_snapshot()
     hot_rows, rising_rows, feed_page = _get_trending_page_data(page)
     has_trending_content = bool(
         hot_rows or rising_rows or feed_page.object_list
@@ -149,6 +172,7 @@ def trending_api(request):
         page = 1
     page = max(1, page)
 
+    _ensure_trending_snapshot()
     cached = cache.get(TRENDING_API_CACHE_KEY)
     if cached is not None and page == 1:
         out = dict(cached)

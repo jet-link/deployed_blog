@@ -1,15 +1,16 @@
 {# Bottom nav: body data-turbo="false"; bar data-turbo="true"; permanent node. Login/sign-out data-turbo="false". Popovers live inside __inner so clicks are not swallowed by nav pointer-events. #}
 {% with ns=request.resolver_match.namespace|default:'' un=request.resolver_match.url_name|default:'' slug_user=request.resolver_match.kwargs.username|default:'' %}
-<nav class="mobile-bottom-nav{% if un == 'post_detail' %} mobile-bottom-nav--hidden-on-detail{% endif %}" aria-label="Mobile primary" id="mobileBottomNav" data-turbo-permanent data-turbo="true"{% if un == 'post_detail' %} aria-hidden="true" inert{% else %} aria-hidden="false"{% endif %}>
+<nav class="mobile-bottom-nav{% if un == 'post_detail' or un == 'comment_thread' %} mobile-bottom-nav--hidden-on-detail{% endif %}" aria-label="Mobile primary" id="mobileBottomNav" data-turbo-permanent data-turbo="true"{% if un == 'post_detail' or un == 'comment_thread' %} aria-hidden="true" inert{% else %} aria-hidden="false"{% endif %}>
   <div class="mobile-bottom-nav__inner">
     <div class="mobile-bottom-nav__scroll">
       <div class="mobile-bottom-nav__track">
         <span class="mobile-bottom-nav__slide" aria-hidden="true"></span>
-        <a href="{% url 'smart_blog:items_list' %}" class="mobile-bottom-nav__link mobile-bottom-nav__nav-cell{% if ns == 'smart_blog' and un == 'items_list' %} mobile-bottom-nav__link--active{% endif %}">
+
+         <a href="{% url 'smart_blog:topics_list' %}" class="mobile-bottom-nav__link mobile-bottom-nav__nav-cell{% if ns == 'smart_blog' and un == 'topics_list' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'topic_detail' %} mobile-bottom-nav__link--active{% endif %}">
           <span class="mobile-bottom-nav__icon-wrap" aria-hidden="true">
-            <i class="fa fa-newspaper-o mobile-bottom-nav__icon" aria-hidden="true"></i>
+            <i class="fa fa-compass mobile-bottom-nav__icon" aria-hidden="true"></i>
           </span>
-          <span class="mobile-bottom-nav__label">BraiNews</span>
+          <span class="mobile-bottom-nav__label">Topics</span>
         </a>
 
         <a href="{% url 'smart_blog:trending_list' %}" class="mobile-bottom-nav__link mobile-bottom-nav__nav-cell{% if ns == 'smart_blog' and un == 'trending_list' %} mobile-bottom-nav__link--active{% endif %}">
@@ -19,18 +20,18 @@
           <span class="mobile-bottom-nav__label">In trend</span>
         </a>
 
-        <a href="{% url 'smart_blog:topics_list' %}" class="mobile-bottom-nav__link mobile-bottom-nav__nav-cell{% if ns == 'smart_blog' and un == 'topics_list' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'topic_detail' %} mobile-bottom-nav__link--active{% endif %}">
+           <a href="{% url 'mindset:theme_list' %}" class="mobile-bottom-nav__link mobile-bottom-nav__nav-cell{% if ns == 'mindset' %} mobile-bottom-nav__link--active{% endif %}">
           <span class="mobile-bottom-nav__icon-wrap" aria-hidden="true">
-            <i class="fa fa-compass mobile-bottom-nav__icon" aria-hidden="true"></i>
+            <i class="fa fa-at mobile-bottom-nav__icon" aria-hidden="true"></i>
           </span>
-          <span class="mobile-bottom-nav__label">Topics</span>
+          <span class="mobile-bottom-nav__label">Mindset</span>
         </a>
 
         <div class="mobile-bottom-nav__tail-group">
           {% if user.is_authenticated %}
             <div class="mobile-bottom-nav__account mobile-bottom-nav__nav-cell">
               <button type="button"
-                class="mobile-bottom-nav__link mobile-bottom-nav__more-btn{% if slug_user == user.username and un == 'profile' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'profile-section' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'notifications' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'profile-edit' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'create_post' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'edit_post' %} mobile-bottom-nav__link--active{% endif %}"
+                class="mobile-bottom-nav__link mobile-bottom-nav__more-btn{% if slug_user == user.username and un == 'profile' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'profile-section' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'profile-themes' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'profile-reposts' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'notifications' %} mobile-bottom-nav__link--active{% elif slug_user == user.username and un == 'profile-edit' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'create_post' %} mobile-bottom-nav__link--active{% elif ns == 'smart_blog' and un == 'edit_post' %} mobile-bottom-nav__link--active{% endif %}"
                 id="mobileNavMoreBtn"
                 aria-label="Account menu"
                 aria-expanded="false"
@@ -65,6 +66,10 @@
     <a href="{% url 'login_app:notifications' user.username %}" class="mobile-nav-account-popover__row notification-btn{% if notifications_count %} has-unread{% endif %}{% if slug_user == user.username and un == 'notifications' %} mobile-nav-account-popover__row--active{% endif %}"{% if notifications_count %} data-notifications-count="{{ notifications_count }}"{% endif %}>
       <i class="fa fa-bell mobile-nav-account-popover__ico" aria-hidden="true"></i>
       <span class="mobile-nav-account-popover__text">Notifications</span>
+    </a>
+    <a href="{% url 'login_app:profile-themes' user.username %}" class="mobile-nav-account-popover__row{% if slug_user == user.username and un == 'profile-themes' %} mobile-nav-account-popover__row--active{% elif slug_user == user.username and un == 'profile-reposts' %} mobile-nav-account-popover__row--active{% endif %}">
+      <i class="fa fa-at mobile-nav-account-popover__ico" aria-hidden="true"></i>
+      <span class="mobile-nav-account-popover__text">My themes</span>
     </a>
     <a href="{% url 'smart_blog:create_post' %}" class="mobile-nav-account-popover__row{% if ns == 'smart_blog' and un == 'create_post' %} mobile-nav-account-popover__row--active{% endif %}">
       <i class="fa fa-plus mobile-nav-account-popover__ico" aria-hidden="true"></i>

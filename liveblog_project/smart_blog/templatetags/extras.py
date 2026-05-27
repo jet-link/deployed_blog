@@ -6,22 +6,6 @@ from django.utils.text import Truncator
 register = template.Library()
 
 
-@register.filter(name='trust_score_zone_class')
-def trust_score_zone_class(score):
-    """Badge color class from trust score (same bands as profile Trust rating)."""
-    try:
-        s = float(score)
-    except (TypeError, ValueError):
-        return 'badge_muted'
-    if s >= 8:
-        return 'badge_success'
-    if s >= 5:
-        return 'badge_muted'
-    if s >= 3:
-        return 'badge_warning'
-    return 'rating_badge_danger'
-
-
 @register.filter(name='user_shadow_banned')
 def user_shadow_banned(user):
     """True when score < 3: block comments and reply."""

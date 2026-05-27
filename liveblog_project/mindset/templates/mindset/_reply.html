@@ -1,0 +1,94 @@
+{% load mindset_extras %}
+{% load counters %}
+<div class="mindset-reply{% if standalone %} mindset-reply--standalone{% endif %}" data-mindset-reply="{{ reply.pk }}" id="mindset-reply-{{ reply.pk }}">
+  <div class="mindset-reply__head mb-4">
+    {% include 'mindset/_author_identity.html' with author=reply.author %}
+    {% comment %} Follow/Followed on replies — disabled for now (main themes only).
+    <div class="mindset-theme__author-row">
+      <a href="{% if user.is_authenticated %}{% url 'login_app:profile-themes' reply.author.username %}{% else %}{% url 'login_app:profile' reply.author.username %}{% endif %}" class="mindset-author-link text-decoration-none">
+        {% include 'includes/user_avatar.html' with author=reply.author %}
+      </a>
+      {% if user.is_authenticated and user.id != reply.author_id and reply.author.is_active %}
+        <span class="mindset-follow-sep" aria-hidden="true">|</span>
+        <button
+          type="button"
+          class="mindset-follow-link{% if reply.user_following_author %} is-following{% endif %}"
+          data-action="follow-user"
+          data-username="{{ reply.author.username }}"
+          data-url="{% url 'mindset:api_user_follow_toggle' reply.author.username %}"
+          aria-pressed="{% if reply.user_following_author %}true{% else %}false{% endif %}"
+        >
+          <span class="mindset-follow-link__label">{% if reply.user_following_author %}Followed{% else %}Follow{% endif %}</span>
+          <i class="fa fa-check mindset-follow-link__check" aria-hidden="true"{% if not reply.user_following_author %} hidden{% endif %}></i>
+        </button>
+      {% endif %}
+    </div>
+    {% endcomment %}
+    <small class="text-muted mindset-reply__date">
+      {% comment %} <i class="fa fa-clock-o" aria-hidden="true"></i> {% endcomment %}
+      <span>{{ reply.human_published }}</span>
+    </small>
+  </div>
+  <div class="mindset-reply__body" data-mindset-body>{{ reply.body|mindset_body }}</div>
+  {% if reply.image %}
+    <a href="{{ reply.image.get_url }}"
+       target="_blank"
+       rel="noopener"
+       class="mindset-reply__pinned-picture">
+      <i class="fa fa-image" aria-hidden="true"></i>
+      <span>Pinned image</span>
+    </a>
+  {% endif %}
+  <div class="mindset-reply__actions">
+    <div class="mindset-reply__counters">
+      <span class="mindset-counter" data-counter="likes">
+        <i class="fa fa-heart-o" aria-hidden="true"></i>
+        <span class="mindset-counter__val" data-counter-val>{{ reply.likes_count|human }}</span>
+      </span>
+      <span class="mindset-counter" data-counter="reposts">
+        <i class="fa fa-retweet" aria-hidden="true"></i>
+        <span class="mindset-counter__val" data-counter-val>{{ reply.reposts_count|human }}</span>
+      </span>
+    </div>
+
+    <div class="mindset-reply__buttons">
+      {% if user.is_authenticated %}
+        {% if user.id != reply.author_id %}
+          <button type="button"
+            class="mindset-action-btn mindset-action-btn--sm{% if reply.user_liked %} is-active{% endif %}"
+            data-action="reply-like"
+            data-reply-id="{{ reply.pk }}"
+            data-url="{% url 'mindset:api_reply_like' reply.pk %}"
+            aria-pressed="{% if reply.user_liked %}true{% else %}false{% endif %}"
+            aria-label="{% if reply.user_liked %}Unlike{% else %}Like{% endif %}">
+            <i class="fa fa-heart{% if not reply.user_liked %}-o{% endif %}" aria-hidden="true"></i>
+            <span>{% if reply.user_liked %}Liked{% else %}Like{% endif %}</span>
+          </button>
+        {% endif %}
+        <button type="button"
+          class="mindset-action-btn mindset-action-btn--sm{% if reply.user_reposted %} is-active{% endif %}"
+          data-action="reply-repost"
+          data-reply-id="{{ reply.pk }}"
+          data-url="{% url 'mindset:api_reply_repost' reply.pk %}"
+          aria-pressed="{% if reply.user_reposted %}true{% else %}false{% endif %}"
+          aria-label="{% if reply.user_reposted %}Undo repost{% else %}Repost{% endif %}">
+          <i class="fa fa-retweet" aria-hidden="true"></i>
+          <span>{% if reply.user_reposted %}Reposted{% else %}Repost{% endif %}</span>
+        </button>
+        {% if user.id == reply.author_id and reply.is_editable %}
+          <button type="button"
+            class="mindset-action-btn mindset-action-btn--sm mindset-action-btn--danger"
+            data-bs-toggle="modal"
+            data-bs-target="#mindsetConfirmDeleteModal"
+            data-mindset-delete-kind="reply"
+            data-mindset-delete-id="{{ reply.pk }}"
+            data-mindset-delete-url="{% url 'mindset:api_reply_delete' reply.pk %}"
+            aria-label="Delete reply">
+            <i class="fa fa-trash" aria-hidden="true"></i>
+            <span>Delete</span>
+          </button>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>

@@ -3,9 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="theme-color" id="meta-theme-color" content="#ffffff" />
-    <script>
-      (function(){try{var t=localStorage.getItem('themeToggle');var dark=t==='sun';document.documentElement.setAttribute('data-theme',dark?'dark':'light');var m=document.getElementById('meta-theme-color');if(m)m.setAttribute('content',dark?'#0d1117':'#ffffff');}catch(e){}}());
-    </script>
+    {% include 'includes/theme_head_init.html' %}
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <meta name="csrf-token" content="{{ csrf_token }}" />
 
@@ -17,7 +15,9 @@
 
     {% load static %}
     {% load cache %}
-    <link rel="icon" type="image/svg+xml" href="{% static 'admin/favicon-cube.svg' %}" />
+    <link rel="icon" type="image/svg+xml" href="{% static 'admin/favicon-cube.svg' %}?v=7" />
+    <link rel="shortcut icon" type="image/svg+xml" href="{% static 'admin/favicon-cube.svg' %}?v=7" />
+    <link rel="apple-touch-icon" href="{% static 'admin/favicon-cube.svg' %}?v=7" />
     <script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.12/dist/turbo.es2017-umd.js" crossorigin="anonymous"></script>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

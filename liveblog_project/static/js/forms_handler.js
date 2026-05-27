@@ -50,6 +50,11 @@
             if (next && next.classList && next.classList.contains(CLASS_ERROR_MSG)) {
                 next.remove();
             }
+            const pwWrap = field.closest('.form-floating-password');
+            if (pwWrap && pwWrap.nextElementSibling
+                && pwWrap.nextElementSibling.classList.contains('fh-password-field-error')) {
+                pwWrap.nextElementSibling.remove();
+            }
         } catch (e) { /* ignore */ }
     }
 
@@ -57,13 +62,59 @@
         clearFieldErrors(field);
         try {
             field.classList.add(CLASS_ERROR);
+            const pwWrap = field.closest('.form-floating-password');
+            if (pwWrap) {
+                const node = document.createElement('div');
+                node.className = 'text-danger small mt-1 mb-2 fh-field-error-appear fh-password-field-error';
+                node.textContent = messages.join(' ');
+                pwWrap.insertAdjacentElement('afterend', node);
+                return;
+            }
             const node = createErrorNode(messages.join(' '));
             if (field.nextSibling) field.parentNode.insertBefore(node, field.nextSibling);
             else field.parentNode.appendChild(node);
         } catch (e) { /* ignore */ }
     }
 
-    function showNonFieldErrors(container, messages) {
+    function showPostDailyLimitAlert(container, messages, resetAt) {
+        const scope = container.closest('.create-field') || container;
+        const alert = scope.querySelector('#postDailyLimitAlert');
+        if (!alert) return false;
+        const msg = (messages && messages.length) ? messages.join(' ') : 'The post publishing limit has been reached!';
+        const hours = '24';
+        alert.textContent = '';
+        alert.append(
+            document.createTextNode(msg + ' Try again in '),
+            (function () {
+                const strong = document.createElement('strong');
+                strong.className = 'post-daily-limit-alert__timer';
+                strong.setAttribute('data-post-limit-timer', '');
+                strong.textContent = hours;
+                return strong;
+            })(),
+            document.createTextNode(' hours.')
+        );
+        if (resetAt) {
+            alert.setAttribute('data-reset-at', resetAt);
+        }
+        alert.classList.remove('d-none');
+        alert.hidden = false;
+        const submitBtn = container.querySelector('.create-post-submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.setAttribute('aria-disabled', 'true');
+            submitBtn.classList.add('create-post-submit-btn--blocked');
+        }
+        if (typeof window.initPostDailyLimitTimer === 'function') {
+            window.initPostDailyLimitTimer(alert);
+        }
+        alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return true;
+    }
+
+    function showNonFieldErrors(container, messages, options) {
+        const opts = options || {};
+        if (showPostDailyLimitAlert(container, messages, opts.resetAt)) return;
         let box = container.querySelector('.form-errors-global');
         if (!box) {
             box = document.createElement('div');
@@ -239,6 +290,47 @@
     }
 
     // ---------- client validation ----------
+    function applyServerSideFieldHighlights(form) {
+        if (!form) return;
+        form.querySelectorAll('.form-floating-password').forEach(function (wrap) {
+            const field = wrap.querySelector('input:not([type="hidden"])');
+            if (!field || !field.name) return;
+            const errBlock = wrap.nextElementSibling;
+            if (!errBlock || !errBlock.classList.contains('text-danger')) return;
+            if (!String(errBlock.textContent || '').trim()) return;
+            field.classList.add(CLASS_ERROR);
+            if (field.type === 'password' || /password/i.test(field.name)) {
+                field.value = '';
+                try {
+                    field.dispatchEvent(new Event('input', { bubbles: true }));
+                } catch (_) { /* ignore */ }
+            }
+        });
+    }
+
+    function validatePasswordPair(form, name1, name2, message) {
+        const pairResult = { valid: true, errors: {} };
+        const p1 = findField(form, name1);
+        const p2 = findField(form, name2);
+        if (p1 && p2 && String(p1.value || '') !== '' && String(p2.value || '') !== ''
+            && p1.value !== p2.value) {
+            pairResult.valid = false;
+            pairResult.errors[name2] = pairResult.errors[name2] || [];
+            pairResult.errors[name2].push(message);
+        }
+        return pairResult;
+    }
+
+    function mergeValidationResults(target, extra) {
+        if (!extra || extra.valid) return target;
+        target.valid = false;
+        Object.keys(extra.errors).forEach(function (key) {
+            target.errors[key] = target.errors[key] || [];
+            target.errors[key] = target.errors[key].concat(extra.errors[key]);
+        });
+        return target;
+    }
+
     function validateForm(form) {
         // returns { valid: bool, errors: { field: [msg] , __all__: [msg] } }
         const res = { valid: true, errors: {} };
@@ -293,6 +385,20 @@
                 res.errors[el.name].push(`Minimum length is ${n} characters.`);
             }
         });
+
+        if (form.id === 'passwordForm') {
+            mergeValidationResults(
+                res,
+                validatePasswordPair(form, 'new_password1', 'new_password2', 'Passwords do not match.')
+            );
+        }
+
+        if (form.id === 'registerForm') {
+            mergeValidationResults(
+                res,
+                validatePasswordPair(form, 'password1', 'password2', 'Passwords not same')
+            );
+        }
 
         const rtf = form.getAttribute('data-require-text-or-file');
         if (rtf === '1' || rtf === 'true') {
@@ -398,6 +504,9 @@
                 } else if (resp.status === 429) {
                     const msg = (data && data.error) ? data.error : 'Too many requests';
                     showNonFieldErrors(form, [msg]);
+                } else if (resp.status === 403 && data && data.daily_post_limit) {
+                    const msg = data.error || 'The post publishing limit has been reached!';
+                    showNonFieldErrors(form, [msg], { resetAt: data.reset_at || '' });
                 } else {
                     showNonFieldErrors(form, ['Server error. Try again.']);
                 }
@@ -456,6 +565,8 @@
             // avoid attaching listeners twice (pageshow + DOMContentLoaded can both run)
             if (form.dataset.fhInit === '1') return;
             form.dataset.fhInit = '1';
+
+            applyServerSideFieldHighlights(form);
 
             // attach summernote listeners (if present) to keep textarea synced and clear errors on change
             try {

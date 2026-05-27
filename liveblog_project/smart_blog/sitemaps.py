@@ -4,12 +4,16 @@ from __future__ import annotations
 from typing import Optional
 
 from django.contrib.sitemaps import Sitemap
+from django.db.models import Exists, OuterRef
 from django.urls import reverse
 
+from mindset.models import Hashtag, Theme
 from smart_blog.models import Category, Item, Tag
 
 # Human HTML sitemap: only the N most recently created tags (newest first); XML sitemap lists all tags.
 SITEMAP_HTML_TAGS_LIMIT = 50
+# Same upper bound for mindset hashtags on the public HTML sitemap.
+SITEMAP_HTML_MINDSET_TAGS_LIMIT = 50
 
 # Whitelist: only slugs backed by templates (see pages.views.PageView).
 PAGE_SLUGS_FOR_SITEMAP = ("about", "contacts")
@@ -24,11 +28,11 @@ def static_sitemap_entries():
     Each item: (label, url_name, kwargs) — kwargs is None when empty.
     """
     entries = [
-        ("Home", "pages:home", None),
+        ("brainstorm.news", "smart_blog:items_list", None),
         ("FAQ", "pages:faq", None),
-        ("BraiNews", "smart_blog:items_list", None),
         ("In trend", "smart_blog:trending_list", None),
         ("Topics", "smart_blog:topics_list", None),
+        ("Mindset", "mindset:theme_list", None),
         ("Sitemap", "pages:sitemap_page", None),
     ]
     for slug in PAGE_SLUGS_FOR_SITEMAP:
@@ -45,6 +49,8 @@ SITEMAP_SECTION_LABELS = {
     "topics": "Topic hubs",
     "categories": "Category post lists",
     "tags": "Tag pages",
+    "mindset_themes": "Mindset themes",
+    "mindset_tags": "Mindset hashtags",
 }
 
 
@@ -70,6 +76,30 @@ def tags_for_sitemap_html(limit: Optional[int] = None):
     """
     lim = int(limit) if limit is not None else SITEMAP_HTML_TAGS_LIMIT
     return Tag.objects.order_by("-pk")[:lim]
+
+
+def mindset_themes_for_sitemap():
+    """Public mindset themes (not soft-deleted)."""
+    return Theme.objects.filter(is_deleted=False).order_by("-updated_at", "-pk")
+
+
+def mindset_hashtags_for_sitemap():
+    """All mindset hashtags (no soft-delete on Hashtag)."""
+    return Hashtag.objects.all().order_by("slug")
+
+
+def mindset_hashtags_for_sitemap_html(limit: Optional[int] = None):
+    """HTML /sitemap/: newest hashtags first, capped at ``limit``.
+
+    Omits rows that no longer anchor any **live** theme (soft-deleted themes do
+    not count). XML sitemap still uses ``mindset_hashtags_for_sitemap()`` (all rows).
+    """
+    lim = int(limit) if limit is not None else SITEMAP_HTML_MINDSET_TAGS_LIMIT
+    live_theme = Theme.objects.filter(hashtags=OuterRef('pk'), is_deleted=False)
+    return (
+        Hashtag.objects.filter(Exists(live_theme))
+        .order_by('-created_at', '-pk')[:lim]
+    )
 
 
 class StaticAndListSitemap(Sitemap):
@@ -136,10 +166,41 @@ class TagSitemap(Sitemap):
         return reverse("smart_blog:tag_list", kwargs={"slug": obj.slug})
 
 
+class MindsetThemeSitemap(Sitemap):
+    """Mindset theme detail pages: /mindset/theme/<pk>/."""
+
+    changefreq = "daily"
+    priority = 0.6
+
+    def items(self):
+        return mindset_themes_for_sitemap()
+
+    def lastmod(self, obj):
+        return obj.updated_at or obj.created_at
+
+    def location(self, obj):
+        return reverse("mindset:theme_detail", kwargs={"pk": obj.pk})
+
+
+class MindsetHashtagSitemap(Sitemap):
+    """Mindset hashtag listings: /mindset/tag/<slug>/."""
+
+    changefreq = "weekly"
+    priority = 0.5
+
+    def items(self):
+        return mindset_hashtags_for_sitemap()
+
+    def location(self, obj):
+        return reverse("mindset:theme_list_by_tag", kwargs={"slug": obj.slug})
+
+
 PUBLIC_SITEMAPS = {
     "static": StaticAndListSitemap,
     "posts": PostSitemap,
     "topics": TopicSitemap,
     "categories": CategoryListSitemap,
     "tags": TagSitemap,
+    "mindset_themes": MindsetThemeSitemap,
+    "mindset_tags": MindsetHashtagSitemap,
 }

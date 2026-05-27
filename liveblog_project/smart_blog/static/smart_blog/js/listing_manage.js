@@ -13,15 +13,97 @@
     }
 
     /* ================= CONFIG ================= */
-    const ALLOWED_PATTERNS = ['brainews', 'blog', '/profile', '/search', '/tag', 'smart_blog'];
+    const ALLOWED_PATTERNS = ['brainews', 'blog', '/profile', '/search', '/tag', 'smart_blog', '/mindset'];
 
     function isAllowedPath(pathname) {
         try {
             const p = (pathname || location.pathname || '').toLowerCase();
+            // brainstorm.news home now lives at "/" — treat root as an allowed listing surface.
+            if (p === '' || p === '/') return true;
+            if (p.includes('/topics')) return true;
             return ALLOWED_PATTERNS.some(t => p.includes(t));
         } catch {
             return false;
         }
+    }
+
+    /** Mindset: URL keyed in listing_url — must match return target after hashtag filter (# ×). */
+    function getMindsetListRestoreUrl() {
+        try {
+            const pathname = location.pathname || '/';
+            const search = window.location.search || '';
+            const pathTrim = pathname.replace(/\/+$/, '') || '/';
+
+            if (/^\/profile\/[^/]+\/themes$/i.test(pathTrim)) {
+                return pathname.replace(/\/+$/, '') + '/' + search;
+            }
+            if (pathTrim.startsWith('/mindset/tag')) {
+                return '/mindset/';
+            }
+            if (pathTrim.startsWith('/mindset/theme')) {
+                return '/mindset/';
+            }
+            if (pathTrim === '/mindset') {
+                return '/mindset/' + (search === '?' ? '' : search);
+            }
+        } catch { }
+        return '';
+    }
+
+    /** Same-origin hashtag filter exit (# ×) → back to profile themes or Mindset hub. */
+    function patchMindsetTagExitHref() {
+        try {
+            if (!location.pathname.includes('/mindset/tag')) return;
+            const a = document.querySelector('.mindset-active-tag a.mindset-hashtag[href]');
+            if (!a) return;
+            const ret = getItem('listing_url');
+            if (!ret || ret.indexOf('/mindset/tag/') !== -1) return;
+            const u = new URL(ret, location.origin);
+            if (u.origin !== location.origin) return;
+            const p = u.pathname.replace(/\/+$/, '') || '/';
+            const ok = /^\/profile\/[^/]+\/themes$/i.test(p) || /^\/mindset$/i.test(p) || u.pathname.startsWith('/mindset/');
+            if (!ok || u.pathname.includes('/mindset/tag/')) return;
+            a.setAttribute('href', u.pathname + (u.search || ''));
+        } catch { }
+    }
+
+    const BRAIN_FILTER_KEY = 'brainews_filter_active';
+    /** Set for one nested restoreListingPosition() call triggered by BraiNews after filtered cards hit the DOM. */
+    const LISTING_FROM_BRAIN_EVENT = 'listing_from_brainews_cards_ready';
+
+    function isBrainewsFilterableFeedPage() {
+        try {
+            const path = (location.pathname || '').replace(/\/+$/, '') || '/';
+            if (path === '' || path === '/') return true;
+            if (path === '/filter' || path.startsWith('/filter/')) return true;
+            if (path.endsWith('/brainews') || path === '/brainews' || path === '/blog/brainews') return true;
+            if (path.startsWith('/brainews/filter') || path.startsWith('/blog/brainews/filter')) return true;
+            if (path === '/search' || path.startsWith('/search/')) return true;
+            if (path.startsWith('/tag/') || path.includes('/blog/tag/')) return true;
+        } catch { }
+        return false;
+    }
+
+    function getMindsetAnchorIdFromElement(innerEl) {
+        const reply = innerEl?.closest?.('[data-mindset-reply]');
+        if (reply) {
+            let id = reply.id;
+            if (!id || !id.startsWith('mindset-reply-')) {
+                const pid = reply.getAttribute('data-mindset-reply');
+                if (pid) id = 'mindset-reply-' + pid;
+            }
+            if (id && id.startsWith('mindset-reply-')) return id;
+        }
+        const theme = innerEl?.closest?.('[data-mindset-theme]');
+        if (theme) {
+            let id = theme.id;
+            if (!id || !id.startsWith('mindset-theme-')) {
+                const tid = theme.getAttribute('data-mindset-theme');
+                if (tid) id = 'mindset-theme-' + tid;
+            }
+            if (id && id.startsWith('mindset-theme-')) return id;
+        }
+        return null;
     }
 
 
@@ -291,15 +373,83 @@
        1) SAVE LISTING STATE ON CARD CLICK
     ===================================================== */
     document.addEventListener('click', function (e) {
-        const crumbLink = e.target.closest?.('.breadcrumb-trail a');
-        if (!crumbLink) return;
         if (!location.pathname.includes('/post/') || location.pathname.includes('/edit/')) return;
 
-        // Ensure instant restore when leaving detail via breadcrumbs
+        const a = e.target.closest?.('a[href]');
+        if (!a) return;
+
+        // Triggers smooth scroll+glow when leaving detail back to a listing surface:
+        // breadcrumb link, header brand link, or any other internal link pointing
+        // at an allowed listing path that matches our saved listing_url.
+        const isBreadcrumb = !!a.closest?.('.breadcrumb-trail');
+        const isBrand = a.classList?.contains('brand-minimal');
+        const isMindsetBack = a.classList?.contains('mindset-back-link__link');
+        let isMindsetHeaderHub = false;
+        try {
+            const hu = new URL(a.getAttribute('href') || '', location.origin);
+            const pth = hu.pathname.replace(/\/+$/, '') || '/';
+            isMindsetHeaderHub = !!a.classList?.contains('header-menu-item')
+                && hu.origin === location.origin
+                && pth === '/mindset';
+        } catch { }
+
+        let targetMatchesSavedListing = false;
+        try {
+            const targetUrl = new URL(a.getAttribute('href') || '', location.origin);
+            if (targetUrl.origin === location.origin && !targetUrl.pathname.includes('/post/')) {
+                const targetPath = targetUrl.pathname + targetUrl.search;
+                if (isAllowedPath(targetPath)) {
+                    const savedListing = getItem('listing_url');
+                    if (savedListing && savedListing === targetPath) {
+                        targetMatchesSavedListing = true;
+                    }
+                }
+            }
+        } catch { }
+
+        if (!isBreadcrumb && !isBrand && !targetMatchesSavedListing && !isMindsetBack && !isMindsetHeaderHub) return;
+
         try {
             setItem('listing_instant', '1');
             setItem('profile_from_detail', '1');
         } catch { }
+    }, { passive: true });
+
+    /* Mindset: save scroll + card anchor when opening tag filter; restore on "×" exit. */
+    document.addEventListener('click', function (e) {
+        const a = e.target.closest?.('.mindset-active-tag a.mindset-hashtag[href]');
+        if (!a) return;
+        let u;
+        try {
+            u = new URL(a.getAttribute('href') || '', location.origin);
+        } catch {
+            return;
+        }
+        const p = u.pathname.replace(/\/+$/, '') || '/';
+        if (p !== '/mindset') return;
+        try {
+            setItem('listing_instant', '1');
+            setItem('profile_from_detail', '1');
+        } catch { }
+    }, { passive: true });
+
+    document.addEventListener('click', function (e) {
+        const a = e.target.closest?.('a.mindset-hashtag[href]');
+        if (!a || a.closest('.mindset-active-tag')) return;
+        let u;
+        try {
+            u = new URL(a.getAttribute('href') || '', location.origin);
+        } catch {
+            return;
+        }
+        if (!u.pathname.includes('/mindset/tag/')) return;
+        const listUrl = getMindsetListRestoreUrl();
+        if (!listUrl) return;
+        setItem('listing_url', listUrl);
+        setItem('listing_scroll', String(window.scrollY || 0));
+        const anchor = getMindsetAnchorIdFromElement(a);
+        if (anchor) setItem('listing_anchor', anchor);
+        removeItem('listing_section_anchor');
     }, { passive: true });
 
     document.addEventListener('click', function (e) {
@@ -313,6 +463,25 @@
             }
         }
         if (!link) return;
+
+        if (/^\/mindset(\/|$)/.test(location.pathname || '')) {
+            try {
+                const uh = new URL(link.href, location.origin);
+                if (
+                    uh.origin === location.origin
+                    && isItemDetailHref(link.getAttribute('href') || '')
+                    && uh.pathname.includes('/post/')
+                    && !uh.searchParams.has('from')
+                ) {
+                    uh.searchParams.set('from', 'mindset');
+                    uh.searchParams.set(
+                        'source_url',
+                        location.pathname + (location.search || ''),
+                    );
+                    link.href = uh.toString();
+                }
+            } catch { }
+        }
 
         setItem('listing_url', location.pathname + location.search);
         setItem('listing_scroll', String(window.scrollY || 0));
@@ -334,6 +503,8 @@
 
         try {
             setItem('profile_from_detail', '1');
+            /* Smooth scroll + pulse on return (including browser back) from listing → post. */
+            setItem('listing_instant', '1');
         } catch { }
 
         try {
@@ -440,12 +611,37 @@
         }
     }
 
+    function smoothScrollToCard(cardEl) {
+        if (!cardEl) return false;
+        const headerEl = document.querySelector('.header-wrapper');
+        const headerH = headerEl ? Math.round(headerEl.getBoundingClientRect().height) : 64;
+        const offset = headerH + 24;
+        const rect = cardEl.getBoundingClientRect();
+        const targetY = Math.max(0, Math.round(rect.top + window.pageYOffset - offset));
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        try {
+            window.scrollTo({ top: targetY, behavior: reduce ? 'auto' : 'smooth' });
+        } catch {
+            window.scrollTo(0, targetY);
+        }
+        return true;
+    }
+
+    function smoothScrollToY(y) {
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        try {
+            window.scrollTo({ top: y, behavior: reduce ? 'auto' : 'smooth' });
+        } catch {
+            window.scrollTo(0, y);
+        }
+    }
+
     function restoreListingPosition() {
         if (maybeRefreshProfileListing()) return;
-        if (!isAllowedPath(location.pathname + location.search)) {
-            clearListing();
-            return;
-        }
+        // Non-listing surfaces (e.g. /post/<slug>/): just bail out. Do NOT clearListing()
+        // here — that would wipe state right after a card click on the way to the detail
+        // page, breaking the smooth-scroll/glow return flow.
+        if (!isAllowedPath(location.pathname + location.search)) return;
 
         const savedUrl = getItem('listing_url');
         if (!savedUrl || savedUrl !== location.pathname + location.search) return;
@@ -467,41 +663,77 @@
 
         restoreShownCount();
 
-        if (instant && fromDetail) {
-            const savedScroll = parseInt(getItem('listing_scroll') || '0', 10);
-            if (!Number.isNaN(savedScroll)) {
-                requestAnimationFrame(() => {
-                    window.scrollTo(0, savedScroll);
-                });
+        const el = targetId ? document.getElementById(targetId) : null;
+        if (el) {
+            ensureListingCardVisible(el);
+
+            const section = el.closest?.('.profile-section');
+            if (section && window.profileSectionsActivate) {
+                try { window.profileSectionsActivate(section.id); } catch { }
             }
+        }
+
+        const fromBrainCardsReady = getItem(LISTING_FROM_BRAIN_EVENT) === '1';
+        /* BraiNews filter replaces cards asynchronously; skip first scroll attempt until filtered HTML is painted. */
+        const deferBrainewsScroll = !!(instant && fromDetail && getItem(BRAIN_FILTER_KEY)
+            && isBrainewsFilterableFeedPage() && !fromBrainCardsReady);
+
+        if (!deferBrainewsScroll && instant && fromDetail) {
+            let cardForScroll = null;
+            if (el) {
+                if (el.classList?.contains('mindset-theme') || el.classList?.contains('mindset-reply')) {
+                    cardForScroll = el;
+                } else {
+                    cardForScroll = el.closest?.('.item-card') || el;
+                }
+            }
+            requestAnimationFrame(() => {
+                if (cardForScroll) {
+                    smoothScrollToCard(cardForScroll);
+                } else {
+                    const savedScroll = parseInt(getItem('listing_scroll') || '0', 10);
+                    if (!Number.isNaN(savedScroll)) {
+                        smoothScrollToY(savedScroll);
+                    }
+                }
+            });
             removeItem('listing_instant');
         }
 
-        if (!targetId || !fromDetail) return;
+        if (deferBrainewsScroll || !targetId || !fromDetail || !el) return;
 
-        const el = document.getElementById(targetId);
-        if (!el) return;
-
-        ensureListingCardVisible(el);
-
-        const section = el.closest?.('.profile-section');
-        if (section && window.profileSectionsActivate) {
-            try { window.profileSectionsActivate(section.id); } catch { }
-        }
-
-        if (anchorId && String(anchorId).startsWith('item-')) {
-            const cardEl = el.closest?.('.item-card') || el;
+        const isBlogItem = anchorId && String(anchorId).startsWith('item-');
+        const isMindsetCard = anchorId && (
+            String(anchorId).startsWith('mindset-theme-')
+            || String(anchorId).startsWith('mindset-reply-')
+        );
+        if (isBlogItem || isMindsetCard) {
+            let cardEl = el;
+            if (isBlogItem) {
+                cardEl = el.closest?.('.item-card') || el;
+            }
             cardEl.classList.remove('back-highlight');
             setTimeout(() => {
                 void cardEl.offsetWidth;
                 cardEl.classList.add('back-highlight');
-                setTimeout(() => cardEl.classList.remove('back-highlight'), 1300);
-            }, 100);
+                setTimeout(() => cardEl.classList.remove('back-highlight'), 1900);
+            }, 250);
         }
     }
 
+    document.addEventListener('brainewsFilterCardsReady', function () {
+        try {
+            setItem(LISTING_FROM_BRAIN_EVENT, '1');
+            restoreListingPosition();
+        } finally {
+            removeItem(LISTING_FROM_BRAIN_EVENT);
+        }
+    });
+
     window.addEventListener('pageshow', restoreListingPosition);
     document.addEventListener('DOMContentLoaded', restoreListingPosition);
+    document.addEventListener('DOMContentLoaded', patchMindsetTagExitHref);
+    window.addEventListener('pageshow', patchMindsetTagExitHref);
     window.addEventListener('pageshow', () => { maybeRefreshProfileListing(); });
     document.addEventListener('DOMContentLoaded', () => { maybeRefreshProfileListing(); });
 

@@ -84,7 +84,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="text-muted d-flex align-items-center">
         <small class="d-flex align-items-center gap-2">
-          <i class="fa fa-calendar-o" aria-hidden="true"></i>
+          <i class="fa fa-clock-o" aria-hidden="true"></i>
           <span class="fw-semibold">{{ item.human_published }}</span>
           {% if item.is_edited %}
             <span>/</span>
@@ -94,9 +94,9 @@
       </div>
       {% if item.author %}
         {% if user == item.author %}
-          <small class="primary_ fw-semibold">My post</small>
+          <small class="primary_ fw-semibold">Your post</small>
         {% else %}
-          <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+          <a href="{% url 'login_app:profile' item.author.username %}" class="d-flex align-items-center gap-2 flex-wrap text-decoration-none" title="{% user_status_title item.author %}">
             <span class="comment-author-name fw-semibold item-detail-author-name">
               {% if item.author.is_active %}
                 {{ item.author }}
@@ -104,25 +104,23 @@
                 {% user_status_display item.author %}
               {% endif %}
             </span>
-            <a href="{% url 'login_app:profile' item.author.username %}" class="d-flex align-items-center gap-1 text-decoration-none" title="{% user_status_title item.author %}">
-              <div class="little-avatar">
-                {% if item.author.is_active %}
-                  {% if item.author.profile.avatar_url or item.author.profile.avatar_file %}
-                    <img src="{{ item.author.profile.get_avatar }}" alt="{{ item.author }}" class="user-avatar clickable-avatar" data-full="{{ item.author.profile.get_avatar }}" data-username="{{ item.author.username }}" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
-                  {% else %}
-                    <img src="{% static 'img/no_avatar.svg' %}" alt="{{ item.author }}" class="user-avatar no_avatar" data-username="{{ item.author.username }}" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
-                  {% endif %}
+            <div class="little-avatar">
+              {% if item.author.is_active %}
+                {% if item.author.profile.avatar_url or item.author.profile.avatar_file %}
+                  <img src="{{ item.author.profile.get_avatar }}" alt="{{ item.author }}" class="user-avatar clickable-avatar" data-full="{{ item.author.profile.get_avatar }}" data-username="{{ item.author.username }}" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
                 {% else %}
-                  <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display item.author %}" class="user-avatar" width="40" height="40" loading="eager" decoding="async" />
+                  <img src="{% static 'img/no_avatar.svg' %}" alt="{{ item.author }}" class="user-avatar no_avatar" data-username="{{ item.author.username }}" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
                 {% endif %}
-              </div>
-            </a>
-          </div>
+              {% else %}
+                <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display item.author %}" class="user-avatar" width="40" height="40" loading="eager" decoding="async" />
+              {% endif %}
+            </div>
+          </a>
         {% endif %}
       {% else %}
         <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-          <span class="comment-author-name fw-semibold item-detail-author-name">{% user_status_display item.author %}</span>
-          <a href="{% url 'login_app:vanished' %}" class="d-flex align-items-center text-decoration-none" title="{% user_status_title item.author %}">
+          <a href="{% url 'login_app:vanished' %}" class="d-flex align-items-center gap-2 text-decoration-none" title="{% user_status_title item.author %}">
+            <span class="comment-author-name fw-semibold item-detail-author-name">{% user_status_display item.author %}</span>
             <div class="little-avatar">
               <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display item.author %}" class="user-avatar" width="40" height="40" loading="eager" decoding="async" />
             </div>
@@ -163,15 +161,15 @@
                 {% if like.user %}
                   {% if like.user.is_active %}
                     {% if like.user.profile.avatar_url or like.user.profile.avatar_file %}
-                      <img src="{{ like.user.profile.get_avatar }}" alt="{{ like.user.username }}" class="user-avatar" width="30" height="30" loading="lazy" decoding="async" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
+                      <img src="{{ like.user.profile.get_avatar }}" alt="{{ like.user.username }}" class="user-avatar" width="30" height="30" loading="eager" decoding="async" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
                     {% else %}
-                      <img src="{% static 'img/no_avatar.svg' %}" alt="{{ like.user.username }}" class="user-avatar no_avatar" width="30" height="30" loading="lazy" decoding="async" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
+                      <img src="{% static 'img/no_avatar.svg' %}" alt="{{ like.user.username }}" class="user-avatar no_avatar" width="30" height="30" loading="eager" decoding="async" onerror="this.onerror=null;this.classList.add('avatar-load-failed');" />
                     {% endif %}
                   {% else %}
-                    <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display like.user %}" class="user-avatar" width="30" height="30" loading="lazy" decoding="async" />
+                    <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display like.user %}" class="user-avatar" width="30" height="30" loading="eager" decoding="async" />
                   {% endif %}
                 {% else %}
-                  <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display like.user %}" class="user-avatar" width="30" height="30" loading="lazy" decoding="async" />
+                  <img src="{% static 'img/user-deleted.webp' %}" alt="{% user_status_display like.user %}" class="user-avatar" width="30" height="30" loading="eager" decoding="async" />
                 {% endif %}
               </span>
             {% endfor %}
@@ -246,16 +244,12 @@
       <div id="likedUsersCurrent"
         data-username="{{ user.username }}"
         data-profile-url="{% url 'login_app:profile' user.username %}"
-        data-avatar="{% if user.profile.avatar_url or user.profile.avatar_file %}
-          {{ user.profile.get_avatar }}
-        {% else %}
-          {% static 'img/no_avatar.svg' %}
-        {% endif %}"
+        data-avatar="{% if user.profile.avatar_url or user.profile.avatar_file %}{{ user.profile.get_avatar }}{% else %}{% static 'img/no_avatar.svg' %}{% endif %}"
         class="hidden"></div>
     {% endif %}
 
     <!-- ===== Comments: form → heading + count → preview → Read more ===== -->
-    <div id="commentsList" class="detail-comments-stack pt-4 mt-2">
+    <div id="commentsList" class="detail-comments-stack py-4">
     {% if user.is_authenticated %}
       {% include 'includes/comment_form.html' with comments_page=False comment_form_expand=True %}
     {% endif %}
@@ -299,6 +293,7 @@
   {% include 'includes/share_modal.html' %}
   {% include 'includes/report_modal.html' %}
   {% include 'includes/liked_users_modal.html' %}
+  {% include 'includes/mobile_comment_dock.html' %}
   {% if item.body_pin_original %}
     <div class="modal fade item-pinned-file-modal" id="itemPinnedFileModal" tabindex="-1" aria-hidden="true" aria-label="{% trans 'Document preview' %}" data-bs-keyboard="true">
       <div class="modal-dialog modal-fullscreen">
@@ -361,6 +356,7 @@
   {% endif %}
   <script defer src="{% static 'smart_blog/js/comment_restore_ui.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/comment_operate.js' %}"></script>
+  <script defer src="{% static 'smart_blog/js/mobile_comment_dock.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/liked_users_overlay.js' %}"></script>
   <script defer src="{% static 'smart_blog/js/report_modal.js' %}"></script>
   <script>

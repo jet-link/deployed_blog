@@ -89,11 +89,49 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    def _slug_base_from_name(self):
+        base = slugify(self.name, allow_unicode=False)
+        if not base and translit:
+            try:
+                base = slugify(translit(self.name, 'ru', reversed=True))
+            except Exception:
+                base = ''
+        if not base:
+            base = ''.join(ch for ch in self.name if ch.isalnum())[:50]
+        return base or 'category'
+
+    def _assign_unique_slug_from_name(self):
+        base = self._slug_base_from_name()
+        candidate = base
+        n = 1
+        while True:
+            qs = Category.all_objects.filter(slug=candidate)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if not qs.exists():
+                self.slug = candidate
+                return
+            candidate = f"{base}-{n}"
+            n += 1
+
     def save(self, *args, **kwargs):
         self.name = self.name.strip()
+        if self.name:
+            self.name = self.name.capitalize()
 
+        regen_slug = False
         if not self.slug:
-            self.slug = slugify(self.name)
+            regen_slug = True
+        elif self.pk:
+            try:
+                prev = Category.all_objects.only('name').get(pk=self.pk)
+                if prev.name.strip() != self.name:
+                    regen_slug = True
+            except Category.DoesNotExist:
+                regen_slug = True
+
+        if regen_slug:
+            self._assign_unique_slug_from_name()
 
         super().save(*args, **kwargs)
 
@@ -137,20 +175,38 @@ class Tag(models.Model):
         from django.urls import reverse
         return reverse('smart_blog:tag_list', kwargs={'slug': self.slug})
 
+    def _assign_unique_slug_from_tag_name(self):
+        base = slugify(self.tag_name) or 'tag'
+        candidate = base
+        n = 1
+        while True:
+            qs = Tag.all_objects.filter(slug=candidate)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if not qs.exists():
+                self.slug = candidate
+                return
+            n += 1
+            candidate = f"{base}-{n}"
+
     def save(self, *args, **kwargs):
         # Match public tag entry style (lowercase); slugify lowercases anyway
         self.tag_name = (self.tag_name or '').strip().lower()
-        # Автогенерация slug при сохранении (если не указан)
+
+        regen_slug = False
         if not self.slug:
-            base = slugify(self.tag_name)
-            slug_candidate = base or "tag"
-            # Убедимся в уникальности: добавляем суффикс при необходимости
-            counter = 0
-            from django.db.models import Q
-            while Tag.objects.filter(Q(slug=slug_candidate)).exclude(pk=self.pk).exists():
-                counter += 1
-                slug_candidate = f"{base}-{counter}"
-            self.slug = slug_candidate
+            regen_slug = True
+        elif self.pk:
+            try:
+                prev = Tag.all_objects.only('tag_name').get(pk=self.pk)
+                if prev.tag_name != self.tag_name:
+                    regen_slug = True
+            except Tag.DoesNotExist:
+                regen_slug = True
+
+        if regen_slug:
+            self._assign_unique_slug_from_tag_name()
+
         super().save(*args, **kwargs)
 
     def soft_delete(self):
@@ -807,12 +863,16 @@ class Notification(models.Model):
     TYPE_ITEM_LIKE = "item_like"
     TYPE_COMMENT_LIKE = "comment_like"
     TYPE_FROM_ADMIN = "from_admin"
+    TYPE_MINDSET_THEME_REPLY = "mindset_theme_reply"
+    TYPE_MINDSET_THEME_REPOST = "mindset_theme_repost"
 
     TYPE_CHOICES = [
         (TYPE_REPLY, "Reply"),
         (TYPE_ITEM_LIKE, "Liked item"),
         (TYPE_COMMENT_LIKE, "Liked comment"),
         (TYPE_FROM_ADMIN, "From admin"),
+        (TYPE_MINDSET_THEME_REPLY, "Mindset theme reply"),
+        (TYPE_MINDSET_THEME_REPOST, "Mindset theme repost"),
     ]
 
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
@@ -836,6 +896,20 @@ class Notification(models.Model):
     )
     parent_comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="reply_notifications", null=True, blank=True)
     reply_comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="notifications", null=True, blank=True)
+    mindset_theme = models.ForeignKey(
+        "mindset.Theme",
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        null=True,
+        blank=True,
+    )
+    mindset_reply = models.ForeignKey(
+        "mindset.Reply",
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        null=True,
+        blank=True,
+    )
     is_read = models.BooleanField(default=False)
     cleared_from_inbox = models.BooleanField(
         default=False,
@@ -858,12 +932,29 @@ class Notification(models.Model):
     def __str__(self):
         if self.notif_type == self.TYPE_FROM_ADMIN:
             return f"Admin notification for {self.recipient}"
+        if self.notif_type in (self.TYPE_MINDSET_THEME_REPLY, self.TYPE_MINDSET_THEME_REPOST):
+            return f"Notification for {self.recipient} on Mindset theme {self.mindset_theme_id}"
         return f"Notification for {self.recipient} on {self.item}"
+
+    @property
+    def admin_list_link_label(self):
+        if self.notif_type in (self.TYPE_MINDSET_THEME_REPLY, self.TYPE_MINDSET_THEME_REPOST):
+            from smart_blog.notification_utils import mindset_theme_annotation
+
+            label = (mindset_theme_annotation(self.mindset_theme) or "").strip()
+            return label or "Mindset theme"
+        if self.item_id and self.item:
+            return (self.item.title or "").strip()
+        return ""
 
     @property
     def admin_reason_label(self):
         if self.notif_type == self.TYPE_FROM_ADMIN:
             return "From admin"
+        if self.notif_type == self.TYPE_MINDSET_THEME_REPLY:
+            return "Mindset theme reply"
+        if self.notif_type == self.TYPE_MINDSET_THEME_REPOST:
+            return "Mindset theme repost"
         if self.notif_type == self.TYPE_REPLY:
             return "Comment reply"
         if self.notif_type == self.TYPE_COMMENT_LIKE:
@@ -887,6 +978,17 @@ class Notification(models.Model):
     def get_absolute_url(self):
         if self.notif_type == self.TYPE_FROM_ADMIN:
             return reverse("login_app:notifications", kwargs={"username": self.recipient.username})
+
+        if self.notif_type in (self.TYPE_MINDSET_THEME_REPLY, self.TYPE_MINDSET_THEME_REPOST):
+            if not self.mindset_theme_id:
+                return reverse("mindset:theme_list")
+            base = reverse("mindset:theme_detail", kwargs={"pk": self.mindset_theme_id})
+            if (
+                self.notif_type == self.TYPE_MINDSET_THEME_REPLY
+                and self.mindset_reply_id
+            ):
+                return f"{base}#mindset-reply-{self.mindset_reply_id}"
+            return f"{base}#mindset-theme-{self.mindset_theme_id}"
 
         def _item_comment_url(path, focus_pk, anchor_pk):
             sep = '&' if '?' in path else '?'

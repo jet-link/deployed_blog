@@ -8,11 +8,12 @@ ViewEvent provides non-unique page-view counts for real velocity.
 from __future__ import annotations
 
 import math
-from collections import defaultdict
 from datetime import timedelta
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Count, Q
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from smart_blog.models import (
@@ -23,7 +24,7 @@ from smart_blog.models import (
 TRENDING_API_CACHE_KEY = "trending:api_snapshot"
 
 TRUST_SCORE_MIN = 3.0
-ACTIVE_DAYS = 7
+ACTIVE_DAYS = int(getattr(settings, "TRENDING_ACTIVE_DAYS", 7))
 
 
 def _author_trust_ok(item: Item) -> bool:
@@ -74,7 +75,7 @@ def trend_score_from_stats(
     raw = views * 0.5 + likes * 3.0 + comments * 5.0 + bookmarks * 4.0 + reposts * 6.0
     base = math.log10(max(raw, 1))
     age_penalty = math.pow(max(hours_since_post, 0.0) + 2.0, 1.5)
-    velocity_bonus = engagement_1h / max(engagement_prev_1h, 1) if engagement_prev_1h >= 0 else 0
+    velocity_bonus = engagement_1h / max(engagement_prev_1h, 1)
     score = (base * (1.0 + 0.3 * min(velocity_bonus, 3.0))) / age_penalty
     return score
 
@@ -233,7 +234,9 @@ def calculate_trending(now=None) -> int:
     since_days = now - timedelta(days=ACTIVE_DAYS)
 
     items = list(
-        Item.objects.filter(is_published=True, published_date__gte=since_days)
+        Item.objects.filter(is_published=True, deleted_at__isnull=True)
+        .annotate(anchor=Coalesce("published_date", "created"))
+        .filter(anchor__gte=since_days)
         .select_related("author", "author__profile")
         .only("pk", "published_date", "created", "author_id",
               "author__id", "author__profile__trust_score")

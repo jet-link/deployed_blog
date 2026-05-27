@@ -1,0 +1,34 @@
+<div class="mindset-sidebar-stack" data-mindset-sidebar>
+  <div class="mindset-sidebar-card">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 class="mindset-sidebar-card__title m-0">
+        {% comment %} <i class="fa fa-commenting-o me-2" aria-hidden="true"></i> {% endcomment %}
+        <i class="fa fa-at me-2" aria-hidden="true"></i>
+        Most popular themes
+      </h5>
+    </div>
+    <hr class="text-muted" />
+    <ul class="mindset-sidebar-list" data-mindset-sidebar-list="last">
+      {% for entry in sidebar.last %}
+        {% include 'mindset/_sidebar_item.html' with entry=entry %}
+      {% empty %}
+        <li class="text-muted small">No themes yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="mindset-sidebar-card">
+    <h5 class="mindset-sidebar-card__title m-0">
+      <i class="fa fa-bullhorn me-2" aria-hidden="true"></i>
+      Most discussed themes
+    </h5>
+    <hr class="text-muted" />
+    <ul class="mindset-sidebar-list" data-mindset-sidebar-list="top">
+      {% for entry in sidebar.top %}
+        {% include 'mindset/_sidebar_item.html' with entry=entry %}
+      {% empty %}
+        <li class="text-muted small">Nothing trending yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>

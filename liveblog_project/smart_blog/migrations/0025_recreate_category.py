@@ -4,6 +4,19 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def _drop_legacy_category(apps, schema_editor):
+    """Только на PostgreSQL: убрать прежнюю Category-таблицу и orphaned FK-колонку.
+    SQLite (локальный dev) проходит migrate с нуля — на нём этого делать не нужно
+    и сам синтаксис (CASCADE / DROP COLUMN IF EXISTS) не поддерживается.
+    """
+    if schema_editor.connection.vendor != "postgresql":
+        return
+    schema_editor.execute(
+        "DROP TABLE IF EXISTS smart_blog_category CASCADE; "
+        "ALTER TABLE smart_blog_item DROP COLUMN IF EXISTS category_id;"
+    )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -12,10 +25,7 @@ class Migration(migrations.Migration):
 
     operations = [
         # 1. Drop Category table + orphaned category_id (PostgreSQL keeps column after DROP TABLE CASCADE)
-        migrations.RunSQL(
-            sql="DROP TABLE IF EXISTS smart_blog_category CASCADE; ALTER TABLE smart_blog_item DROP COLUMN IF EXISTS category_id;",
-            reverse_sql=migrations.RunSQL.noop,
-        ),
+        migrations.RunPython(_drop_legacy_category, migrations.RunPython.noop),
         # 2. Create Category with new schema
         migrations.CreateModel(
             name='Category',

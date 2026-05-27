@@ -5,6 +5,14 @@ html[data-theme="dark"] .personal-info-row {
     border-color: var(--border-default);
 }
 
+.text-danger{
+    margin-bottom: 10px !important;
+}
+
+.invalid-feedback {
+    margin-bottom: 10px !important;
+}
+
 /* Light + shared: modal dimmer (semi-transparent, not milky/white) */
 .modal-backdrop.show {
     background-color: rgba(0, 0, 0, 0.52) !important;
@@ -296,15 +304,42 @@ html[data-theme="dark"] .category-select-panel {
     transition: background-color 0.15s ease;
 }
 
+.category-select-option[aria-selected="true"],
+.category-select-option.is-selected {
+    background: color-mix(in srgb, var(--text-link) 14%, var(--bg-default));
+    color: var(--text-link);
+    font-weight: 600;
+}
+
+html[data-theme="dark"] .category-select-option[aria-selected="true"],
+html[data-theme="dark"] .category-select-option.is-selected {
+    background: color-mix(in srgb, var(--text-link) 20%, var(--bg-muted));
+    color: var(--text-link);
+}
+
 .category-select-option:hover,
 .category-select-option:focus {
     background: color-mix(in srgb, var(--text-link) 12%, var(--bg-default));
     outline: none;
 }
 
+.category-select-option[aria-selected="true"]:hover,
+.category-select-option[aria-selected="true"]:focus,
+.category-select-option.is-selected:hover,
+.category-select-option.is-selected:focus {
+    background: color-mix(in srgb, var(--text-link) 20%, var(--bg-default));
+}
+
 html[data-theme="dark"] .category-select-option:hover,
 html[data-theme="dark"] .category-select-option:focus {
     background: color-mix(in srgb, var(--text-link) 18%, var(--bg-muted));
+}
+
+html[data-theme="dark"] .category-select-option[aria-selected="true"]:hover,
+html[data-theme="dark"] .category-select-option[aria-selected="true"]:focus,
+html[data-theme="dark"] .category-select-option.is-selected:hover,
+html[data-theme="dark"] .category-select-option.is-selected:focus {
+    background: color-mix(in srgb, var(--text-link) 26%, var(--bg-muted));
 }
 
 .category-select-custom.is-open .category-select-trigger {
@@ -325,7 +360,7 @@ html[data-theme="dark"] .category-select-option:focus {
     color: #3d454d;
     border: 1px solid color-mix(in srgb, #6c757d 40%, var(--border-default));
     background: color-mix(in srgb, #6c757d 11%, var(--card-bg));
-    border-radius: 6px;
+    border-radius: 999px;
     box-sizing: border-box;
     flex-shrink: 0;
     transition:
@@ -522,7 +557,8 @@ html {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    overflow-x: hidden;
+    /* clip — горизонтальный клип без «оси прокрутки» как у hidden; иначе sticky ломается (Chrome/Safari). */
+    overflow-x: clip;
 }
 
 html {
@@ -552,10 +588,10 @@ html.scroll-locked body {
     width: 100%;
     max-width: 100%;
     top: var(--scroll-y, 0);
-    height: 100%;
-    min-height: 100vh;
-    min-height: 100dvh;
-    min-height: -webkit-fill-available;
+    /* top + height:100vh leaves a gap below the viewport when scrolled (Safari scrim bug) */
+    bottom: 0;
+    height: auto;
+    min-height: 0;
 }
 
 /* Search overlay open: no extra min-height vs. keyboard / dynamic toolbars (avoids outer scrollbar). */
@@ -1005,7 +1041,7 @@ html[data-theme="dark"] .form-floating>textarea:not(:placeholder-shown)~label {
 }
 
 .paginator-btn:hover {
-    color: var(--btn-primary-bg);
+    color: #0984e3;
     background: var(--bg-subtle);
     border-color: var(--border-strong);
 }
@@ -1014,6 +1050,8 @@ html[data-theme="dark"] .form-floating>textarea:not(:placeholder-shown)~label {
     color: var(--text-muted);
     cursor: default;
     pointer-events: none;
+    text-decoration: line-through;
+    font-weight: 600;
 }
 
 .paginator-pages {
@@ -1041,15 +1079,15 @@ html[data-theme="dark"] .form-floating>textarea:not(:placeholder-shown)~label {
 }
 
 .paginator-page:hover {
-    color: var(--btn-primary-bg);
+    color: #0984e3;
     background: var(--bg-subtle);
     border-color: var(--border-strong);
 }
 
 .paginator-page.paginator-current {
-    color: var(--btn-primary-fg);
-    background: var(--btn-primary-bg);
-    border-color: var(--btn-primary-bg);
+    color: var(--paginator-active-fg);
+    background: var(--paginator-active-bg);
+    border-color: var(--paginator-active-bg);
     cursor: default;
 }
 
@@ -1072,12 +1110,6 @@ html[data-theme="dark"] .paginator-btn:hover,
 html[data-theme="dark"] .paginator-page:hover {
     background: var(--bg-muted);
     border-color: var(--border-strong);
-}
-
-html[data-theme="dark"] .paginator-page.paginator-current {
-    background: var(--btn-primary-bg);
-    border-color: var(--btn-primary-bg);
-    color: var(--btn-primary-fg);
 }
 
 .modal .modal-close-btn {
@@ -1127,7 +1159,7 @@ html[data-theme="dark"] .paginator-page.paginator-current {
 /* Обычный header в потоке документа; dropdown поиска якорится к обёртке */
 /* Круг: поиск + переключение темы. Квадрат со скруглением: бургер, закрытие. Одинаковый hit-area. */
 :root {
-    --header-icon-size: 38px;
+    --header-icon-size: 40px;
     --header-icon-radius-square: 8px;
 }
 
@@ -1147,7 +1179,8 @@ html[data-theme="dark"] .paginator-page.paginator-current {
     width: 100%;
     /* background: #f1f2f6; */
     background: var(--bg-default);
-    padding: 20px 10px;
+    padding: 40px 10px;
+    /* padding: 20px 10px; */
     transform: none;
     transition: none;
     will-change: auto;
@@ -1160,19 +1193,25 @@ html[data-theme="dark"] .header {
 }
 
 .header-nav {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    display: flex;
     align-items: center;
+    justify-content: space-between;
     column-gap: 24px;
 }
 
-/* Let the brand column shrink so search + burger keep a stable hit area (grid/flex min-width: auto otherwise overflows). */
+/* Brand + primary menu share the left side; menu sits right next to brainstorm.news. */
 .header-brand {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex: 1 1 auto;
     min-width: 0;
 }
 
 .header-brand .brand-minimal {
     min-width: 0;
+    flex-shrink: 0;
 }
 
 @media (max-width: 991px) {
@@ -1187,7 +1226,10 @@ html[data-theme="dark"] .header {
         column-gap: 12px;
     }
 
-    /* Grid item: keep search + burger from being squeezed. */
+    .header-brand {
+        gap: 12px;
+    }
+
     .header-actions {
         min-width: fit-content;
     }
@@ -1201,9 +1243,10 @@ html[data-theme="dark"] .header {
 
 .header-menu {
     display: flex;
-    justify-self: center;
     align-items: center;
     white-space: nowrap;
+    font-weight: 600;
+    min-width: 0;
 }
 
 .header-menu-item {
@@ -1348,21 +1391,7 @@ html[data-theme="dark"] .theme-toggle-btn {
     box-sizing: border-box;
 }
 
-/* Light — theme toggle only (#192a56 / hover #273c75); search = same white/grey as .search-btn (dark unchanged) */
-html[data-theme="light"] .header-utility-segment .theme-toggle-btn {
-    background: #192a56;
-    color: var(--btn-primary-fg);
-    border-color: transparent;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-}
-
-html[data-theme="light"] .header-utility-segment .theme-toggle-btn:hover {
-    color: var(--btn-primary-fg);
-    background: #273c75;
-    border-color: transparent;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-}
-
+/* Light — search + theme toggle share the same capsule styling */
 html[data-theme="light"] .header-utility-segment .search-btn {
     background: var(--card-bg);
     color: var(--text-muted);
@@ -1376,21 +1405,32 @@ html[data-theme="light"] .header-utility-segment .search-btn:hover {
     border-color: var(--border-strong);
 }
 
-/* Moon/sun from data-theme (set in <head> before paint) — avoids icon swap on DOMContentLoaded */
-.theme-toggle-btn .theme-toggle-icon--moon {
-    display: inline-block;
-}
-
-.theme-toggle-btn .theme-toggle-icon--sun {
+/* Theme cycle button: icon follows saved preference (light / dark / auto), not effective palette */
+.theme-toggle-btn .theme-toggle-icon--moon,
+.theme-toggle-btn .theme-toggle-icon--sun,
+.theme-toggle-btn .theme-toggle-icon--auto {
     display: none;
 }
 
-html[data-theme="dark"] .theme-toggle-btn .theme-toggle-icon--moon {
-    display: none;
+.theme-toggle-btn.theme-pref-light .theme-toggle-icon--sun {
+    display: inline-block;
 }
 
-html[data-theme="dark"] .theme-toggle-btn .theme-toggle-icon--sun {
+.theme-toggle-btn.theme-pref-dark .theme-toggle-icon--moon {
     display: inline-block;
+}
+
+.theme-toggle-btn.theme-pref-auto .theme-toggle-icon--auto {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-toggle-letter-a {
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1;
 }
 
 /* Search dropdown — шторка под header, не влияет на высоту контента */
@@ -1428,6 +1468,38 @@ html[data-theme="dark"] .theme-toggle-btn .theme-toggle-icon--sun {
     text-decoration: none;
     font-size: 1rem;
     letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+    /* padding: 0.2rem 0.55rem; */
+    border-radius: 6px;
+    transition: color 0.18s ease, text-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.brand-minimal:hover {
+    color: var(--text-link-hover) !important;
+}
+
+.brand-minimal:focus-visible {
+    outline: 2px solid var(--text-link);
+    outline-offset: 2px;
+}
+
+/* Active state: subtle glow when current page is the brainstorm.news home (items_list at "/"). */
+.brand-minimal--active {
+    color: var(--text-link) !important;
+    text-shadow:
+        0 0 6px color-mix(in srgb, var(--text-link) 32%, transparent),
+        0 0 14px color-mix(in srgb, var(--text-link) 18%, transparent);
+}
+
+.brand-minimal--active:hover {
+    color: var(--text-link) !important;
+}
+
+html[data-theme="dark"] .brand-minimal--active {
+    text-shadow:
+        0 0 8px color-mix(in srgb, var(--text-link) 45%, transparent),
+        0 0 18px color-mix(in srgb, var(--text-link) 26%, transparent);
 }
 
 .brand-minimal .brand-short { display: none; }
@@ -1435,6 +1507,20 @@ html[data-theme="dark"] .theme-toggle-btn .theme-toggle-icon--sun {
 @media (max-width: 991px) {
     .brand-minimal .brand-full  { display: none; }
     .brand-minimal .brand-short { display: inline; }
+}
+
+/* Vertical divider between the brand and the primary menu (desktop only). */
+.header-brand-divider {
+    flex-shrink: 0;
+    width: 1px;
+    height: 20px;
+    background-color: #dfe6e9;
+    align-self: center;
+    opacity: 0.85;
+}
+
+@media (max-width: 991px) {
+    .header-brand-divider { display: none; }
 }
 
 .header-actions {
@@ -1470,10 +1556,6 @@ html[data-theme="dark"] .theme-toggle-btn .theme-toggle-icon--sun {
 }
 
 @media (max-width: 991px) {
-    .header-nav {
-        grid-template-columns: 1fr auto;
-    }
-
     .header-menu {
         display: none !important;
     }
@@ -2080,9 +2162,7 @@ html[data-theme="dark"] .feed-cards-masonry .item_block.trending-card {
 
 .footer {
     position: relative;
-    /* Above home v3 `.home-section-stripe--accent` (z-index: 1) while `.main` uses
-       `isolation: auto` — otherwise the Subscribe popover paints under trending. */
-    z-index: 2;
+    z-index: 0;
     flex-shrink: 0;
     border-top: 1px solid var(--border-subtle);
     background: var(--bg-default);
@@ -3175,16 +3255,135 @@ a.filter-reason-btn.topic-category-link:hover {
     min-width: 0;
 }
 
+/* BraiNews / Topics: sticky filter row — parent .listing-filter-sticky-scope must wrap filters + grids */
+.listing-filter-sticky-scope {
+    min-width: 0;
+}
+
+.filter-segment-sticky-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 95;
+    /* Bootstrap py-4 */
+    padding-top: 1.2rem;
+    margin-bottom: 0;
+    /* background: var(--bg-default); */
+    box-sizing: border-box;
+    margin-bottom: 1.2rem;
+}
+
+.filter-segment-sticky-wrap .filter-segment-outer {
+    margin-bottom: 0;
+}
+
+@media (max-width: 575px) {
+    .filter-segment-sticky-wrap {
+        padding-top: max(1.5rem, calc(1.5rem + env(safe-area-inset-top, 0px)));
+    }
+}
+
+/* BraiNews / Topics filter pill: dark = liquid glass; light = flat chip rail (no shadow), как на /topics/ */
 .filter-segment-shell {
     display: inline-block;
     vertical-align: top;
     max-width: 100%;
     min-width: 0;
-    border: 1px solid var(--border-strong);
+    position: relative;
     border-radius: 999px;
-    background: var(--bg-default);
     box-sizing: border-box;
     overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    backdrop-filter: blur(12px) saturate(140%);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: background 0.3s ease;
+    transform: translateZ(0);
+}
+
+.filter-segment-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.25),
+        rgba(255, 255, 255, 0.05)
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
+html[data-theme="light"] .filter-segment-shell {
+    /* Плоская плашка как на Topics / BraiNews: без glass и без box-shadow на белом фоне */
+    background: var(--card-bg, #fff);
+    border: 2px solid var(--border-subtle, #e8e8ec);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+}
+
+html[data-theme="light"] .filter-segment-shell::before {
+    display: none;
+}
+
+html[data-theme="dark"] .filter-segment-shell {
+    background: rgba(20, 20, 20, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    /* box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05); */
+}
+
+html[data-theme="dark"] .filter-segment-shell::before {
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.12),
+        rgba(255, 255, 255, 0.03)
+    );
+}
+
+@supports not (backdrop-filter: blur(10px)) {
+    .filter-segment-shell {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        background: rgba(20, 20, 20, 0.9);
+    }
+
+    .filter-segment-shell::before {
+        display: none;
+    }
+
+    html:not([data-theme="dark"]) .filter-segment-shell {
+        background: var(--card-bg, #fff);
+        border: 1px solid var(--border-default, #e6e6e6);
+        box-shadow: none;
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .filter-segment-shell {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        background: var(--card-bg, #fff);
+        border: 1px solid var(--border-default, #e6e6e6);
+        box-shadow: none;
+    }
+
+    .filter-segment-shell::before {
+        display: none;
+    }
+
+    html[data-theme="dark"] .filter-segment-shell {
+        background: var(--card-bg, #161b22);
+        border: 1px solid var(--border-default);
+        box-shadow:
+            0 12px 32px rgba(0, 0, 0, 0.4),
+            0 2px 10px rgba(0, 0, 0, 0.25);
+    }
 }
 
 /* Scrollport: fixed width = shell inner; only the chip row (.filter-segment-bar) pans inside */
@@ -3193,6 +3392,8 @@ a.filter-reason-btn.topic-category-link:hover {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
+    position: relative;
+    z-index: 1;
 }
 
 /* Subtitle under the segment pill (e.g. For you) — not uppercase like chips */
@@ -3215,7 +3416,7 @@ a.filter-reason-btn.topic-category-link:hover {
     width: max-content;
     max-width: none;
     position: relative;
-    z-index: 0;
+    z-index: 1;
     white-space: normal;
 }
 
@@ -3227,15 +3428,17 @@ a.filter-reason-btn.topic-category-link:hover {
     border-radius: 999px;
     flex-shrink: 0;
     white-space: nowrap;
+    text-decoration: none;
     transition: background 0.22s ease, background-color 0.22s ease, color 0.22s ease;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     cursor: pointer;
     position: relative;
     z-index: 1;
-    text-transform: uppercase;
-    font-weight: 600;
-    letter-spacing: .02rem;
+    /* text-transform: uppercase; */
+    /* font-weight: 600; */
+    letter-spacing: .015rem;
+    font-size: .875rem;
 }
 
 .filter-segment-bar .filter-reason-btn.is-selected,
@@ -3253,7 +3456,17 @@ html[data-theme="light"] .filter-segment-bar a.filter-reason-btn.is-selected {
 
 .filter-segment-bar .filter-reason-btn:hover:not(.is-selected):not(:disabled),
 .filter-segment-bar a.filter-reason-btn:hover:not(.is-selected) {
-    background: var(--bg-subtle);
+    background: rgba(255, 255, 255, 0.35);
+}
+
+html[data-theme="light"] .filter-segment-bar .filter-reason-btn:hover:not(.is-selected):not(:disabled),
+html[data-theme="light"] .filter-segment-bar a.filter-reason-btn:hover:not(.is-selected) {
+    background: rgba(0, 0, 0, 0.055);
+}
+
+html[data-theme="dark"] .filter-segment-bar .filter-reason-btn:hover:not(.is-selected):not(:disabled),
+html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn:hover:not(.is-selected) {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 /* Dark: active segment = grey pill (same token as filter chip hover lift), white label */
@@ -3262,6 +3475,28 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
     border-color: transparent;
     color: var(--btn-primary-fg);
     background: var(--btn-secondary-hover-bg);
+}
+
+/* Mobile: selected filter chip = same pill + glow as .mobile-bottom-nav__slide + active link (see ≤991px nav block) */
+@media (max-width: 991px) {
+    html[data-theme="light"] .filter-segment-bar .filter-reason-btn.is-selected,
+    html[data-theme="light"] .filter-segment-bar a.filter-reason-btn.is-selected {
+        border-color: transparent;
+        color: var(--btn-primary-bg);
+        background: color-mix(in srgb, var(--btn-primary-bg) 16%, rgba(255, 255, 255, 0.55));
+        text-shadow: 0 0 12px color-mix(in srgb, var(--btn-primary-bg) 45%, transparent);
+    }
+
+    html[data-theme="dark"] .filter-segment-bar .filter-reason-btn.is-selected,
+    html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
+        border-color: transparent;
+        color: #fff;
+        background: color-mix(in srgb, #ffffff 18%, rgba(255, 255, 255, 0.08));
+        box-shadow: none;
+        text-shadow:
+            0 0 10px rgba(255, 255, 255, 0.8),
+            0 0 22px rgba(255, 255, 255, 0.35);
+    }
 }
 
 /* `.topic-category-chips` elsewhere uses width 100%; inner row must stay max-content for horizontal scroll */
@@ -3379,7 +3614,8 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
     }
 
-    body.page-item-detail {
+    body.page-item-detail,
+    body.thread-comment-page {
         padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
@@ -3433,6 +3669,24 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         );
         pointer-events: none;
         z-index: 0;
+    }
+
+    html[data-theme="light"] .mobile-bottom-nav__inner {
+        background: rgba(255, 255, 255, 0.52);
+        border: 1px solid rgba(0, 0, 0, 0.09);
+        -webkit-backdrop-filter: blur(14px) saturate(165%);
+        backdrop-filter: blur(14px) saturate(165%);
+        box-shadow:
+            0 6px 22px rgba(0, 0, 0, 0.07),
+            inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+
+    html[data-theme="light"] .mobile-bottom-nav__inner::before {
+        background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.72),
+            rgba(255, 255, 255, 0.2)
+        );
     }
 
     .mobile-bottom-nav__scroll {
@@ -3737,8 +3991,9 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         pointer-events: auto;
     }
 
-    /* Arrow points down toward More; horizontal position follows anchor via --popover-caret-x (px from popover left) */
-    .mobile-nav-account-popover.is-open::after {
+    /* Arrow points down toward More; horizontal position follows anchor via --popover-caret-x (px from popover left).
+       Pseudo-elements apply in all states so opacity/visibility transitions keep arrow + panel in sync. */
+    .mobile-nav-account-popover::after {
         content: '';
         position: absolute;
         left: var(--popover-caret-x);
@@ -3760,12 +4015,12 @@ html[data-theme="dark"] .filter-segment-bar a.filter-reason-btn.is-selected {
         box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
-    html[data-theme="dark"] .mobile-nav-account-popover.is-open::after {
+    html[data-theme="dark"] .mobile-nav-account-popover::after {
         border-top-color: var(--border-strong, #484f58);
         filter: none;
     }
 
-    html[data-theme="dark"] .mobile-nav-account-popover.is-open::before {
+    html[data-theme="dark"] .mobile-nav-account-popover::before {
         content: '';
         position: absolute;
         left: var(--popover-caret-x);
@@ -4503,11 +4758,11 @@ html[data-theme="dark"] .avatar-file-trigger:hover {
     font-size: 0.88rem;
 }
 
-.comment-text.comment-text--truncated {
+.comment-text.comment-text--truncated .comment-text-content {
     position: relative;
 }
 
-.comment-text.comment-text--truncated::after {
+.comment-text.comment-text--truncated .comment-text-content::after {
     content: '';
     position: absolute;
     left: 0;
@@ -4518,25 +4773,40 @@ html[data-theme="dark"] .avatar-file-trigger:hover {
     background: linear-gradient(to top, var(--card-bg) 0%, var(--excerpt-fade) 42%, transparent 100%);
 }
 
+.comment-text:has(.comment-toggle-btn) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.comment-text-content {
+    display: block;
+    min-width: 0;
+    width: 100%;
+}
+
+.comment-text .comment-toggle-btn.cstm-btn {
+    display: inline-flex;
+    position: relative;
+    z-index: 2;
+    margin-top: 0.65rem;
+    align-self: flex-start;
+    flex-shrink: 0;
+}
+
 /* ===============================
    COMMENT LAYOUT (avatar + column)
 =============================== */
 .comment-layout {
     display: grid;
-    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-columns: 35px minmax(0, 1fr);
     grid-template-rows: auto auto;
     column-gap: 0.5rem;
     row-gap: 0.35rem;
 }
 
-.comment-avatar-col {
-    grid-column: 1;
-    grid-row: 1;
-    align-self: center;
-}
-
-.comment-meta-row {
-    grid-column: 2;
+.comment-top-bar {
+    grid-column: 1 / -1;
     grid-row: 1;
     display: flex;
     flex-wrap: nowrap;
@@ -4544,6 +4814,20 @@ html[data-theme="dark"] .avatar-file-trigger:hover {
     justify-content: space-between;
     gap: 0.5rem;
     min-width: 0;
+}
+
+.comment-identity-link {
+    color: inherit;
+    min-width: 0;
+}
+
+.comment-identity-link .comment-author-name {
+    color: var(--text-primary);
+}
+
+.comment-identity-link:hover .comment-author-name,
+.comment-identity-link:focus-visible .comment-author-name {
+    text-decoration: underline;
 }
 
 .comment-main {
@@ -4828,8 +5112,8 @@ html[data-theme="dark"] .comment-menu--actions-bar .comment-actions .comment-men
     gap: 0.35rem;
     padding: 0.32rem 0.55rem;
     border-radius: var(--radius-md);
-    border: 1.5px solid color-mix(in srgb, #14b8a6 45%, var(--border-default));
-    /* background: color-mix(in srgb, #14b8a6 14%, var(--card-bg)); */
+    border: 1px solid color-mix(in srgb, #14b8a6 45%, var(--border-default));
+    background: color-mix(in srgb, #14b8a6 14%, var(--card-bg));
     color: #0f766e;
     font-size: 0.8rem;
     font-weight: 600;
@@ -4839,7 +5123,7 @@ html[data-theme="dark"] .comment-menu--actions-bar .comment-actions .comment-men
 html[data-theme="dark"] .comment-actions-bar__likes[role="group"] {
     color: #5eead4;
     border-color: color-mix(in srgb, #2dd4bf 38%, var(--border-default));
-    /* background: color-mix(in srgb, #2dd4bf 14%, var(--card-bg)); */
+    background: color-mix(in srgb, #2dd4bf 14%, var(--card-bg));
 }
 
 .comment-actions-bar__like-btn {
@@ -4945,8 +5229,8 @@ html[data-theme="dark"] .comment-actions-bar__likes[role="group"] {
 }
 
 .comment-main .comment-text {
-    padding: 15px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    padding: 17px 20px 17px 12px;
+    /* box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05); */
 }
 
 html[data-theme="dark"] .comment-main .comment-text {
@@ -5072,7 +5356,7 @@ a.comment-replies-thread-link:focus-visible {
 
 .replies {
     margin-left: 0;
-    margin-top: 4px;
+    /* margin-top: 4px; */
     /* padding-left: 0.75rem; */
     /* border-left: 2px solid color-mix(in srgb, var(--text-link) 32%, var(--border-default, #c4c4c4)); */
 }
@@ -5118,7 +5402,24 @@ a.comment-replies-thread-link:focus-visible {
    ROOT COMMENT HIGHLIGHT (MENTION)
 =============================== */
 .comment-text.root-mention-highlight {
+    /* --mention-highlight-solid: rgba(255, 232, 180, 0.92); */
+    --mention-highlight-mid: rgba(255, 232, 180, 0.45);
     animation: mentionFillFade 1.6s ease-in-out;
+}
+
+html[data-theme="dark"] .comment-text.root-mention-highlight {
+    --mention-highlight-solid: rgba(72, 58, 18, 0.95);
+    --mention-highlight-mid: rgba(72, 58, 18, 0.5);
+}
+
+/* Truncation fade must match highlight — white --card-bg caused a “white spot” */
+.comment-text.root-mention-highlight.comment-text--truncated .comment-text-content::after {
+    background: linear-gradient(
+        to top,
+        var(--mention-highlight-solid) 0%,
+        var(--mention-highlight-mid) 48%,
+        transparent 100%
+    );
 }
 
 @keyframes mentionFillFade {
@@ -5135,7 +5436,7 @@ a.comment-replies-thread-link:focus-visible {
     }
 
     100% {
-        background-color: transparent;
+        background-color: var(--card-bg);
     }
 }
 
@@ -5169,17 +5470,14 @@ a.comment-replies-thread-link:focus-visible {
     font-weight: 500;
 }
 
-.comment-toggle-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-primary);
-    border-radius: 25px;
-    font-size: .775rem;
-    cursor: pointer;
-    text-decoration: none;
+#postDailyLimitAlert.post-daily-limit-alert--oneline {
+    white-space: nowrap;
+    overflow-x: auto;
     font-weight: 600;
-    margin-top: 15px;
-    padding: 0;
+}
+
+#postDailyLimitAlert .post-daily-limit-alert__timer {
+    font-variant-numeric: tabular-nums;
 }
 
 .show-more-btn-toggle {
@@ -5194,11 +5492,18 @@ a.comment-replies-thread-link:focus-visible {
     color: var(--text-primary);
 }
 
-/* Ссылка @mention */
+/* Ссылка @mention — always inline with following text */
 .mention-link {
+    display: inline;
     color: var(--text-link);
     text-decoration: none;
     font-weight: 500;
+    white-space: normal;
+}
+
+.comment-text .mention-link,
+.comment-text-content .mention-link {
+    display: inline;
 }
 
 /* Якорь для точного скролла */
@@ -5362,8 +5667,8 @@ html[data-theme="dark"] .post_report_btn:hover {
 }
 
 .cstm-btn {
-    padding: 8px 13px;
-    border-radius: 5px;
+    padding: 8px 15px;
+    border-radius: 999px;
     transition: .2s ease-in-out;
     font-size: 1rem;
     text-decoration: none;
@@ -5379,7 +5684,7 @@ html[data-theme="dark"] .post_report_btn:hover {
 }
 
 .cstm-btn-sm {
-    padding: 8px 10px;
+    padding: 8px 15px;
     transition: .2s ease-in-out;
     font-size: .8rem;
     font-weight: 500;
@@ -5399,7 +5704,8 @@ html[data-theme="dark"] .post_report_btn:hover {
     box-sizing: border-box;
     font-weight: 600;
     line-height: 1.2;
-    border-radius: var(--radius-md);
+    border-radius: 999px;
+    /* border-radius: var(--radius-md); */
     color: #3d454d;
     border-color: color-mix(in srgb, #6c757d 40%, var(--border-default));
     background: color-mix(in srgb, #6c757d 11%, var(--card-bg));
@@ -5437,7 +5743,8 @@ html[data-theme="dark"] .custom-secondary-btn:hover {
     box-sizing: border-box;
     font-weight: 600;
     line-height: 1.2;
-    border-radius: var(--radius-md);
+    border-radius: 999px;
+    /* border-radius: var(--radius-md); */
     color: #c53030;
     border-color: color-mix(in srgb, #e74c3c 48%, var(--border-default));
     background: color-mix(in srgb, #e74c3c 14%, var(--card-bg));
@@ -5470,7 +5777,8 @@ html[data-theme="dark"] .custom-danger-btn:hover {
     box-sizing: border-box;
     font-weight: 600;
     line-height: 1.2;
-    border-radius: var(--radius-md);
+    /* border-radius: var(--radius-md); */
+    border-radius: 999px;
     color: #1a6cad;
     border-color: color-mix(in srgb, #2980b9 52%, var(--border-default));
     background: color-mix(in srgb, #2980b9 14%, var(--card-bg));
@@ -5496,6 +5804,20 @@ html[data-theme="dark"] .custom-primary-btn:hover {
     color: var(--text-default);
     border-color: color-mix(in srgb, #58a6ff 50%, var(--border-default));
     background: color-mix(in srgb, #58a6ff 20%, var(--card-bg));
+}
+
+/* Create post page: daily limit — strikethrough disabled submit (beats .cstm-btn text-decoration:none) */
+.create-field .cstm-btn.create-post-submit-btn.create-post-submit-btn--blocked,
+.create-field .cstm-btn.create-post-submit-btn:disabled {
+    text-decoration: line-through !important;
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+html[data-theme="dark"] .create-field .cstm-btn.create-post-submit-btn.create-post-submit-btn--blocked,
+html[data-theme="dark"] .create-field .cstm-btn.create-post-submit-btn:disabled {
+    opacity: 0.5;
 }
 
 /* Comment submit cooldown: danger surface (must beat html[data-theme=dark] .custom-primary-btn*) */
@@ -5767,7 +6089,7 @@ html[data-theme="dark"] .report-reason-btn.is-selected {
 }
 
 .report-exists-header {
-    color: #3498db;
+    color: var(--danger-fg);
     font-weight: 500;
 }
 
@@ -5810,7 +6132,7 @@ html[data-theme="dark"] .report-reason-btn.is-selected {
     padding: 15px;
     background-color: var(--card-bg);
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-    color: #a4a2a2;
+    color: var(--text-link);
     border-radius: 8px;
     z-index: 1;
     line-height: 1.25rem;
@@ -5820,18 +6142,19 @@ html[data-theme="dark"] .report-reason-btn.is-selected {
 }
 
 .comment-text {
+    display: block;
     padding: 17px;
     background-color: var(--card-bg);
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
     color: #5e5e5e;
-    border-radius: 8px;
+    border-radius: 10px;
     position: relative;
     z-index: 1;
     line-height: 1.25rem;
     word-wrap: break-word;
-    font-size: .8rem;
-    font-weight: 500;
-    border-left: 4px solid var(--text-link)
+    font-size: .875rem;
+    font-weight: 600;
+    border-left: 2px solid var(--text-link)
 }
 
 .comment-text a.primary_ {
@@ -6515,7 +6838,7 @@ html[data-theme="dark"] .comment_likes_badge {
 
 .share-buttons {
     display: flex;
-    gap: 8px;
+    gap: 5px;
     /* расстояние между кнопками */
     width: 100%;
 }
@@ -6657,24 +6980,57 @@ html[data-theme="dark"] .comment_likes_badge {
 }
 
 @keyframes backPulse {
+    0% {
+        box-shadow:
+            0 0 0 0 rgba(116, 185, 255, 0),
+            0 0 0 0 rgba(95, 39, 205, 0),
+            var(--card-shadow, 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075));
+    }
 
-    0%,
-    30% {
-        outline: 1.5px solid #74b9ff;
-        outline-offset: -1px;
-        box-shadow: inset 0 0 0 2px #74b9ff, 0 0 20px rgba(95, 39, 205, 0.45), var(--card-shadow, 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075));
+    20% {
+        box-shadow:
+            0 0 0 3px rgba(116, 185, 255, 0.35),
+            0 0 32px 8px rgba(95, 39, 205, 0.45),
+            var(--card-shadow, 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075));
+    }
+
+    65% {
+        box-shadow:
+            0 0 0 3px rgba(116, 185, 255, 0.28),
+            0 0 28px 6px rgba(95, 39, 205, 0.35),
+            var(--card-shadow, 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075));
     }
 
     100% {
-        outline: 1.5px solid transparent;
-        outline-offset: -1px;
-        box-shadow: var(--card-shadow, 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075));
+        box-shadow:
+            0 0 0 0 rgba(116, 185, 255, 0),
+            0 0 0 0 rgba(95, 39, 205, 0),
+            var(--card-shadow, 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075));
     }
 }
 
 .item_block.back-highlight,
 .item-card.back-highlight .item_block {
-    animation: backPulse 1.5s ease-in-out forwards;
+    animation: backPulse 1.8s ease-out forwards;
+}
+
+/* Mindset theme / reply — same glow return as feed cards */
+.mindset-theme.back-highlight,
+.mindset-reply.back-highlight {
+    animation: backPulse 1.8s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .item_block.back-highlight,
+    .item-card.back-highlight .item_block {
+        animation: none;
+    }
+
+    .mindset-theme.back-highlight,
+    .mindset-reply.back-highlight {
+        animation: none;
+    }
 }
 
 
@@ -7432,6 +7788,17 @@ html[data-theme="dark"] .topic-tile--in-trend:hover {
 .btn-back-link:focus-visible {
     outline: 2px solid var(--text-link);
     outline-offset: 2px;
+}
+
+/* .text-muted + dark theme overrides hover color on Back buttons */
+html[data-theme="dark"] .btn-back-link:hover,
+html[data-theme="dark"] .btn-back-link.text-muted:hover {
+    color: var(--text-link) !important;
+}
+
+html[data-theme="dark"] .btn-back-link:hover .fa,
+html[data-theme="dark"] .btn-back-link.text-muted:hover .fa {
+    color: var(--text-link) !important;
 }
 
 .for-you-empty-hint {
@@ -8378,6 +8745,45 @@ html[data-theme="dark"] .item-text.ck-content pre.item-doc-faithful-block {
     z-index: 2;
 }
 
+/*
+ * Mobile: shell + chip row fill container; equal flex only when JS adds .filter-segment-scroll--even-mobile
+ * (row fits without horizontal scroll — see filter_segment_scroll.js).
+ */
+@media (max-width: 575px) {
+    .filter-segment-shell:has(.filter-segment-scroll--even-mobile) {
+        width: 100%;
+        max-width: 100%;
+        display: block;
+        box-sizing: border-box;
+    }
+
+    .filter-segment-scroll.filter-segment-scroll--even-mobile {
+        overflow-x: hidden;
+    }
+
+    .filter-segment-scroll.filter-segment-scroll--even-mobile .filter-segment-bar {
+        display: flex;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .filter-segment-scroll.filter-segment-scroll--even-mobile .filter-segment-bar .filter-reason-btn,
+    .filter-segment-scroll.filter-segment-scroll--even-mobile .filter-segment-bar a.filter-reason-btn {
+        flex: 1 1 0;
+        min-width: 0;
+        flex-shrink: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
 .topic-category-chips {
     width: 100%;
     max-width: 100%;
@@ -8456,5 +8862,278 @@ html[data-theme="dark"] .comment-form-body textarea.form-control:focus {
         font-size: 16px !important;
         padding: 0.9rem;
         min-height: calc(1.45em + 1.8rem + 2px);
+    }
+}
+
+/* =========================================================
+   MOBILE COMMENT DOCK (YouTube-style fixed-bottom composer)
+   Authenticated users only, mobile breakpoint <=767.98px.
+   On desktop the dock is hidden and inline forms keep working.
+   ========================================================= */
+.mobile-comment-dock {
+    display: none;
+}
+
+@media (max-width: 767.98px) {
+    /* The bottom-fixed dock lives outside normal flow */
+    .mobile-comment-dock {
+        display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1590;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        background: var(--card-bg);
+        border-top: 1px solid var(--border-default);
+        box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.08);
+        transform: translate3d(0, 100%, 0);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition:
+            transform 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+            opacity 0.28s ease,
+            visibility 0.32s ease;
+        will-change: transform, opacity;
+    }
+
+    .mobile-comment-dock.is-revealed {
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mobile-comment-dock {
+            transition: none;
+        }
+    }
+
+    html[data-theme="dark"] .mobile-comment-dock {
+        box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.45);
+    }
+
+    .mobile-comment-dock[hidden] {
+        display: none !important;
+    }
+
+    .mobile-comment-dock__form {
+        display: flex;
+        /* Vertical centering of all controls; textarea grows upward and
+           the send/close buttons stay anchored to the middle of the bar. */
+        align-items: center;
+        gap: 5px;
+        /* Keep viewport scrollbar off the send/close buttons (desktop narrow). */
+        padding: 25px calc(10px + (100vw - 100%)) 25px 15px;
+        margin: 0;
+    }
+
+    .mobile-comment-dock__field {
+        --mobile-dock-lh: 1.4;
+        --mobile-dock-py: 9px;
+        --mobile-dock-max-rows: 10;
+        flex: 1 1 auto;
+        min-width: 0;
+        max-height: calc(var(--mobile-dock-max-rows) * 1em * var(--mobile-dock-lh) + var(--mobile-dock-py) * 2 + 2px);
+        overflow-y: hidden;
+        overflow-x: hidden;
+        border: 1px solid var(--border-default);
+        background: var(--bg-muted, var(--bg-default));
+        box-sizing: border-box;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .mobile-comment-dock__field:focus-within {
+        border-color: var(--text-link, #273c75);
+        box-shadow: 0 0 0 2px var(--input-focus-ring, rgba(39, 60, 117, 0.22));
+    }
+
+    .mobile-comment-dock__field.is-scrollable {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.22) transparent;
+    }
+
+    .mobile-comment-dock__field.is-scrollable::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .mobile-comment-dock__field.is-scrollable::-webkit-scrollbar-track {
+        background: transparent;
+        margin: 4px 0;
+    }
+
+    .mobile-comment-dock__field.is-scrollable::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.22);
+        border-radius: 999px;
+    }
+
+    html[data-theme="dark"] .mobile-comment-dock__field.is-scrollable {
+        scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+    }
+
+    html[data-theme="dark"] .mobile-comment-dock__field.is-scrollable::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.28);
+    }
+
+    /* Rectangular fixed-width textarea: starts as 1 line, grows up to
+       10 lines; scrolling is handled by .mobile-comment-dock__field. */
+    .mobile-comment-dock__textarea {
+        display: block;
+        width: 100%;
+        margin: 0;
+        font-size: 16px !important;
+        line-height: var(--mobile-dock-lh);
+        padding: var(--mobile-dock-py) 12px;
+        border-radius: 0;
+        border: none;
+        background: transparent;
+        color: var(--text-default);
+        resize: none;
+        max-height: none;
+        overflow: hidden;
+        outline: none;
+        box-sizing: border-box;
+        vertical-align: middle;
+    }
+
+    .mobile-comment-dock__textarea:focus {
+        outline: none;
+        box-shadow: none;
+    }
+
+    .mobile-comment-dock__close,
+    .mobile-comment-dock__send {
+        flex: 0 0 auto;
+        align-self: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: transparent;
+        color: var(--text-muted, #6c757d);
+        font-size: 1rem;
+        cursor: pointer;
+        padding: 0;
+        transition: background 0.3s ease, color 0.3s ease,
+                    border-color 0.3s ease, opacity 0.3s ease;
+    }
+
+    .mobile-comment-dock__close[hidden] {
+        display: none !important;
+    }
+
+    /* Close button: × glyph like share modal .modal-close-btn */
+    .mobile-comment-dock__close {
+        color: var(--text-muted, #6c757d);
+        font-size: 2rem;
+        line-height: 1;
+        font-weight: 400;
+        opacity: 0.8;
+    }
+
+    .mobile-comment-dock__close:hover,
+    .mobile-comment-dock__close:focus-visible {
+        color: #c53030;
+        outline: none;
+        opacity: 1;
+    }
+
+    .mobile-comment-dock__close:active {
+        transform: scale(0.94);
+    }
+
+    .mobile-comment-dock__send {
+        color: var(--text-muted, #6c757d);
+    }
+
+    .mobile-comment-dock__send:not(:disabled):not(.is-cooldown) {
+        color: var(--text-link, #273c75);
+    }
+
+    .mobile-comment-dock__send:not(:disabled):not(.is-cooldown):active {
+        transform: scale(0.94);
+    }
+
+    .mobile-comment-dock__send:disabled:not(.is-cooldown) {
+        /* cursor: not-allowed; */
+        opacity: 0.45;
+    }
+
+    /* Main-comment cooldown: red button with seconds countdown (textarea stays editable). */
+    .mobile-comment-dock__send.is-cooldown {
+        background: transparent;
+        color: #c0392b;
+        opacity: 1;
+        /* cursor: not-allowed; */
+        font-size: 0.9rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+        border: 1px solid #c0392b;
+        border-radius: 50%;
+    }
+
+    .mobile-comment-dock__send.is-cooldown:disabled {
+        opacity: 1;
+    }
+
+    .mobile-comment-dock__send i {
+        font-size: 1.35rem;
+        line-height: 1;
+    }
+
+    .mobile-comment-dock__error {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: 100%;
+        margin-bottom: 6px;
+        padding: 6px 10px;
+        font-size: 0.78rem;
+        background: var(--card-bg);
+        color: #dc3545;
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    }
+
+    .mobile-comment-dock__error[hidden] {
+        display: none !important;
+    }
+
+    /* Push page content above the docked composer so the last
+       comment isn't covered by the fixed bar. The dock height is
+       ~54px + safe-area, leave a bit of breathing room. */
+    body.page-item-detail.has-mobile-comment-dock.is-dock-revealed,
+    body.thread-comment-page.has-mobile-comment-dock.is-dock-revealed {
+        padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* === Hide inline composer/reply/edit UI on mobile === */
+    /* Original main comment composer in the detail page */
+    body.has-mobile-comment-dock #commentForm,
+    body.has-mobile-comment-dock #commentFormBody,
+    body.has-mobile-comment-dock .comment-form-body,
+    body.has-mobile-comment-dock .comment-form-btn {
+        display: none !important;
+    }
+
+    /* The "Leave a comment" heading wrapper that lives right above
+       #commentFormBody — keep it hidden too so only the dock shows. */
+    body.has-mobile-comment-dock .comment-form-header {
+        display: none !important;
+    }
+
+    /* Inline reply / edit forms — dock takes over */
+    body.has-mobile-comment-dock .reply-form,
+    body.has-mobile-comment-dock .comment-edit-form {
+        display: none !important;
     }
 }
